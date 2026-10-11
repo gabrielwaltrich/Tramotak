@@ -26,10 +26,39 @@ jobs:
       - run: npm test
       - run: npx electron-vite build
 
+  e2e:
+    name: E2E (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - name: Playwright (Linux, com tela virtual)
+        if: runner.os == 'Linux'
+        run: xvfb-run --auto-servernum npx playwright test
+      - name: Playwright
+        if: runner.os != 'Linux'
+        run: npx playwright test
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: playwright-report-${{ matrix.os }}
+          path: |
+            playwright-report/
+            test-results/
+
   package:
     name: Instaladores (${{ matrix.os }})
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: check
+    needs: [check, e2e]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -53,7 +82,7 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v7
         with:
-          name: tramotak-${{ matrix.os }}
+          name: tramotak-${{ github.ref_name }}-${{ runner.os }}
           path: |
             dist/*.exe
             dist/*.dmg

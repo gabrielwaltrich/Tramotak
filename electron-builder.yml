@@ -1,23 +1,33 @@
 appId: com.tramotak.app
 productName: Tramotak
+copyright: Copyright © 2026 Gabriel Waltrich
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
 directories:
   buildResources: resources
   output: dist
 files:
   - out/**
   - package.json
-asarUnpack:
-  - resources/**
+icon: resources/icon.png
 win:
   target: [nsis, portable]
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-setup.${ext}
+portable:
+  artifactName: ${productName}-${version}-portable.${ext}
 mac:
-  target: [dmg]
+  target:
+    - target: dmg
+      arch: [arm64, x64]
   category: public.app-category.education
+dmg:
+  artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
   target: [AppImage, deb]
   category: Education
-  maintainer: Gabriel Waltrich
+  maintainer: Gabriel Waltrich <64818081+gabrielwaltrich@users.noreply.github.com>
+  synopsis: Central de estudos para os seus cursos
+  syncDesktopName: true
 publish: null
