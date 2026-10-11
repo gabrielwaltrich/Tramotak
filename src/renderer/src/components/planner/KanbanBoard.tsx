@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
 import { TASK_STATUS_LABEL, type Task, type TaskStatus } from '@shared/planner'
+import { plural } from '@shared/format'
+import { dayKey } from '@shared/streak'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { useToast } from '../Toast'
 import { TaskMeta } from './TaskMeta'
@@ -25,6 +27,16 @@ export function KanbanBoard({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: T
   const [dragging, setDragging] = useState<number | null>(null)
   const [target, setTarget] = useState<{ status: TaskStatus; index: number } | null>(null)
   const [quick, setQuick] = useState('')
+  // Dias futuros dos planos de estudo ficam só no Calendário (senão um curso grande enche a coluna).
+  const today = dayKey(new Date())
+  const hidden = (t: Task) => t.planId !== null && t.status === 'todo' && (t.scheduledDate ?? '') > today
+  const futurePlanDays = tasks.filter(hidden).length
+  /** Posição na coluna inteira (com as tarefas escondidas) para soltar antes da `index`-ésima visível. */
+  const serverIndex = (id: number, status: TaskStatus, index: number) => {
+    const full = tasks.filter((t) => t.status === status && t.id !== id).sort((a, b) => a.position - b.position)
+    const visible = full.filter((t) => !hidden(t))
+    return index < visible.length ? full.indexOf(visible[index]) : full.length
+  }
 
   const move = useMutation({
     mutationFn: (m: { id: number; status: TaskStatus; index: number }) => window.api.tasks.move(m.id, m.status, m.index),
@@ -56,7 +68,7 @@ export function KanbanBoard({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: T
   return (
     <div className="grid grid-cols-3 gap-4">
       {COLUMNS.map((status) => {
-        const column = tasks.filter((t) => t.status === status).sort((a, b) => a.position - b.position)
+        const column = tasks.filter((t) => t.status === status && !hidden(t)).sort((a, b) => a.position - b.position)
         return (
           <section
             key={status}
@@ -73,7 +85,9 @@ export function KanbanBoard({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: T
             }}
             onDrop={(e) => {
               e.preventDefault()
-              if (dragging !== null && target) move.mutate({ id: dragging, ...target })
+              if (dragging !== null && target) {
+                move.mutate({ id: dragging, status: target.status, index: serverIndex(dragging, target.status, target.index) })
+              }
               setDragging(null)
               setTarget(null)
             }}
@@ -82,6 +96,11 @@ export function KanbanBoard({ tasks, onOpen }: { tasks: Task[]; onOpen: (task: T
               <span className={`size-2 rounded-full ${DOT[status]}`} />
               {TASK_STATUS_LABEL[status]}
               <span className="text-xs font-normal text-muted">{column.length}</span>
+              {status === 'todo' && futurePlanDays > 0 && (
+                <span className="ml-auto text-xs font-normal text-muted" title="Os próximos dias dos planos de estudo aparecem no Calendário">
+                  +{plural(futurePlanDays, 'dia', 'dias')} de planos no Calendário
+                </span>
+              )}
             </header>
 
             {status === 'todo' && (

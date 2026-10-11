@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { NEW_CARDS_PER_DAY } from '@shared/flashcards'
+import { DEFAULT_DECK_OPTIONS } from '@shared/srs'
+const NEW_CARDS_PER_DAY = DEFAULT_DECK_OPTIONS.newPerDay
 import { openDatabase, type Database } from '../../src/main/db/database'
 import { deleteCourse, insertScannedCourse } from '../../src/main/db/courses'
 import { getDashboard } from '../../src/main/db/dashboard'
@@ -13,8 +14,10 @@ import {
   getDeck,
   listDecks,
   nextStudyCard,
+  ensureMemoryStates,
   resetCard,
-  updateCard
+  updateCard,
+  updateDeck
 } from '../../src/main/db/flashcards'
 import { search } from '../../src/main/db/search'
 import { scanCourse } from '../../src/main/scanner/scan'
@@ -86,8 +89,11 @@ describe('fila de estudo', () => {
     expect(nextStudyCard(db, deckId, now).next?.card.id).toBe(b)
     expect(nextStudyCard(db, deckId, now + 10 * MIN).next?.card.id).toBe(b)
 
-    answerCard(db, a, 3, 5000, now + 10 * MIN, mid) // a gradua para 1 dia
-    expect(getDeck(db, deckId, now).cards.find((c) => c.id === a)).toMatchObject({ state: 'review', intervalDays: 1 })
+    answerCard(db, a, 3, 5000, now + 10 * MIN, mid) // a gradua para o intervalo do FSRS (alguns dias)
+    const graduated = getDeck(db, deckId, now).cards.find((c) => c.id === a)!
+    expect(graduated.state).toBe('review')
+    expect(graduated.intervalDays).toBeGreaterThanOrEqual(2)
+    expect(graduated.stability).toBeGreaterThan(2)
     expect(counts(now + 10 * MIN)).toEqual({ n: 0, l: 1, r: 0, total: 2 })
   })
 
@@ -109,11 +115,58 @@ describe('fila de estudo', () => {
     expect(counts().n).toBe(NEW_CARDS_PER_DAY)
 
     const first = getDeck(db, deckId, now).cards[0].id
-    answerCard(db, first, 4, 1000, now, mid) // Fácil: 4 dias
+    answerCard(db, first, 4, 1000, now, mid) // Fácil: 8 dias
     expect(counts().n).toBe(NEW_CARDS_PER_DAY - 1)
-    expect(counts(now + 3 * DAY).r).toBe(0)
-    expect(counts(now + 4 * DAY).r).toBe(1)
-    expect(counts(now + 4 * DAY).n).toBe(NEW_CARDS_PER_DAY) // novo dia, limite renovado
+    expect(counts(now + 7 * DAY).r).toBe(0)
+    expect(counts(now + 8 * DAY).r).toBe(1)
+    expect(counts(now + 8 * DAY).n).toBe(NEW_CARDS_PER_DAY) // novo dia, limite renovado
+  })
+
+  it('opções do baralho: limites diários, etapas e retenção', () => {
+    for (let i = 0; i < 8; i++) add(`c${i}`)
+    updateDeck(db, deckId, { title: 'Cálculo', description: '', options: { ...DEFAULT_DECK_OPTIONS, newPerDay: 3, learningStepsMin: [5] } })
+    expect(counts().n).toBe(3)
+    const next = nextStudyCard(db, deckId, now).next!
+    expect(next.intervals[1]).toBe(5 * MIN)
+    // Editar só o nome mantém as opções
+    updateDeck(db, deckId, { title: 'Cálculo I', description: '' })
+    expect(listDecks(db, now).find((d) => d.id === deckId)!.options).toMatchObject({ newPerDay: 3, learningStepsMin: [5] })
+    // Opções inválidas viram valores aceitos
+    updateDeck(db, deckId, { title: 'Cálculo I', description: '', options: { ...DEFAULT_DECK_OPTIONS, desiredRetention: 2 } })
+    expect(getDeck(db, deckId, now).options.desiredRetention).toBe(0.97)
+  })
+
+  it('cada resposta guarda a memória do FSRS na carta e no histórico', () => {
+    const a = add('a')
+    answerCard(db, a, 3, 1000, now, mid)
+    const card = getDeck(db, deckId, now).cards[0]
+    expect(card.stability).toBeCloseTo(2.3065, 3)
+    expect(card.difficulty).toBeGreaterThan(1)
+    const review = db.prepare('SELECT stability_after AS s, difficulty_after AS d FROM reviews WHERE card_id = ?').get(a) as { s: number; d: number }
+    expect(review.s).toBeCloseTo(card.stability!, 6)
+    expect(review.d).toBeCloseTo(card.difficulty!, 6)
+  })
+
+  it('cartas do SM-2 ganham memória pelo histórico ou pela facilidade, sem mudar a data', () => {
+    const a = add('a')
+    const b = add('b')
+    answerCard(db, a, 3, 1000, now, mid)
+    answerCard(db, a, 3, 1000, now + 10 * MIN, mid)
+    const expected = getDeck(db, deckId, now).cards.find((c) => c.id === a)!
+    // Como se tivessem sido agendadas antes do FSRS: sem memória; b veio de um pacote antigo, sem histórico.
+    db.prepare('UPDATE cards SET stability = NULL, difficulty = NULL WHERE id = ?').run(a)
+    db.prepare("UPDATE cards SET state = 'review', interval_days = 12, ease = 1.3, due = ?, last_review_at = ? WHERE id = ?").run(
+      now + 2 * DAY, now - 10 * DAY, b
+    )
+    expect(ensureMemoryStates(db)).toBe(2)
+    expect(ensureMemoryStates(db)).toBe(0)
+    const cards = getDeck(db, deckId, now).cards
+    const ca = cards.find((c) => c.id === a)!
+    const cb = cards.find((c) => c.id === b)!
+    expect(ca.stability).toBeCloseTo(expected.stability!, 6)
+    expect(ca.due).toBe(expected.due)
+    expect(cb).toMatchObject({ stability: 12, due: now + 2 * DAY })
+    expect(cb.difficulty).toBeCloseTo(9.8)
   })
 
   it('reset volta a carta para nova', () => {

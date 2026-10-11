@@ -6,6 +6,7 @@ import { plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { useToast } from '../Toast'
 import { TaskMeta } from './TaskMeta'
+import { PlanLessons } from './PlanLessons'
 
 /** Painel "Hoje" do Início: tarefas de hoje e atrasadas, concluídas com um clique. */
 export function TodayTasks() {
@@ -45,8 +46,9 @@ export function TodayTasks() {
               className="mt-0.5 size-4 cursor-pointer accent-[var(--accent)]"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-sm">{t.title}</p>
+              <p className="text-sm [overflow-wrap:anywhere]">{t.title}</p>
               <TaskMeta task={t} />
+              {t.planLessons && t.planLessons.length > 1 && <PlanLessons lessons={t.planLessons} compact limit={6} />}
             </div>
           </li>
         ))}

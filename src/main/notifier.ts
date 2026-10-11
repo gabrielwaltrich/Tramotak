@@ -5,6 +5,7 @@ import { dayKey } from '@shared/streak'
 import type { Database } from './db/database'
 import { dueToday } from './db/flashcards'
 import { takeBlockReminders, tasksForToday } from './db/planner'
+import { autoReplan } from './db/studyPlan'
 import { getInternal, getSettings, setInternal } from './db/settings'
 
 const CHECK_EVERY_MS = 30_000
@@ -31,16 +32,23 @@ function show(title: string, body: string, getWindow: () => BrowserWindow | unde
 export function startNotifier(db: Database, getWindow: () => BrowserWindow | undefined): () => void {
   const tick = () => {
     try {
+      const now = new Date()
+      // Uma vez por dia (e ao abrir): planos de estudo com aulas atrasadas são redistribuídos.
+      const today = dayKey(now)
+      if (getInternal(db, 'lastPlanCheckDate') !== today) {
+        setInternal(db, 'lastPlanCheckDate', today)
+        const replanned = autoReplan(db, now)
+        if (replanned.length) getWindow()?.webContents.send(IPC.plansChanged)
+      }
+
       const settings = getSettings(db)
       if (!settings.notificationsEnabled) return
-      const now = new Date()
 
       for (const task of takeBlockReminders(db, now, settings.notifyLeadMinutes)) {
         const when = settings.notifyLeadMinutes === 0 ? 'agora' : `às ${task.scheduledTime}`
         show(`Bloco de estudo ${when}`, [task.title, task.lessonTitle ?? task.courseTitle].filter(Boolean).join(' · '), getWindow)
       }
 
-      const today = dayKey(now)
       if (now.getHours() >= SUMMARY_HOUR && getInternal(db, 'lastSummaryDate') !== today) {
         setInternal(db, 'lastSummaryDate', today)
         const tasks = tasksForToday(db, now).length

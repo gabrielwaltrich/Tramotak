@@ -1,7 +1,8 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNext } from './flashcards'
-import type { Rating } from './srs'
+import type { DeckOptions, Rating } from './srs'
 import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
+import type { PlanPreview, PlanSettings, StudyPlanView } from './studyPlan'
 import type { HistoryEntry, HistoryFilter, ProgressData } from './progress'
 import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam, ExamSelection, ExamSettings } from './exams'
 import type { Question, QuestionAnswer, QuestionInput } from './questions'
@@ -118,6 +119,14 @@ export const IPC = {
   tasksDelete: 'tasks:delete',
   tasksToday: 'tasks:today',
   calendarRange: 'calendar:range',
+  plansList: 'plans:list',
+  plansGet: 'plans:get',
+  plansPreview: 'plans:preview',
+  plansSave: 'plans:save',
+  plansReplan: 'plans:replan',
+  plansDelete: 'plans:delete',
+  /** Evento: planos replanejados sozinhos (a interface recarrega as tarefas). */
+  plansChanged: 'plans:changed',
   statsGet: 'stats:get',
   statsHistory: 'stats:history',
   banksList: 'banks:list',
@@ -282,8 +291,9 @@ export interface TramotakApi {
   decks: {
     list(): Promise<DeckSummary[]>
     get(id: number): Promise<DeckDetail>
-    create(input: { title: string; description?: string; courseId?: number | null }): Promise<number>
-    update(id: number, patch: { title: string; description: string }): Promise<void>
+    create(input: { title: string; description?: string; courseId?: number | null; options?: DeckOptions }): Promise<number>
+    /** Sem `options`, mantém as opções atuais do baralho. */
+    update(id: number, patch: { title: string; description: string; options?: DeckOptions }): Promise<void>
     delete(id: number): Promise<void>
     /** Baralho ligado ao curso (cria um com o nome do curso se não houver). */
     forCourse(courseId: number): Promise<number>
@@ -310,6 +320,18 @@ export interface TramotakApi {
     delete(id: number): Promise<void>
     today(): Promise<Task[]>
     calendar(from: string, to: string): Promise<CalendarDay[]>
+  }
+  plans: {
+    list(): Promise<StudyPlanView[]>
+    get(courseId: number): Promise<StudyPlanView | null>
+    /** Calcula sem gravar; `start` é o primeiro dia ('AAAA-MM-DD', padrão hoje). */
+    preview(courseId: number, settings: PlanSettings, start?: string): Promise<PlanPreview>
+    /** Cria ou substitui o plano e refaz as tarefas pendentes dele no Planner. */
+    save(courseId: number, settings: PlanSettings, start?: string): Promise<StudyPlanView>
+    replan(courseId: number): Promise<StudyPlanView>
+    delete(courseId: number): Promise<void>
+    /** Planos replanejados sozinhos (virada do dia). Devolve o "desinscrever". */
+    onChanged(callback: () => void): () => void
   }
   banks: {
     list(): Promise<BankSummary[]>

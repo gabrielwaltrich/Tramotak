@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { CalendarRange, Trash2 } from 'lucide-react'
 import { TASK_STATUS_LABEL, type Task, type TaskInput, type TaskStatus } from '@shared/planner'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Modal } from '../Modal'
 import { Button } from '../Button'
 import { Label, TextArea, TextInput } from '../Field'
 import { useToast } from '../Toast'
+import { PlanLessons } from './PlanLessons'
 
 export type TaskDialogState = { mode: 'create'; preset?: Partial<TaskInput> } | { mode: 'edit'; task: Task } | null
 
@@ -99,6 +100,17 @@ function TaskForm({ state, onClose }: { state: NonNullable<TaskDialogState>; onC
         save.mutate()
       }}
     >
+      {state.mode === 'edit' && state.task.planLessons && (
+        <div className="rounded-lg border border-border bg-surface-2/40 p-3">
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted">
+            <CalendarRange size={14} /> Dia do plano de estudos{state.task.courseTitle ? ` de ${state.task.courseTitle}` : ''}
+          </p>
+          <PlanLessons lessons={state.task.planLessons} />
+          <p className="mt-2 text-xs text-muted">
+            Fica concluída sozinha quando todas as aulas forem concluídas. Ao replanejar, os dias pendentes do plano são refeitos.
+          </p>
+        </div>
+      )}
       <div>
         <Label htmlFor="task-title">Título</Label>
         <TextInput id="task-title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="Ex.: Revisar o módulo de limites" data-autofocus />

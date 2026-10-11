@@ -8,12 +8,13 @@ Windows, macOS e Linux.
 - **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele.
 - **Busca global:** barra de pesquisa no topo (ou `Ctrl+K` em qualquer tela) encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
-- **Flashcards:** repetição espaçada no estilo do Anki (SM-2); transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
+- **Flashcards:** repetição espaçada com o FSRS (o algoritmo do Anki atual), retenção desejada e limites por baralho; transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
 - **Questões e simulados:** bancos com 5 tipos de questão e fórmulas LaTeX, simulados cronometrados com anti-cola, correção e desempenho por tópico; importa e exporta JSON, CSV e GIFT (Moodle).
 - **Cadernos:** páginas com Markdown, fórmulas, desenho à mão (caneta com pressão) e links para o seu material; exporta PDF.
 - **Mapas mentais:** editor por teclado com layouts automáticos (árvore, organograma, radial), cores e anexos; exporta PNG e JSON.
 - **IA (dá para usar de graça):** converse com a IA sobre a aula (as respostas citam o momento do vídeo, com clique para pular até ele) e gere flashcards, questões, resumos e mapas mentais a partir do que é falado na aula, revise e salve. A IA usa só o conteúdo, nunca título, curso ou nomes de arquivos; a pesquisa na internet é opcional. Gemini grátis com a conta Google, login no OpenRouter (modelos grátis e pagos), modelos leves no seu computador pelo Ollama (Llama, Qwen, Gemma), chave do Claude ou qualquer API compatível com a OpenAI.
 - **Planner:** tarefas em quadro (arrastar e soltar) e calendário com as revisões previstas; avisos antes dos blocos de estudo.
+- **Plano de estudos:** escolha até quando quer terminar um curso (ou quantos minutos por dia) e as aulas são distribuídas no Planner; previsão de término pelo seu ritmo real e replanejamento quando atrasar.
 - **Progresso:** mapa de atividade, minutos dos últimos 30 dias contra a meta, progresso por curso e histórico.
 - **Backup e pacotes:** backup completo do banco (manual e automático diário) com restauração; pacotes `.tramotak` para levar baralhos, questões, cadernos, mapas e anotações a outro computador ou pessoa.
 - **Aparência:** estilos prontos (Tramotak, Foco, Noturno azul, Leitura, Claro) e ajustes de tema (Grafite, Meia-noite, Azul-marinho, Claro, Papel ou o do sistema), 8 cores de destaque, tamanho da interface, cantos, fonte com serifa para leitura e animações reduzidas.

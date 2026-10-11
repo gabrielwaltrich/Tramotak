@@ -140,7 +140,7 @@ export function MonthCalendar({ month, onMonth, selected, onSelect, onOpenTask, 
               {day.tasks.map((t) => (
                 <li key={t.id}>
                   <button type="button" onClick={() => onOpenTask(t)} className="w-full rounded-lg border border-border p-2.5 text-left hover:border-accent/50">
-                    <p className={t.status === 'done' ? 'text-muted line-through' : ''}>{t.title}</p>
+                    <p className={`line-clamp-3 [overflow-wrap:anywhere] ${t.status === 'done' ? 'text-muted line-through' : ''}`}>{t.title}</p>
                     <div className="mt-1">
                       <TaskMeta task={t} hideDate />
                     </div>

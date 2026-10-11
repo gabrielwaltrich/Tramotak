@@ -15,8 +15,9 @@ import { validateQuestion, type QuestionInput } from '@shared/questions'
 import type { ExamSelection, ExamSettings } from '@shared/exams'
 import type { TranscriptSegment } from '@shared/media'
 import { normalize } from '@shared/search'
+import { normalizeDeckOptions, type DeckOptions } from '@shared/srs'
 import { transaction, type Database } from '../db/database'
-import { createCard, createDeck } from '../db/flashcards'
+import { createCard, createDeck, ensureMemoryStates } from '../db/flashcards'
 import { createBank, createExam, createQuestion } from '../db/questions'
 import { createNotebook, createPage, savePage } from '../db/notebooks'
 import { createMindMap } from '../db/mindmaps'
@@ -54,6 +55,9 @@ interface PkgSchedule {
   reps: number
   lapses: number
   lastReviewAt: number | null
+  /** Memória do FSRS (pacotes da 0.6 em diante); sem ela, o app aproxima pelo intervalo e pela facilidade. */
+  stability?: number | null
+  difficulty?: number | null
 }
 
 export interface PkgDeck {
@@ -61,6 +65,8 @@ export interface PkgDeck {
   title: string
   description: string
   course: string | null
+  /** Opções do baralho (retenção, limites, etapas); pacotes antigos não têm. */
+  options?: DeckOptions
   cards: { front: string; back: string; ref: LessonRef | null; timestampSec: number | null; schedule?: PkgSchedule }[]
 }
 
@@ -143,14 +149,14 @@ export function buildPackage(db: Database, input: ExportSelection, appVersion: s
   const bankKeys = new Map(sel.bankIds.map((id, i) => [id, `b${i + 1}`]))
 
   const decks: PkgDeck[] = sel.deckIds.flatMap((id) => {
-    const deck = db.prepare('SELECT id, title, description, course_id AS courseId FROM decks WHERE id = ?').get(id) as
-      | { id: number; title: string; description: string; courseId: number | null }
-      | undefined
+    const deck = db
+      .prepare('SELECT id, title, description, course_id AS courseId, options_json AS optionsJson FROM decks WHERE id = ?')
+      .get(id) as { id: number; title: string; description: string; courseId: number | null; optionsJson: string } | undefined
     if (!deck) return []
     const cards = db
       .prepare(
         `SELECT front, back, lesson_id AS lessonId, timestamp_sec AS timestampSec, state, step, interval_days AS intervalDays, ease, due, reps, lapses,
-                last_review_at AS lastReviewAt FROM cards WHERE deck_id = ? ORDER BY id`
+                last_review_at AS lastReviewAt, stability, difficulty FROM cards WHERE deck_id = ? ORDER BY id`
       )
       .all(id) as unknown as (PkgSchedule & { front: string; back: string; lessonId: number | null; timestampSec: number | null })[]
     return [
@@ -159,6 +165,7 @@ export function buildPackage(db: Database, input: ExportSelection, appVersion: s
         title: deck.title,
         description: deck.description,
         course: deck.courseId !== null ? courseKey(deck.courseId) : null,
+        options: readOptions(deck.optionsJson),
         cards: cards.map(({ front, back, lessonId, timestampSec, ...schedule }) => ({
           front,
           back,
@@ -319,6 +326,17 @@ export function serializePackage(pkg: TramotakPackage): Buffer {
 const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : [])
 const text = (v: unknown, max = 100_000) => (typeof v === 'string' ? v.slice(0, max) : '')
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
+function readOptions(json: string): DeckOptions {
+  try {
+    return normalizeDeckOptions(JSON.parse(json))
+  } catch {
+    return normalizeDeckOptions({})
+  }
+}
+const positive = (v: unknown, max: number): number | null => {
+  const n = num(v)
+  return n !== null && n > 0 ? Math.min(max, n) : null
+}
 const key = (v: unknown) => (typeof v === 'string' && /^[a-z]\d{1,6}$/.test(v) ? v : null)
 
 function readRef(v: unknown): LessonRef | null {
@@ -402,6 +420,7 @@ export function parsePackage(buffer: Buffer): TramotakPackage {
         title: text(d.title, 200) || 'Baralho',
         description: text(d.description, 2000),
         course: key(d.course),
+        ...(d.options && typeof d.options === 'object' ? { options: normalizeDeckOptions(d.options) } : {}),
         cards: arr(d.cards).flatMap((c0) => {
           const c = c0 as Record<string, unknown>
           const front = text(c?.front, 10_000).trim()
@@ -417,7 +436,9 @@ export function parsePackage(buffer: Buffer): TramotakPackage {
                   due: Math.max(0, Math.round(num(s.due) ?? 0)),
                   reps: Math.max(0, Math.round(num(s.reps) ?? 0)),
                   lapses: Math.max(0, Math.round(num(s.lapses) ?? 0)),
-                  lastReviewAt: num(s.lastReviewAt)
+                  lastReviewAt: num(s.lastReviewAt),
+                  stability: positive(s.stability, 36500),
+                  difficulty: positive(s.difficulty, 10)
                 }
               : undefined
           return [{ front, back: text(c.back, 10_000), ref: readRef(c.ref), timestampSec: num(c.timestampSec), ...(schedule ? { schedule } : {}) }]
@@ -601,10 +622,11 @@ export function importPackage(db: Database, pkg: TramotakPackage, courseMap: Rec
 
     const deckIds = new Map<string, { id: number; title: string }>()
     const setSchedule = db.prepare(
-      'UPDATE cards SET state = ?, step = ?, interval_days = ?, ease = ?, due = ?, reps = ?, lapses = ?, last_review_at = ? WHERE id = ?'
+      `UPDATE cards SET state = ?, step = ?, interval_days = ?, ease = ?, due = ?, reps = ?, lapses = ?, last_review_at = ?,
+         stability = ?, difficulty = ? WHERE id = ?`
     )
     for (const d of pkg.decks) {
-      const deckId = createDeck(db, { title: d.title, description: d.description, courseId: target(d.course) })
+      const deckId = createDeck(db, { title: d.title, description: d.description, courseId: target(d.course), options: d.options })
       deckIds.set(d.key, { id: deckId, title: d.title })
       result.decks++
       for (const c of d.cards) {
@@ -613,11 +635,13 @@ export function importPackage(db: Database, pkg: TramotakPackage, courseMap: Rec
         const card = createCard(db, { deckId, front: c.front, back: c.back, lessonId: lesson?.id ?? null, timestampSec: lesson ? c.timestampSec : null })
         if (c.schedule) {
           const s = c.schedule
-          setSchedule.run(s.state, s.step, s.intervalDays, s.ease, s.due, s.reps, s.lapses, s.lastReviewAt, card.id)
+          const memory = s.state !== 'new' && s.stability && s.difficulty ? [s.stability, s.difficulty] : [null, null]
+          setSchedule.run(s.state, s.step, s.intervalDays, s.ease, s.due, s.reps, s.lapses, s.lastReviewAt, ...memory, card.id)
         }
         result.cards++
       }
     }
+    ensureMemoryStates(db)
 
     const bankIds = new Map<string, { id: number; title: string }>()
     for (const b of pkg.banks) {

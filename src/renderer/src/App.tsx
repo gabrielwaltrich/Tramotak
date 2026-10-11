@@ -46,6 +46,16 @@ export function App() {
     [queryClient]
   )
 
+  // Planos replanejados sozinhos na virada do dia: tarefas e planos voltam do banco.
+  useEffect(
+    () =>
+      window.api.plans.onChanged(() => {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.tasks })
+        void queryClient.invalidateQueries({ queryKey: queryKeys.plans })
+      }),
+    [queryClient]
+  )
+
   // Clique numa notificação do sistema abre a tela pedida pelo processo principal.
   useEffect(() => window.api.app.onNavigate((path) => navigate(path)), [navigate])
 

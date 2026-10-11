@@ -5,7 +5,7 @@ import { ArrowLeft, Loader2, MoreVertical, Pencil, PlayCircle, RotateCcw, Search
 import type { CardView, DeckDetail } from '@shared/flashcards'
 import { plural } from '@shared/format'
 import { matches } from '@shared/search'
-import { formatInterval } from '@shared/srs'
+import { calendarDays, formatInterval, retrievability } from '@shared/srs'
 import { errorMessage, queryKeys } from '../lib/api'
 import { Button } from '../components/Button'
 import { TextArea, TextInput } from '../components/Field'
@@ -32,6 +32,16 @@ function dueLabel(card: CardView): string | null {
   const now = Math.floor(Date.now() / 1000)
   const diff = card.due - now
   return diff <= 0 ? 'vence agora' : `em ${formatInterval(diff, now)}`
+}
+
+/** "Chance de lembrar hoje: 87% · memória de 12 dias · dificuldade 5,2 de 10" (FSRS). */
+function memoryHint(card: CardView): string | undefined {
+  if (card.state === 'new' || !card.stability || !card.difficulty) return undefined
+  const now = Math.floor(Date.now() / 1000)
+  const elapsed = card.lastReviewAt !== null ? calendarDays(card.lastReviewAt, now) : 0
+  const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
+  const chance = Math.round(retrievability(elapsed, card.stability) * 100)
+  return `Chance de lembrar hoje: ${chance}% · memória de ${formatInterval(card.stability * 86_400)} · dificuldade ${fmt(card.difficulty)} de 10`
 }
 
 const isSubmit = (e: React.KeyboardEvent) => e.key === 'Enter' && (e.ctrlKey || e.metaKey)
@@ -135,7 +145,9 @@ function CardRow({ card, deckId }: { card: CardView; deckId: number }) {
       <p className="line-clamp-3 text-sm whitespace-pre-wrap text-muted">{card.back || '—'}</p>
       <div className="flex items-center gap-2">
         <div className="text-right">
-          <span className={`rounded px-1.5 py-0.5 text-xs ${STATE_COLOR[card.state]}`}>{STATE_LABEL[card.state]}</span>
+          <span className={`rounded px-1.5 py-0.5 text-xs ${STATE_COLOR[card.state]}`} title={memoryHint(card)}>
+            {STATE_LABEL[card.state]}
+          </span>
           {due && <p className="mt-1 text-xs text-muted">{due}</p>}
           {card.lessonId !== null && (
             <Link

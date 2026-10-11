@@ -9,6 +9,7 @@ import { Button } from '../components/Button'
 import { KanbanBoard } from '../components/planner/KanbanBoard'
 import { MonthCalendar } from '../components/planner/MonthCalendar'
 import { TaskDialog, type TaskDialogState } from '../components/planner/TaskDialog'
+import { PlanCard } from '../components/planner/PlanCard'
 
 type View = 'kanban' | 'calendar'
 const VIEW_KEY = 'tramotak.planner.view'
@@ -20,6 +21,7 @@ export function PlannerPage() {
   const [month, setMonth] = useState({ year: now.getFullYear(), month: now.getMonth() })
   const [selected, setSelected] = useState(dayKey(now))
   const tasks = useQuery({ queryKey: queryKeys.tasks, queryFn: () => window.api.tasks.list(), staleTime: 0 })
+  const plans = useQuery({ queryKey: queryKeys.plans, queryFn: () => window.api.plans.list(), staleTime: 0 })
 
   const choose = (v: View) => {
     setView(v)
@@ -49,6 +51,13 @@ export function PlannerPage() {
           </Button>
         }
       />
+      {plans.data && plans.data.length > 0 && (
+        <div className="mb-6 grid gap-4 md:grid-cols-2">
+          {plans.data.map((plan) => (
+            <PlanCard key={plan.id} plan={plan} compact />
+          ))}
+        </div>
+      )}
       <div role="tablist" aria-label="Visão" className="mb-4 inline-flex rounded-lg border border-border p-1">
         {tab('kanban', 'Quadro', Columns3)}
         {tab('calendar', 'Calendário', CalendarDays)}

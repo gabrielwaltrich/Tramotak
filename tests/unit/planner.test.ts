@@ -86,13 +86,13 @@ describe('Hoje e calendário', () => {
     const easy = createCard(db, { deckId, front: 'fácil', back: '' })
     answerCard(db, easy.id, 4, 0, nowSec - 10 * 86_400, () => 0.5) // venceu há ~6 dias → conta hoje
     const good = createCard(db, { deckId, front: 'boa', back: '' })
-    answerCard(db, good.id, 4, 0, nowSec, () => 0.5) // vence em 4 dias
+    answerCard(db, good.id, 4, 0, nowSec, () => 0.5) // Fácil (FSRS): vence em 8 dias
 
-    const days = calendar(db, '2026-10-11', '2026-10-16', today)
+    const days = calendar(db, '2026-10-11', '2026-10-19', today)
     const byDate = Object.fromEntries(days.map((d) => [d.date, d]))
-    expect(days).toHaveLength(6)
+    expect(days).toHaveLength(9)
     expect(byDate['2026-10-11'].reviewsDue).toBe(1)
-    expect(byDate['2026-10-15'].reviewsDue).toBe(1)
+    expect(byDate['2026-10-19'].reviewsDue).toBe(1)
     expect(byDate['2026-10-12'].tasks.map((t) => t.title)).toEqual(['Bloco'])
     expect(byDate['2026-10-13'].dueTasks.map((t) => t.title)).toEqual(['Entrega'])
     expect(() => calendar(db, '2026-10-16', '2026-10-11', today)).toThrow('Período')

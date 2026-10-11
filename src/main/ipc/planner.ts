@@ -5,6 +5,7 @@ import type { HistoryFilter } from '@shared/progress'
 import type { Database } from '../db/database'
 import { calendar, createTask, deleteTask, listTasks, moveTask, setTaskDone, tasksForToday, updateTask } from '../db/planner'
 import { getProgress, watchHistory } from '../db/progress'
+import { deletePlan, getPlan, listPlans, previewPlan, replan, savePlan } from '../db/studyPlan'
 
 function assertId(id: unknown): number {
   if (!Number.isInteger(id)) throw new Error('Identificador inválido')
@@ -28,6 +29,18 @@ export function registerPlannerIpc(db: Database): void {
   ipcMain.handle(IPC.tasksDelete, (_e, id: number) => deleteTask(db, assertId(id)))
   ipcMain.handle(IPC.tasksToday, () => tasksForToday(db))
   ipcMain.handle(IPC.calendarRange, (_e, from: string, to: string) => calendar(db, from, to))
+
+  const start = (value: unknown) => (typeof value === 'string' ? value : undefined)
+  ipcMain.handle(IPC.plansList, () => listPlans(db))
+  ipcMain.handle(IPC.plansGet, (_e, courseId: number) => getPlan(db, assertId(courseId)))
+  ipcMain.handle(IPC.plansPreview, (_e, courseId: number, settings: unknown, first: unknown) =>
+    previewPlan(db, assertId(courseId), settings, start(first))
+  )
+  ipcMain.handle(IPC.plansSave, (_e, courseId: number, settings: unknown, first: unknown) =>
+    savePlan(db, assertId(courseId), settings, start(first))
+  )
+  ipcMain.handle(IPC.plansReplan, (_e, courseId: number) => replan(db, assertId(courseId)))
+  ipcMain.handle(IPC.plansDelete, (_e, courseId: number) => deletePlan(db, assertId(courseId)))
 
   ipcMain.handle(IPC.statsGet, () => getProgress(db))
   ipcMain.handle(IPC.statsHistory, (_e, filter: HistoryFilter) =>

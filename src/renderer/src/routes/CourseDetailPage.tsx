@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Mic, Play, PlayCircle, Type } from 'lucide-react'
+import { ArrowLeft, CalendarRange, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Mic, Play, PlayCircle, Type } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -10,6 +10,8 @@ import { Button } from '../components/Button'
 import { FormatCheckDialog } from '../components/media/FormatCheckDialog'
 import { TitleRulesDialog } from '../components/TitleRulesDialog'
 import { TranscribeCourseDialog } from '../components/media/TranscribeCourseDialog'
+import { PlanCard } from '../components/planner/PlanCard'
+import { StudyPlanDialog } from '../components/planner/StudyPlanDialog'
 
 function countLessons(m: CourseModuleNode): { total: number; done: number } {
   return m.children.reduce(
@@ -80,7 +82,9 @@ export function CourseDetailPage() {
   const [checking, setChecking] = useState(false)
   const [naming, setNaming] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
+  const [planning, setPlanning] = useState(false)
   const course = useQuery({ queryKey: queryKeys.course(id), queryFn: () => window.api.courses.get(id) })
+  const plan = useQuery({ queryKey: queryKeys.plan(id), queryFn: () => window.api.plans.get(id), staleTime: 0 })
   const measuring = useCourseDurations(id)
 
   if (course.isPending) {
@@ -135,6 +139,29 @@ export function CourseDetailPage() {
         </div>
       </header>
 
+      {plan.data ? (
+        <div className="mb-6">
+          <PlanCard plan={plan.data} onEdit={() => setPlanning(true)} />
+        </div>
+      ) : (
+        plan.isSuccess &&
+        c.completedCount < c.lessonCount && (
+          <button
+            type="button"
+            onClick={() => setPlanning(true)}
+            className="mb-6 flex w-full items-center gap-3 rounded-xl border border-dashed border-border p-4 text-left hover:border-accent/60"
+          >
+            <CalendarRange size={20} className="shrink-0 text-accent" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium">Criar plano de estudos</span>
+              <span className="block text-xs text-muted">
+                Escolha até quando quer terminar (ou quanto tempo por dia) e as aulas são distribuídas no Planner.
+              </span>
+            </span>
+          </button>
+        )
+      )}
+
       {c.lessons.length > 0 && (
         <ul className="mb-3 space-y-0.5 rounded-lg border border-border bg-surface p-2">
           {c.lessons.map((l) => (
@@ -150,6 +177,7 @@ export function CourseDetailPage() {
       <FormatCheckDialog courseId={c.id} open={checking} onClose={() => setChecking(false)} />
       {naming && <TitleRulesDialog course={c} open onClose={() => setNaming(false)} />}
       {transcribing && <TranscribeCourseDialog courseId={c.id} onClose={() => setTranscribing(false)} />}
+      {planning && <StudyPlanDialog courseId={c.id} courseTitle={c.title} plan={plan.data ?? null} onClose={() => setPlanning(false)} />}
     </div>
   )
 }

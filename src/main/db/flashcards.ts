@@ -1,14 +1,24 @@
 import {
   MAX_CARD_FIELD,
-  NEW_CARDS_PER_DAY,
-  REVIEWS_PER_DAY,
   type CardView,
   type DeckDetail,
   type DeckSummary,
   type NewCard,
   type StudyNext
 } from '@shared/flashcards'
-import { previewIntervals, schedule, startOfLocalDay, type CardState, type Rating, type SchedulingState } from '@shared/srs'
+import {
+  memoryFromHistory,
+  memoryFromSm2,
+  normalizeDeckOptions,
+  previewIntervals,
+  schedule,
+  startOfLocalDay,
+  type CardState,
+  type DeckOptions,
+  type Rating,
+  type ReviewRecord,
+  type SchedulingState
+} from '@shared/srs'
 import { transaction, type Database } from './database'
 import { recordStudyTime } from './study'
 
@@ -46,12 +56,27 @@ interface DeckRow {
   description: string
   courseId: number | null
   courseTitle: string | null
+  optionsJson: string
 }
 
-const DECK_SELECT = `SELECT d.id, d.title, d.description, d.course_id AS courseId, c.title AS courseTitle
+const DECK_SELECT = `SELECT d.id, d.title, d.description, d.course_id AS courseId, c.title AS courseTitle,
+    d.options_json AS optionsJson
   FROM decks d LEFT JOIN courses c ON c.id = d.course_id`
 
-function deckCounts(db: Database, deckId: number, now: number) {
+function parseOptions(json: string | null | undefined): DeckOptions {
+  try {
+    return normalizeDeckOptions(JSON.parse(json || '{}'))
+  } catch {
+    return normalizeDeckOptions({})
+  }
+}
+
+function deckOptions(db: Database, deckId: number): DeckOptions {
+  const row = db.prepare('SELECT options_json AS json FROM decks WHERE id = ?').get(deckId) as { json: string } | undefined
+  return parseOptions(row?.json)
+}
+
+function deckCounts(db: Database, deckId: number, now: number, options: DeckOptions) {
   const dayStart = startOfLocalDay(now)
   const dayEnd = endOfLocalDay(now)
   const row = db
@@ -73,14 +98,15 @@ function deckCounts(db: Database, deckId: number, now: number) {
 
   return {
     total: row.total,
-    newCount: Math.min(row.newTotal ?? 0, Math.max(0, NEW_CARDS_PER_DAY - (today.newDone ?? 0))),
+    newCount: Math.min(row.newTotal ?? 0, Math.max(0, options.newPerDay - (today.newDone ?? 0))),
     learningCount: row.learning ?? 0,
-    reviewCount: Math.min(row.reviewDue ?? 0, Math.max(0, REVIEWS_PER_DAY - (today.reviewsDone ?? 0)))
+    reviewCount: Math.min(row.reviewDue ?? 0, Math.max(0, options.reviewsPerDay - (today.reviewsDone ?? 0)))
   }
 }
 
-function summarize(db: Database, row: DeckRow, now: number): DeckSummary {
-  return { ...row, ...deckCounts(db, row.id, now) }
+function summarize(db: Database, { optionsJson, ...row }: DeckRow, now: number): DeckSummary {
+  const options = parseOptions(optionsJson)
+  return { ...row, options, ...deckCounts(db, row.id, now, options) }
 }
 
 export function listDecks(db: Database, now = nowSec()): DeckSummary[] {
@@ -94,17 +120,26 @@ function getDeckRow(db: Database, deckId: number): DeckRow {
   return row
 }
 
-export function createDeck(db: Database, input: { title: string; description?: string; courseId?: number | null }): number {
+export function createDeck(
+  db: Database,
+  input: { title: string; description?: string; courseId?: number | null; options?: Partial<DeckOptions> }
+): number {
   const { lastInsertRowid } = db
-    .prepare('INSERT INTO decks (title, description, course_id) VALUES (?, ?, ?)')
-    .run(cleanTitle(input.title), String(input.description ?? '').trim(), input.courseId ?? null)
+    .prepare('INSERT INTO decks (title, description, course_id, options_json) VALUES (?, ?, ?, ?)')
+    .run(cleanTitle(input.title), String(input.description ?? '').trim(), input.courseId ?? null, JSON.stringify(normalizeDeckOptions(input.options)))
   return Number(lastInsertRowid)
 }
 
-export function updateDeck(db: Database, deckId: number, patch: { title: string; description: string }): void {
+/** Atualiza nome, descrição e (se vierem) as opções. Opções novas valem a partir da próxima resposta. */
+export function updateDeck(
+  db: Database,
+  deckId: number,
+  patch: { title: string; description: string; options?: Partial<DeckOptions> }
+): void {
+  const options = patch.options === undefined ? deckOptions(db, deckId) : normalizeDeckOptions(patch.options)
   const { changes } = db
-    .prepare('UPDATE decks SET title = ?, description = ?, updated_at = unixepoch() WHERE id = ?')
-    .run(cleanTitle(patch.title), String(patch.description ?? '').trim(), deckId)
+    .prepare('UPDATE decks SET title = ?, description = ?, options_json = ?, updated_at = unixepoch() WHERE id = ?')
+    .run(cleanTitle(patch.title), String(patch.description ?? '').trim(), JSON.stringify(options), deckId)
   if (!changes) throw new Error('Baralho não encontrado')
 }
 
@@ -126,7 +161,7 @@ export function deckForCourse(db: Database, courseId: number): number {
 // ── Cartas ──────────────────────────────────────────────────────────────────
 
 const CARD_SELECT = `SELECT k.id, k.deck_id AS deckId, k.front, k.back, k.state, k.due, k.interval_days AS intervalDays,
-    k.lesson_id AS lessonId, l.title AS lessonTitle, l.course_id AS courseId, k.timestamp_sec AS timestampSec
+    k.stability, k.difficulty, k.last_review_at AS lastReviewAt, k.lesson_id AS lessonId, l.title AS lessonTitle, l.course_id AS courseId, k.timestamp_sec AS timestampSec
   FROM cards k LEFT JOIN lessons l ON l.id = k.lesson_id`
 
 export function getDeck(db: Database, deckId: number, now = nowSec()): DeckDetail {
@@ -168,7 +203,7 @@ export function deleteCard(db: Database, cardId: number): void {
 export function resetCard(db: Database, cardId: number): void {
   db.prepare(
     `UPDATE cards SET state = 'new', step = 0, interval_days = 0, ease = 2.5, due = 0, reps = 0, lapses = 0,
-       last_review_at = NULL, updated_at = unixepoch() WHERE id = ?`
+       last_review_at = NULL, stability = NULL, difficulty = NULL, updated_at = unixepoch() WHERE id = ?`
   ).run(cardId)
 }
 
@@ -184,15 +219,45 @@ interface SchedulingRow {
   reps: number
   lapses: number
   lastReviewAt: number | null
+  stability: number | null
+  difficulty: number | null
 }
 
 const SCHED_SELECT = `SELECT id, state, step, interval_days AS intervalDays, ease, due, reps, lapses,
-  last_review_at AS lastReviewAt FROM cards`
+  last_review_at AS lastReviewAt, stability, difficulty FROM cards`
 
 function toState(row: SchedulingRow): SchedulingState {
-  const { id: _id, ...state } = row
+  const { id: _id, ease, ...state } = row
   void _id
+  // Carta agendada pelo SM-2 que ainda não ganhou memória do FSRS (ex.: importada agora).
+  if (state.state !== 'new' && (!state.stability || !state.difficulty)) {
+    return { ...state, ...memoryFromSm2(state.intervalDays, ease) }
+  }
   return state
+}
+
+/**
+ * Calcula a memória do FSRS das cartas já estudadas que ainda não a têm: refaz o histórico de respostas ou,
+ * sem histórico (cartas importadas do Anki ou de pacotes), aproxima pelo intervalo e pela facilidade do SM-2.
+ * Não muda as datas já marcadas. Roda ao abrir o app e depois de importações; devolve quantas cartas mudaram.
+ */
+export function ensureMemoryStates(db: Database): number {
+  const rows = db
+    .prepare(`${SCHED_SELECT} WHERE state != 'new' AND (stability IS NULL OR difficulty IS NULL)`)
+    .all() as unknown as SchedulingRow[]
+  if (rows.length === 0) return 0
+  const history = db.prepare(
+    `SELECT rating, reviewed_at AS reviewedAt, state_before AS stateBefore, interval_before AS intervalBefore
+       FROM reviews WHERE card_id = ? ORDER BY reviewed_at, id`
+  )
+  const update = db.prepare('UPDATE cards SET stability = ?, difficulty = ? WHERE id = ?')
+  transaction(db, () => {
+    for (const row of rows) {
+      const memory = memoryFromHistory(history.all(row.id) as unknown as ReviewRecord[]) ?? memoryFromSm2(row.intervalDays, row.ease)
+      update.run(memory.stability, memory.difficulty, row.id)
+    }
+  })
+  return rows.length
 }
 
 /**
@@ -200,8 +265,8 @@ function toState(row: SchedulingRow): SchedulingState {
  * aprendizado que vence em breve (adiantado só quando não sobra mais nada).
  */
 export function nextStudyCard(db: Database, deckId: number, now = nowSec()): StudyNext {
-  getDeckRow(db, deckId)
-  const counts = deckCounts(db, deckId, now)
+  const options = parseOptions(getDeckRow(db, deckId).optionsJson)
+  const counts = deckCounts(db, deckId, now, options)
   const dayEnd = endOfLocalDay(now)
   const pick = (sql: string, ...params: (number | string)[]) =>
     db.prepare(`${SCHED_SELECT} WHERE deck_id = ? AND ${sql} LIMIT 1`).get(deckId, ...params) as unknown as SchedulingRow | undefined
@@ -222,7 +287,7 @@ export function nextStudyCard(db: Database, deckId: number, now = nowSec()): Stu
   return {
     next: {
       card: getCard(db, row.id),
-      intervals: previewIntervals(toState(row), now),
+      intervals: previewIntervals(toState(row), now, options),
       counts: { newCount: counts.newCount, learningCount: counts.learningCount, reviewCount: counts.reviewCount }
     },
     nextLearningAt: null
@@ -241,19 +306,23 @@ export function answerCard(
   if (![1, 2, 3, 4].includes(rating)) throw new Error('Resposta inválida')
   const row = db.prepare(`${SCHED_SELECT} WHERE id = ?`).get(cardId) as unknown as SchedulingRow | undefined
   if (!row) throw new Error('Carta não encontrada')
+  const { deckId } = db.prepare('SELECT deck_id AS deckId FROM cards WHERE id = ?').get(cardId) as { deckId: number }
   const before = toState(row)
-  const after = schedule(before, rating, now, { random })
+  const after = schedule(before, rating, now, { options: deckOptions(db, deckId), random })
   const duration = Math.min(MAX_ANSWER_MS, Math.max(0, Math.round(durationMs || 0)))
 
   transaction(db, () => {
     db.prepare(
-      `UPDATE cards SET state = ?, step = ?, interval_days = ?, ease = ?, due = ?, reps = ?, lapses = ?,
-         last_review_at = ? WHERE id = ?`
-    ).run(after.state, after.step, after.intervalDays, after.ease, after.due, after.reps, after.lapses, after.lastReviewAt, cardId)
+      `UPDATE cards SET state = ?, step = ?, interval_days = ?, due = ?, reps = ?, lapses = ?, last_review_at = ?,
+         stability = ?, difficulty = ? WHERE id = ?`
+    ).run(after.state, after.step, after.intervalDays, after.due, after.reps, after.lapses, after.lastReviewAt,
+      after.stability, after.difficulty, cardId)
+    // ease_after fica com a facilidade antiga da carta (coluna da época do SM-2).
     db.prepare(
-      `INSERT INTO reviews (card_id, reviewed_at, rating, state_before, interval_before, interval_after, ease_after, duration_ms)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    ).run(cardId, now, rating, before.state, before.intervalDays, after.intervalDays, after.ease, duration)
+      `INSERT INTO reviews (card_id, reviewed_at, rating, state_before, interval_before, interval_after, ease_after, duration_ms,
+         stability_after, difficulty_after)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).run(cardId, now, rating, before.state, before.intervalDays, after.intervalDays, row.ease, duration, after.stability, after.difficulty)
     recordStudyTime(db, null, duration / 1000, now)
   })
 }

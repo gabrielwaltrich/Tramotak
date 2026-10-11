@@ -18,6 +18,8 @@ export const queryKeys = {
   tasks: ['tasks'] as const,
   tasksToday: ['tasks', 'today'] as const,
   calendar: (from: string, to: string) => ['tasks', 'calendar', from, to] as const,
+  plans: ['plans'] as const,
+  plan: (courseId: number) => ['plans', courseId] as const,
   stats: ['stats'] as const,
   history: (filter: object) => ['stats', 'history', filter] as const
 }

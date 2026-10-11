@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type { NewCard } from '@shared/flashcards'
 import { IPC } from '@shared/ipc'
-import type { Rating } from '@shared/srs'
+import type { DeckOptions, Rating } from '@shared/srs'
 import type { Database } from '../db/database'
 import {
   answerCard,
@@ -29,11 +29,11 @@ const optionalId = (id: unknown) => (id === null || id === undefined ? null : as
 export function registerFlashcardIpc(db: Database): void {
   ipcMain.handle(IPC.decksList, () => listDecks(db))
   ipcMain.handle(IPC.decksGet, (_e, id: number) => getDeck(db, assertId(id)))
-  ipcMain.handle(IPC.decksCreate, (_e, input: { title: string; description?: string; courseId?: number | null }) =>
-    createDeck(db, { title: input?.title, description: input?.description, courseId: optionalId(input?.courseId) })
+  ipcMain.handle(IPC.decksCreate, (_e, input: { title: string; description?: string; courseId?: number | null; options?: DeckOptions }) =>
+    createDeck(db, { title: input?.title, description: input?.description, courseId: optionalId(input?.courseId), options: input?.options })
   )
-  ipcMain.handle(IPC.decksUpdate, (_e, id: number, patch: { title: string; description: string }) =>
-    updateDeck(db, assertId(id), { title: patch?.title, description: patch?.description })
+  ipcMain.handle(IPC.decksUpdate, (_e, id: number, patch: { title: string; description: string; options?: DeckOptions }) =>
+    updateDeck(db, assertId(id), { title: patch?.title, description: patch?.description, options: patch?.options })
   )
   ipcMain.handle(IPC.decksDelete, (_e, id: number) => deleteDeck(db, assertId(id)))
   ipcMain.handle(IPC.decksForCourse, (_e, courseId: number) => deckForCourse(db, assertId(courseId)))

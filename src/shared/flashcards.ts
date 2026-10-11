@@ -1,4 +1,4 @@
-import type { CardState, Rating } from './srs'
+import type { CardState, DeckOptions, Rating } from './srs'
 
 export interface DeckSummary {
   id: number
@@ -6,6 +6,7 @@ export interface DeckSummary {
   description: string
   courseId: number | null
   courseTitle: string | null
+  options: DeckOptions
   total: number
   /** Cartas novas liberadas hoje (respeitando o limite diário). */
   newCount: number
@@ -23,6 +24,10 @@ export interface CardView {
   state: CardState
   due: number
   intervalDays: number
+  /** Memória do FSRS (null em cartas novas). */
+  stability: number | null
+  difficulty: number | null
+  lastReviewAt: number | null
   lessonId: number | null
   lessonTitle: string | null
   courseId: number | null
@@ -61,6 +66,4 @@ export interface ImportResult {
   skipped: number
 }
 
-export const NEW_CARDS_PER_DAY = 20
-export const REVIEWS_PER_DAY = 200
 export const MAX_CARD_FIELD = 10_000

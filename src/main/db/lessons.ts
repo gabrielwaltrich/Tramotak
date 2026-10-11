@@ -4,6 +4,7 @@ import { mediaUrl } from '@shared/media'
 import { getCourseDetail, orderedLessons } from './courses'
 import { transaction, type Database } from './database'
 import { recordStudyTime } from './study'
+import { syncPlanTasks } from './studyPlan'
 
 /** Caminho absoluto dentro da raiz do curso; recusa qualquer coisa que escape dela. */
 export function resolveInside(root: string, relPath: string): string {
@@ -141,6 +142,8 @@ export function setCompleted(db: Database, lessonId: number, value: boolean, now
   assertLesson(db, lessonId)
   ensureProgressRow(db, lessonId)
   db.prepare('UPDATE lesson_progress SET completed_at = ? WHERE lesson_id = ?').run(value ? now : null, lessonId)
+  // O dia do plano de estudos com todas as aulas feitas vira tarefa concluída.
+  if (value) syncPlanTasks(db, lessonId, now)
 }
 
 export function setFavorite(db: Database, lessonId: number, value: boolean): void {

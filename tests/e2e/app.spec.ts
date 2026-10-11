@@ -161,15 +161,17 @@ test('flashcards: anotação vira carta, estudo com teclado e link de volta para
   await expect(page.getByText('Minha primeira anotação')).toBeVisible()
   await page.keyboard.press('Space')
   await expect(page.getByText('Resposta da carta')).toBeVisible()
-  await expect(page.getByRole('button', { name: /Fácil\s*4 dias/ })).toBeVisible()
+  // FSRS: carta nova respondida "Fácil" vai para ~8 dias (a prévia não tem variação aleatória)
+  await expect(page.getByRole('button', { name: /Fácil\s*8 dias/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Ver na aula: Boas-vindas/ })).toHaveAttribute('href', /#\/lesson\/\d+\?t=\d+/)
   await page.keyboard.press('4')
   await expect(page.getByText('Parabéns! Você terminou este baralho por hoje.')).toBeVisible()
 
-  // A carta passou a ser revisão, para daqui a 4 dias
+  // A carta passou a ser revisão, para daqui a 6–10 dias (8 com a variação aleatória)
   await page.getByRole('link', { name: 'Ver baralho' }).click()
   await expect(page.getByText('Revisão')).toBeVisible()
-  await expect(page.getByText('em 4 dias')).toBeVisible()
+  await expect(page.getByText(/^em (6|7|8|9|10) dias$/)).toBeVisible()
+  await expect(page.getByText('Revisão')).toHaveAttribute('title', /Chance de lembrar hoje: 100%/)
   await app.close()
 })
 
@@ -212,6 +214,43 @@ test('planner e progresso: tarefa de hoje aparece no Início e conclui de lá; p
   await expect(page.getByRole('link', { name: /Boas-vindas/ })).toBeVisible()
   await page.getByLabel('Filtrar histórico').fill('nada disso existe')
   await expect(page.getByText('Nenhuma aula encontrada.')).toBeVisible()
+  await app.close()
+})
+
+test('plano de estudos: prévia, aulas distribuídas no Planner e no Início, e apagar', async () => {
+  const { app, page } = await launch()
+  await page.getByRole('link', { name: 'Meus Cursos' }).click()
+  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: /Criar plano de estudos/ }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('radio', { name: 'Minutos por dia' }).click()
+  await dialog.getByRole('button', { name: '15 min' }).click()
+  // Todos os dias da semana, para hoje ter aula em qualquer dia em que o teste rodar
+  for (const day of ['Dom', 'Sáb']) await dialog.getByRole('button', { name: day, exact: true }).click()
+  await expect(dialog.getByText('Aulas que faltam')).toBeVisible()
+  await expect(dialog.getByText('Termina em')).toBeVisible()
+  await dialog.getByRole('button', { name: 'Criar plano', exact: true }).click()
+  await expect(page.getByText(/Plano salvo: termina em/)).toBeVisible()
+
+  const card = page.getByRole('region', { name: 'Plano de estudos de Curso E2E' })
+  await expect(card.getByText(/^Termina em/)).toBeVisible()
+  await expect(card.getByText(/^Hoje ·/)).toBeVisible()
+  await expect(card.getByRole('link', { name: /Segunda aula/ })).toBeVisible()
+
+  // Planner e Início mostram o dia de hoje do plano, com as aulas
+  await page.getByRole('link', { name: 'Planner' }).click()
+  await expect(page.getByRole('region', { name: 'Plano de estudos de Curso E2E' })).toBeVisible()
+  await page.getByRole('link', { name: 'Início' }).click()
+  await page.getByRole('link', { name: /Segunda aula/ }).first().click()
+  await expect(page.getByRole('heading', { name: /Segunda aula/ })).toBeVisible()
+
+  // Apagar o plano tira as tarefas pendentes dele
+  await page.getByRole('link', { name: 'Meus Cursos' }).click()
+  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: 'Editar' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Apagar plano' }).click()
+  await expect(page.getByText(/Plano apagado/)).toBeVisible()
+  await expect(page.getByRole('button', { name: /Criar plano de estudos/ })).toBeVisible()
   await app.close()
 })
 

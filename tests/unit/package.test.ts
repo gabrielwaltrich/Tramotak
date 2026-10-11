@@ -7,6 +7,7 @@ import { createNote, listNotes } from '../../src/main/db/notes'
 import { saveProgress, setCompleted, setFavorite } from '../../src/main/db/lessons'
 import { getTranscript, saveTranscript } from '../../src/main/db/media'
 import { createCard, createDeck, getDeck, answerCard } from '../../src/main/db/flashcards'
+import { DEFAULT_DECK_OPTIONS } from '@shared/srs'
 import { createBank, createExam, createQuestion, listExams, listQuestions } from '../../src/main/db/questions'
 import { createNotebook, createPage, notebookPages, savePage } from '../../src/main/db/notebooks'
 import { createMindMap, getMindMap } from '../../src/main/db/mindmaps'
@@ -52,7 +53,7 @@ describe('pacotes de estudo', () => {
     setFavorite(a, intro, true)
     saveTranscript(a, intro, { provider: 'groq', model: 'w', language: 'pt', segments: [{ start: 0, end: 2, text: 'olá' }] })
 
-    const deckId = createDeck(a, { title: 'Cartas de cálculo', courseId: src.courseId })
+    const deckId = createDeck(a, { title: 'Cartas de cálculo', courseId: src.courseId, options: { ...DEFAULT_DECK_OPTIONS, desiredRetention: 0.85, newPerDay: 7 } })
     const card = createCard(a, { deckId, front: 'O que é limite?', back: 'Aproximação', lessonId: intro, timestampSec: 30 })
     answerCard(a, card.id, 3, 5000)
     createCard(a, { deckId, front: 'Carta solta', back: 'sem aula' })
@@ -112,6 +113,10 @@ describe('pacotes de estudo', () => {
     const linked = deckB.cards.find((c) => c.front === 'O que é limite?')!
     expect(linked).toMatchObject({ lessonId: introB, timestampSec: 30 })
     expect(linked.state).not.toBe('new') // agendamento veio junto
+    const original = getDeck(a, deckId).cards.find((c) => c.front === 'O que é limite?')!
+    expect(linked.stability).toBeCloseTo(original.stability!, 6) // e a memória do FSRS
+    expect(linked.difficulty).toBeCloseTo(original.difficulty!, 6)
+    expect(deckB.options).toMatchObject({ desiredRetention: 0.85, newPerDay: 7 })
 
     const bankB = (b.prepare('SELECT id FROM question_banks').get() as { id: number }).id
     const questionsB = listQuestions(b, bankB)

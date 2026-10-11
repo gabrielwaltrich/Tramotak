@@ -369,5 +369,34 @@ export const MIGRATIONS: string[] = [
   `,
   /* 10 — regras de nomes por curso (JSON; NULL = títulos como antes) */ `
   ALTER TABLE courses ADD COLUMN title_rules TEXT;
+  `,
+  /* 11 — FSRS (memória das cartas, opções por baralho) e plano de estudos por curso.
+     A memória das cartas já estudadas é calculada pelo app a partir do histórico (ensureMemoryStates). */ `
+  ALTER TABLE cards ADD COLUMN stability REAL;
+  ALTER TABLE cards ADD COLUMN difficulty REAL;
+  ALTER TABLE reviews ADD COLUMN stability_after REAL;
+  ALTER TABLE reviews ADD COLUMN difficulty_after REAL;
+  ALTER TABLE decks ADD COLUMN options_json TEXT NOT NULL DEFAULT '{}';
+
+  CREATE TABLE study_plans (
+    id            INTEGER PRIMARY KEY,
+    course_id     INTEGER NOT NULL UNIQUE REFERENCES courses(id) ON DELETE CASCADE,
+    settings_json TEXT    NOT NULL,
+    created_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at    INTEGER NOT NULL DEFAULT (unixepoch()),
+    replanned_at  INTEGER
+  );
+
+  -- Tarefas geradas pelo plano: uma por dia, com as aulas daquele dia.
+  ALTER TABLE tasks ADD COLUMN plan_id INTEGER REFERENCES study_plans(id) ON DELETE CASCADE;
+  CREATE INDEX tasks_plan ON tasks(plan_id, scheduled_date);
+
+  CREATE TABLE plan_lessons (
+    task_id   INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    lesson_id INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    position  INTEGER NOT NULL,
+    PRIMARY KEY (task_id, lesson_id)
+  );
+  CREATE INDEX plan_lessons_lesson ON plan_lessons(lesson_id);
   `
 ]

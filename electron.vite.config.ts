@@ -18,6 +18,11 @@ export default defineConfig({
     resolve: {
       alias: { ...shared, '@renderer': resolve('src/renderer/src') }
     },
-    plugins: [react(), tailwindcss()]
+    plugins: [react(), tailwindcss()],
+    // Fontes viram arquivo em vez de data: URI, para o CSP não precisar de font-src data:
+    build: {
+      assetsInlineLimit: (filePath: string) =>
+        /\.(woff2?|ttf|otf|eot)$/.test(filePath) ? false : undefined
+    }
   }
 })

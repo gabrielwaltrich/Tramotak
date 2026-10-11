@@ -1,4 +1,5 @@
 import { isDateKey, isTime, parseDateKey, type CalendarDay, type Task, type TaskInput, type TaskStatus } from '@shared/planner'
+import type { PlanLessonRef } from '@shared/studyPlan'
 import { dayKey } from '@shared/streak'
 import { transaction, type Database } from './database'
 
@@ -10,7 +11,7 @@ const nowSec = () => Math.floor(Date.now() / 1000)
 const TASK_SELECT = `SELECT t.id, t.title, t.description, t.status, t.position,
     t.scheduled_date AS scheduledDate, t.scheduled_time AS scheduledTime, t.duration_min AS durationMin,
     t.due_date AS dueDate, t.course_id AS courseId, c.title AS courseTitle,
-    t.lesson_id AS lessonId, l.title AS lessonTitle, t.completed_at AS completedAt
+    t.lesson_id AS lessonId, l.title AS lessonTitle, t.completed_at AS completedAt, t.plan_id AS planId
   FROM tasks t LEFT JOIN courses c ON c.id = t.course_id LEFT JOIN lessons l ON l.id = t.lesson_id`
 
 interface CleanInput {
@@ -61,16 +62,38 @@ function clean(db: Database, input: TaskInput): CleanInput {
   return { title: title.slice(0, 300), description: String(input.description ?? '').trim(), scheduledDate, scheduledTime, durationMin, dueDate, courseId, lessonId }
 }
 
+/** Preenche as aulas das tarefas geradas por planos de estudo (uma consulta para todas). */
+function withPlanLessons(db: Database, tasks: Task[]): Task[] {
+  const planTasks = tasks.filter((t) => t.planId !== null)
+  const byTask = new Map<number, PlanLessonRef[]>()
+  if (planTasks.length > 0) {
+    const rows = db
+      .prepare(
+        `SELECT pl.task_id AS taskId, l.id, l.title, (p.completed_at IS NOT NULL) AS completed
+           FROM plan_lessons pl JOIN lessons l ON l.id = pl.lesson_id LEFT JOIN lesson_progress p ON p.lesson_id = l.id
+          WHERE pl.task_id IN (SELECT value FROM json_each(?)) ORDER BY pl.task_id, pl.position`
+      )
+      .all(JSON.stringify(planTasks.map((t) => t.id))) as { taskId: number; id: number; title: string; completed: number }[]
+    for (const r of rows) {
+      const list = byTask.get(r.taskId) ?? []
+      list.push({ id: r.id, title: r.title, completed: Boolean(r.completed) })
+      byTask.set(r.taskId, list)
+    }
+  }
+  return tasks.map((t) => ({ ...t, planLessons: t.planId !== null ? (byTask.get(t.id) ?? []) : null }))
+}
+
 export function getTask(db: Database, id: number): Task {
   const task = db.prepare(`${TASK_SELECT} WHERE t.id = ?`).get(id) as unknown as Task | undefined
   if (!task) throw new Error('Tarefa não encontrada')
-  return task
+  return withPlanLessons(db, [task])[0]
 }
 
 export function listTasks(db: Database): Task[] {
-  return db
+  const tasks = db
     .prepare(`${TASK_SELECT} ORDER BY CASE t.status WHEN 'todo' THEN 0 WHEN 'doing' THEN 1 ELSE 2 END, t.position, t.id`)
     .all() as unknown as Task[]
+  return withPlanLessons(db, tasks)
 }
 
 function nextPosition(db: Database, status: TaskStatus): number {
@@ -142,13 +165,14 @@ export function deleteTask(db: Database, id: number): void {
 /** Painel "Hoje": pendentes agendadas para hoje ou com prazo até hoje (atrasadas incluídas). */
 export function tasksForToday(db: Database, now = new Date()): Task[] {
   const today = dayKey(now)
-  return db
+  const tasks = db
     .prepare(
       `${TASK_SELECT}
         WHERE t.status != 'done' AND (t.scheduled_date = ? OR t.due_date <= ?)
         ORDER BY t.scheduled_time IS NULL, t.scheduled_time, t.due_date, t.position`
     )
     .all(today, today) as unknown as Task[]
+  return withPlanLessons(db, tasks)
 }
 
 function addDays(key: string, days: number): string {
@@ -175,10 +199,10 @@ export function calendar(db: Database, from: string, to: string, now = new Date(
   const scheduled = db
     .prepare(`${TASK_SELECT} WHERE t.scheduled_date BETWEEN ? AND ? ORDER BY t.scheduled_time IS NULL, t.scheduled_time, t.position`)
     .all(from, last) as unknown as Task[]
-  for (const t of scheduled) index.get(t.scheduledDate!)?.tasks.push(t)
+  for (const t of withPlanLessons(db, scheduled)) index.get(t.scheduledDate!)?.tasks.push(t)
 
   const due = db.prepare(`${TASK_SELECT} WHERE t.due_date BETWEEN ? AND ? ORDER BY t.position`).all(from, last) as unknown as Task[]
-  for (const t of due) index.get(t.dueDate!)?.dueTasks.push(t)
+  for (const t of withPlanLessons(db, due)) index.get(t.dueDate!)?.dueTasks.push(t)
 
   const today = dayKey(now)
   const end = parseDateKey(addDays(last, 1)).getTime() / 1000
@@ -213,5 +237,5 @@ export function takeBlockReminders(db: Database, now: Date, leadMinutes: number)
   })
   const mark = db.prepare('UPDATE tasks SET notified_at = ? WHERE id = ?')
   for (const t of due) mark.run(Math.floor(nowMs / 1000), t.id)
-  return due
+  return withPlanLessons(db, due)
 }

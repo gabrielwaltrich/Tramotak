@@ -1,3 +1,5 @@
+import type { PlanLessonRef } from './studyPlan'
+
 export type TaskStatus = 'todo' | 'doing' | 'done'
 
 export interface Task {
@@ -17,6 +19,9 @@ export interface Task {
   lessonId: number | null
   lessonTitle: string | null
   completedAt: number | null
+  /** Tarefa gerada por um plano de estudos (uma por dia, com as aulas do dia). */
+  planId: number | null
+  planLessons: PlanLessonRef[] | null
 }
 
 export interface TaskInput {

@@ -21,6 +21,7 @@ import { applyPendingRestore, autoBackup } from './backup/backup'
 import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
 import { DurationScanner } from './media/durations'
+import { ensureMemoryStates } from './db/flashcards'
 import { Updater } from './updater'
 import { probe } from './media/ffmpeg'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
@@ -96,6 +97,9 @@ app.whenReady().then(() => {
   const backupsDir = join(userData, 'backups')
   if (applyPendingRestore(userData, dbPath, backupsDir)) console.log('Backup restaurado')
   db = openDatabase(dbPath)
+  // Cartas estudadas antes do FSRS (ou importadas) ganham a memória calculada pelo histórico.
+  const migrated = ensureMemoryStates(db)
+  if (migrated) console.log(`FSRS: memória calculada para ${migrated} cartas`)
   registerIpc(db)
   // Durações dos vídeos medidas pelo FFmpeg, em segundo plano (importação, revalidação e ao abrir o app).
   const durations = new DurationScanner({

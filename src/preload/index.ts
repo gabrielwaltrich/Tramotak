@@ -114,6 +114,19 @@ const api: TramotakApi = {
     today: () => ipcRenderer.invoke(IPC.tasksToday),
     calendar: (from, to) => ipcRenderer.invoke(IPC.calendarRange, from, to)
   },
+  plans: {
+    list: () => ipcRenderer.invoke(IPC.plansList),
+    get: (courseId) => ipcRenderer.invoke(IPC.plansGet, courseId),
+    preview: (courseId, settings, start) => ipcRenderer.invoke(IPC.plansPreview, courseId, settings, start),
+    save: (courseId, settings, start) => ipcRenderer.invoke(IPC.plansSave, courseId, settings, start),
+    replan: (courseId) => ipcRenderer.invoke(IPC.plansReplan, courseId),
+    delete: (courseId) => ipcRenderer.invoke(IPC.plansDelete, courseId),
+    onChanged: (callback) => {
+      const listener = () => callback()
+      ipcRenderer.on(IPC.plansChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.plansChanged, listener)
+    }
+  },
   banks: {
     list: () => ipcRenderer.invoke(IPC.banksList),
     get: (id) => ipcRenderer.invoke(IPC.banksGet, id),
