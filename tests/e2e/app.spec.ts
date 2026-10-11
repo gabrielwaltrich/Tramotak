@@ -180,7 +180,8 @@ test('planner e progresso: tarefa de hoje aparece no Início e conclui de lá; p
 
   // Início: painel Hoje conclui a tarefa
   await page.getByRole('link', { name: 'Início' }).click()
-  await page.getByRole('checkbox', { name: 'Concluir Revisar o primeiro módulo' }).check()
+  // O item sai da lista na hora (atualização otimista): `check()` falharia ao conferir um elemento já removido.
+  await page.getByRole('checkbox', { name: 'Concluir Revisar o primeiro módulo' }).click()
   await expect(page.getByText('“Revisar o primeiro módulo” concluída')).toBeVisible()
   await page.getByRole('link', { name: 'Planner' }).click()
   await page.getByRole('tab', { name: 'Quadro' }).click()
