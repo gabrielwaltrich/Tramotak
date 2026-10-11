@@ -48,6 +48,38 @@ const api: TramotakApi = {
     today: () => ipcRenderer.invoke(IPC.tasksToday),
     calendar: (from, to) => ipcRenderer.invoke(IPC.calendarRange, from, to)
   },
+  banks: {
+    list: () => ipcRenderer.invoke(IPC.banksList),
+    get: (id) => ipcRenderer.invoke(IPC.banksGet, id),
+    create: (input) => ipcRenderer.invoke(IPC.banksCreate, input),
+    update: (id, patch) => ipcRenderer.invoke(IPC.banksUpdate, id, patch),
+    delete: (id) => ipcRenderer.invoke(IPC.banksDelete, id),
+    importFile: (bankId) => ipcRenderer.invoke(IPC.banksImport, bankId),
+    exportFile: (bankId) => ipcRenderer.invoke(IPC.banksExport, bankId),
+    topics: (bankId) => ipcRenderer.invoke(IPC.banksTopics, bankId),
+    analytics: (bankId) => ipcRenderer.invoke(IPC.banksAnalytics, bankId)
+  },
+  questions: {
+    list: (bankId) => ipcRenderer.invoke(IPC.questionsList, bankId),
+    create: (bankId, input) => ipcRenderer.invoke(IPC.questionsCreate, bankId, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.questionsUpdate, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.questionsDelete, id)
+  },
+  exams: {
+    list: (bankId) => ipcRenderer.invoke(IPC.examsList, bankId),
+    create: (bankId, input) => ipcRenderer.invoke(IPC.examsCreate, bankId, input),
+    delete: (id) => ipcRenderer.invoke(IPC.examsDelete, id)
+  },
+  attempts: {
+    start: (examId) => ipcRenderer.invoke(IPC.attemptsStart, examId),
+    get: (id) => ipcRenderer.invoke(IPC.attemptsGet, id),
+    answer: (id, questionId, answer) => ipcRenderer.invoke(IPC.attemptsAnswer, id, questionId, answer),
+    mark: (id, questionId, marked) => ipcRenderer.invoke(IPC.attemptsMark, id, questionId, marked),
+    focusLoss: (id) => ipcRenderer.invoke(IPC.attemptsFocusLoss, id),
+    submit: (id) => ipcRenderer.invoke(IPC.attemptsSubmit, id),
+    gradeEssay: (id, questionId, correct) => ipcRenderer.invoke(IPC.attemptsGradeEssay, id, questionId, correct),
+    delete: (id) => ipcRenderer.invoke(IPC.attemptsDelete, id)
+  },
   stats: {
     get: () => ipcRenderer.invoke(IPC.statsGet),
     history: (filter) => ipcRenderer.invoke(IPC.statsHistory, filter)

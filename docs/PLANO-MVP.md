@@ -301,7 +301,25 @@ Tramotak/
      histórico de aulas assistidas com filtro por curso, texto sem acento e período.
    - `transaction()` passou a aceitar aninhamento (SAVEPOINT).
    - Fica para depois: curva de esquecimento por baralho, tarefas recorrentes.
-5. **Questões e simulados** (bancos, blueprints, cronômetro)
+5. ✅ **Questões e simulados** (bancos, sorteio por critérios, cronômetro)
+   - Tipos: múltipla escolha, múltipla resposta (tudo ou nada), verdadeiro/falso, resposta curta (várias
+     aceitas, sem acento/maiúsculas) e dissertativa (corrigida pela pessoa depois do envio). LaTeX via KaTeX
+     (`$...$`, `$$...$$`, com `trust: false`). Correção pura em `src/shared/questions.ts`.
+   - Migration 6: `question_banks`, `questions`, `exams`, `attempts` (com cópia das questões: editar ou
+     excluir depois não muda notas antigas), `attempt_answers`. Questões na busca (tipo 6).
+   - Simulado: sorteio por tópicos/dificuldades ou escolha manual; tempo limite, nota de corte, embaralhar
+     questões/alternativas, permitir voltar, correção ao enviar ou a cada questão (que trava a questão).
+   - O tempo é validado no processo principal (folga de 5 s); ao estourar, a prova fecha sozinha e conta só
+     até o limite. Gabarito e explicação não saem do processo principal antes da hora.
+   - Sessão: mapa de questões, marcar para revisar, salvamento automático, confirmação de envio com
+     pendências, anti-cola (sair da janela avisa e registra), retomada de prova interrompida.
+   - Desempenho: notas por tentativa, acerto por tópico, questões mais erradas, histórico de tentativas.
+   - Importar/exportar: JSON (sem perdas), CSV (nomes de tipo em português, gabarito por letra/texto/V-F) e
+     GIFT do Moodle (múltipla escolha, múltipla resposta com %, V/F, curta, dissertativa, $CATEGORY, ####).
+     No GIFT, o bloco de respostas é o último grupo de chaves (o LaTeX usa chaves) e `\n` só vira quebra de
+     linha fora das fórmulas.
+   - Fica para depois: correspondência, ordenação, lacunas, hotspot, imagens, histórico de versões, PDF,
+     simulados dentro do curso (com bloqueio por nota) e crédito parcial.
 6. **Cadernos e mapas mentais**
 7. **FFmpeg**: re-encode de vídeos incompatíveis + transcrição (Whisper)
 8. **IA BYOK** (Claude, Gemini, Ollama) gerando cards e questões

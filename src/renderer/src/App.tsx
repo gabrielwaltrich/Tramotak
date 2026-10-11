@@ -13,6 +13,9 @@ import { DeckPage } from './routes/DeckPage'
 import { StudyPage } from './routes/StudyPage'
 import { PlannerPage } from './routes/PlannerPage'
 import { ProgressPage } from './routes/ProgressPage'
+import { QuestionsPage } from './routes/QuestionsPage'
+import { BankPage } from './routes/BankPage'
+import { AttemptPage } from './routes/AttemptPage'
 import { SearchContext } from './lib/searchContext'
 
 export function App() {
@@ -49,6 +52,9 @@ export function App() {
             <Route path="/flashcards" element={<FlashcardsPage />} />
             <Route path="/flashcards/:id" element={<DeckPage />} />
             <Route path="/flashcards/:id/study" element={<StudyPage />} />
+            <Route path="/questions" element={<QuestionsPage />} />
+            <Route path="/questions/:id" element={<BankPage />} />
+            <Route path="/questions/attempt/:id" element={<AttemptPage />} />
             <Route path="/planner" element={<PlannerPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />

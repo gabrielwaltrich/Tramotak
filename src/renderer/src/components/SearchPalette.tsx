@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { BookOpen, Clock, CornerDownLeft, FileText, FolderTree, Layers, Loader2, PlayCircle, Search, StickyNote, X } from 'lucide-react'
+import { BookOpen, ClipboardList, Clock, CornerDownLeft, FileText, FolderTree, Layers, Loader2, PlayCircle, Search, StickyNote, X } from 'lucide-react'
 import type { SearchHit, SearchKind } from '@shared/course'
 import { formatClock } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -17,7 +17,8 @@ const GROUPS: { kind: SearchKind; label: string }[] = [
   { kind: 'module', label: 'Módulos' },
   { kind: 'lesson', label: 'Aulas' },
   { kind: 'note', label: 'Anotações' },
-  { kind: 'card', label: 'Flashcards' }
+  { kind: 'card', label: 'Flashcards' },
+  { kind: 'question', label: 'Questões' }
 ]
 
 function readRecent(): string[] {
@@ -48,6 +49,8 @@ export function hitRoute(hit: SearchHit): string {
       return hit.timestampSec !== null ? `/lesson/${hit.lessonId}?t=${Math.floor(hit.timestampSec)}` : `/lesson/${hit.lessonId}`
     case 'card':
       return `/flashcards/${hit.deckId}`
+    case 'question':
+      return `/questions/${hit.bankId}`
   }
 }
 
@@ -57,12 +60,14 @@ function HitIcon({ hit }: { hit: SearchHit }) {
   if (hit.kind === 'module') return <FolderTree size={16} className={cls} />
   if (hit.kind === 'note') return <StickyNote size={16} className={cls} />
   if (hit.kind === 'card') return <Layers size={16} className={cls} />
+  if (hit.kind === 'question') return <ClipboardList size={16} className={cls} />
   return hit.lessonKind === 'video' ? <PlayCircle size={16} className={cls} /> : <FileText size={16} className={cls} />
 }
 
 function context(hit: SearchHit): string {
   if (hit.kind === 'course') return 'Curso'
   if (hit.kind === 'card') return `Baralho · ${hit.deckTitle}`
+  if (hit.kind === 'question') return `Banco · ${hit.bankTitle}`
   return [hit.courseTitle, hit.moduleTitle].filter(Boolean).join(' · ')
 }
 

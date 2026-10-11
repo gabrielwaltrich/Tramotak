@@ -3,6 +3,8 @@ import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNex
 import type { Rating } from './srs'
 import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
 import type { HistoryEntry, HistoryFilter, ProgressData } from './progress'
+import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam, ExamSelection, ExamSettings } from './exams'
+import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type {
   SearchHit,
   DashboardData,
@@ -86,8 +88,39 @@ export const IPC = {
   tasksToday: 'tasks:today',
   calendarRange: 'calendar:range',
   statsGet: 'stats:get',
-  statsHistory: 'stats:history'
+  statsHistory: 'stats:history',
+  banksList: 'banks:list',
+  banksGet: 'banks:get',
+  banksCreate: 'banks:create',
+  banksUpdate: 'banks:update',
+  banksDelete: 'banks:delete',
+  banksImport: 'banks:import',
+  banksExport: 'banks:export',
+  banksTopics: 'banks:topics',
+  banksAnalytics: 'banks:analytics',
+  questionsList: 'questions:list',
+  questionsCreate: 'questions:create',
+  questionsUpdate: 'questions:update',
+  questionsDelete: 'questions:delete',
+  examsList: 'exams:list',
+  examsCreate: 'exams:create',
+  examsDelete: 'exams:delete',
+  attemptsStart: 'attempts:start',
+  attemptsGet: 'attempts:get',
+  attemptsAnswer: 'attempts:answer',
+  attemptsMark: 'attempts:mark',
+  attemptsFocusLoss: 'attempts:focusLoss',
+  attemptsSubmit: 'attempts:submit',
+  attemptsGradeEssay: 'attempts:gradeEssay',
+  attemptsDelete: 'attempts:delete'
 } as const
+
+export interface QuestionImportResult {
+  bankId: number
+  bankTitle: string
+  imported: number
+  skipped: number
+}
 
 export interface LessonText {
   format: 'markdown' | 'html' | 'text'
@@ -139,6 +172,41 @@ export interface TramotakApi {
     delete(id: number): Promise<void>
     today(): Promise<Task[]>
     calendar(from: string, to: string): Promise<CalendarDay[]>
+  }
+  banks: {
+    list(): Promise<BankSummary[]>
+    get(id: number): Promise<BankSummary>
+    create(input: { title: string; description?: string }): Promise<number>
+    update(id: number, patch: { title: string; description: string }): Promise<void>
+    delete(id: number): Promise<void>
+    /** Abre o seletor e importa .json/.csv/.gift; `bankId` nulo cria um banco novo. `null` se cancelar. */
+    importFile(bankId: number | null): Promise<QuestionImportResult | null>
+    /** Abre "Salvar como"; o formato vem da extensão escolhida. Devolve o caminho ou `null`. */
+    exportFile(bankId: number): Promise<string | null>
+    topics(bankId: number): Promise<string[]>
+    analytics(bankId: number): Promise<BankAnalytics>
+  }
+  questions: {
+    list(bankId: number): Promise<Question[]>
+    create(bankId: number, input: QuestionInput): Promise<Question>
+    update(id: number, input: QuestionInput): Promise<Question>
+    delete(id: number): Promise<void>
+  }
+  exams: {
+    list(bankId: number): Promise<Exam[]>
+    create(bankId: number, input: { title: string; settings?: Partial<ExamSettings>; selection: ExamSelection }): Promise<number>
+    delete(id: number): Promise<void>
+  }
+  attempts: {
+    /** Começa (ou retoma a tentativa aberta) e devolve o id. */
+    start(examId: number): Promise<number>
+    get(id: number): Promise<AttemptView>
+    answer(id: number, questionId: number, answer: QuestionAnswer | null): Promise<AttemptAnswerState>
+    mark(id: number, questionId: number, marked: boolean): Promise<void>
+    focusLoss(id: number): Promise<number>
+    submit(id: number): Promise<void>
+    gradeEssay(id: number, questionId: number, correct: boolean): Promise<void>
+    delete(id: number): Promise<void>
   }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {

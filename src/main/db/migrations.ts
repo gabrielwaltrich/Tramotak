@@ -216,5 +216,76 @@ export const MIGRATIONS: string[] = [
   CREATE INDEX tasks_board ON tasks(status, position);
   CREATE INDEX tasks_scheduled ON tasks(scheduled_date);
   CREATE INDEX tasks_due ON tasks(due_date);
+  `,
+  /* 6 — bancos de questões e simulados. Tentativas guardam cópia das questões (notas não mudam ao editar). */ `
+  CREATE TABLE question_banks (
+    id          INTEGER PRIMARY KEY,
+    title       TEXT    NOT NULL,
+    description TEXT    NOT NULL DEFAULT '',
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE questions (
+    id          INTEGER PRIMARY KEY,
+    bank_id     INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
+    type        TEXT    NOT NULL CHECK (type IN ('single', 'multiple', 'truefalse', 'short', 'essay')),
+    statement   TEXT    NOT NULL,
+    options_json TEXT   NOT NULL DEFAULT '[]',
+    key_json    TEXT    NOT NULL,
+    explanation TEXT    NOT NULL DEFAULT '',
+    topic       TEXT    NOT NULL DEFAULT '',
+    difficulty  INTEGER NOT NULL DEFAULT 3 CHECK (difficulty BETWEEN 1 AND 5),
+    points      REAL    NOT NULL DEFAULT 1,
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE INDEX questions_bank ON questions(bank_id, topic);
+
+  CREATE TABLE exams (
+    id             INTEGER PRIMARY KEY,
+    bank_id        INTEGER NOT NULL REFERENCES question_banks(id) ON DELETE CASCADE,
+    title          TEXT    NOT NULL,
+    settings_json  TEXT    NOT NULL,
+    selection_json TEXT    NOT NULL,
+    created_at     INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at     INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE attempts (
+    id              INTEGER PRIMARY KEY,
+    exam_id         INTEGER NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
+    status          TEXT    NOT NULL DEFAULT 'in_progress' CHECK (status IN ('in_progress', 'submitted')),
+    started_at      INTEGER NOT NULL,
+    submitted_at    INTEGER,
+    time_limit_sec  INTEGER,
+    settings_json   TEXT    NOT NULL,
+    questions_json  TEXT    NOT NULL,   -- cópia das questões, na ordem da prova e com alternativas já embaralhadas
+    score           REAL,
+    max_score       REAL    NOT NULL,
+    focus_losses    INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX attempts_exam ON attempts(exam_id, started_at);
+
+  CREATE TABLE attempt_answers (
+    attempt_id  INTEGER NOT NULL REFERENCES attempts(id) ON DELETE CASCADE,
+    question_id INTEGER NOT NULL,       -- id da questão no momento da prova (sem FK: a cópia vale)
+    answer_json TEXT,
+    marked      INTEGER NOT NULL DEFAULT 0,
+    correct     INTEGER,                -- NULL = pendente (dissertativa) ou sem resposta ainda
+    points      REAL    NOT NULL DEFAULT 0,
+    answered_at INTEGER,
+    PRIMARY KEY (attempt_id, question_id)
+  );
+
+  CREATE TRIGGER search_question_ai AFTER INSERT ON questions BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 6, new.statement, new.explanation);
+  END;
+  CREATE TRIGGER search_question_au AFTER UPDATE OF statement, explanation ON questions BEGIN
+    UPDATE search_index SET title = new.statement, body = new.explanation WHERE rowid = new.id * 8 + 6;
+  END;
+  CREATE TRIGGER search_question_ad AFTER DELETE ON questions BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 6;
+  END;
   `
 ]

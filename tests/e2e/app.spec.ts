@@ -195,3 +195,67 @@ test('planner e progresso: tarefa de hoje aparece no Início e conclui de lá; p
   await expect(page.getByText('Nenhuma aula encontrada.')).toBeVisible()
   await app.close()
 })
+
+test('questões: editor, simulado com correção imediata, envio e resultado', async () => {
+  const { app, page } = await launch()
+  await page.getByRole('link', { name: 'Questões' }).click()
+  await page.getByRole('button', { name: 'Criar banco' }).click()
+  await page.getByRole('dialog').getByLabel('Nome').fill('Banco E2E')
+  await page.getByRole('dialog').getByRole('button', { name: 'Criar' }).click()
+  await expect(page.getByRole('heading', { name: 'Banco E2E' })).toBeVisible()
+
+  // Múltipla escolha com LaTeX
+  await page.getByRole('button', { name: 'Nova questão' }).click()
+  let dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Enunciado').fill('Derivada de $x^2$?')
+  await expect(dialog.getByText('Prévia:')).toBeVisible()
+  await dialog.getByLabel('Texto da alternativa A').fill('$2x$')
+  await dialog.getByLabel('Texto da alternativa B').fill('$x$')
+  await dialog.getByLabel('Alternativa A correta').check()
+  await dialog.getByLabel('Explicação (aparece na correção)').fill('Regra do tombo')
+  await dialog.getByRole('button', { name: 'Criar questão' }).click()
+
+  // Verdadeiro ou falso
+  await page.getByRole('button', { name: 'Nova questão' }).click()
+  dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Tipo').selectOption('truefalse')
+  await dialog.getByLabel('Enunciado').fill('O céu é verde')
+  await dialog.getByLabel('Falsa').check()
+  await dialog.getByRole('button', { name: 'Criar questão' }).click()
+  await expect(page.getByRole('tab', { name: 'Questões (2)' })).toBeVisible()
+
+  // Simulado com correção a cada questão, sem embaralhar
+  await page.getByRole('tab', { name: /Simulados/ }).click()
+  await page.getByRole('button', { name: 'Novo simulado' }).click()
+  dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Nome').fill('Simulado E2E')
+  await dialog.getByRole('radio', { name: 'A cada questão' }).click()
+  await dialog.getByLabel('Embaralhar a ordem das questões').uncheck()
+  await dialog.getByLabel('Embaralhar as alternativas').uncheck()
+  await dialog.getByRole('button', { name: 'Criar simulado' }).click()
+  await page.getByRole('button', { name: 'Começar' }).click()
+
+  // Questão 1: acerta e vê a explicação na hora
+  await expect(page.getByText('Questão 1 de 2')).toBeVisible()
+  await page.getByRole('radio', { name: /^A/ }).click()
+  await page.getByRole('button', { name: 'Responder' }).click()
+  await expect(page.getByText('certa', { exact: true })).toBeVisible()
+  await expect(page.getByText('Regra do tombo')).toBeVisible()
+  await page.getByRole('button', { name: /Próxima/ }).click()
+
+  // Questão 2: erra
+  await page.getByRole('radio', { name: 'Verdadeiro' }).click()
+  await page.getByRole('button', { name: 'Responder' }).click()
+  await expect(page.getByText('errada', { exact: true })).toBeVisible()
+
+  await page.getByRole('main').getByRole('button', { name: 'Enviar prova' }).first().click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Enviar' }).click()
+  await expect(page.getByText('50%')).toBeVisible()
+  await expect(page.getByText('Reprovado (corte 60%)')).toBeVisible()
+
+  // Desempenho do banco
+  await page.getByRole('link', { name: 'Voltar ao banco' }).click()
+  await page.getByRole('tab', { name: 'Desempenho' }).click()
+  await expect(page.getByText(/1 tentativa · média 50%/)).toBeVisible()
+  await app.close()
+})

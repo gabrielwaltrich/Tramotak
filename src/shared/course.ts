@@ -200,7 +200,7 @@ export interface DashboardData {
   cardsDueToday: number
 }
 
-export type SearchKind = 'course' | 'module' | 'lesson' | 'note' | 'card'
+export type SearchKind = 'course' | 'module' | 'lesson' | 'note' | 'card' | 'question'
 
 /**
  * Resultado da busca global. `title` e `snippet` trazem os trechos encontrados entre
@@ -220,6 +220,9 @@ export interface SearchHit {
   /** Só para cartas. Em cartas, `courseId`/`courseTitle` vêm da aula ligada (ou 0/vazio). */
   deckId: number | null
   deckTitle: string | null
+  /** Só para questões. */
+  bankId: number | null
+  bankTitle: string | null
 }
 
 export const HL_START = '\u0001'
