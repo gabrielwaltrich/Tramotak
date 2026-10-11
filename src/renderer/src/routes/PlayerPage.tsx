@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Paperclip, Star } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Star } from 'lucide-react'
 import type { LessonView } from '@shared/course'
 import { errorMessage, queryKeys } from '../lib/api'
 import { VideoPlayer } from '../components/player/VideoPlayer'
 import { TextLesson } from '../components/player/TextLesson'
 import { DocumentLesson } from '../components/player/DocumentLesson'
 import { LessonSidebar } from '../components/player/LessonSidebar'
+import { NotesPanel } from '../components/player/NotesPanel'
 import { playerPrefs } from '../components/player/prefs'
 import { useToast } from '../components/Toast'
 
@@ -26,6 +27,8 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [autoplay, setAutoplay] = useState(playerPrefs.autoplay)
   const [countdown, setCountdown] = useState<number | null>(null)
+  const [tab, setTab] = useState<'notes' | 'attachments'>('notes')
+  const playerRef = useRef<HTMLDivElement>(null)
 
   const lesson = useQuery({ queryKey: queryKeys.lesson(lessonId), queryFn: () => window.api.lessons.get(lessonId), staleTime: 0 })
   const courseId = lesson.data?.course.id
@@ -37,6 +40,19 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
 
   // Ao sair do player, cartões e detalhes precisam refletir o novo progresso.
   useEffect(() => () => void queryClient.invalidateQueries({ queryKey: queryKeys.courses }), [queryClient, lessonId])
+
+  const notes = useQuery({ queryKey: queryKeys.notes(lessonId), queryFn: () => window.api.notes.list(lessonId) })
+  const isVideo = lesson.data?.kind === 'video'
+
+  const getTime = useCallback(() => (isVideo ? (videoRef.current?.currentTime ?? 0) : null), [isVideo])
+
+  const seek = useCallback((sec: number) => {
+    const video = videoRef.current
+    if (!video) return
+    video.currentTime = sec
+    video.play().catch(() => {})
+    playerRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [])
 
   const patchLesson = (patch: Partial<LessonView['progress']>) =>
     queryClient.setQueryData<LessonView>(queryKeys.lesson(lessonId), (old) =>
@@ -99,7 +115,7 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
           <ArrowLeft size={16} /> {l.course.title}
         </Link>
 
-        <div className="relative">
+        <div ref={playerRef} className="relative">
           {l.kind === 'video' ? (
             <VideoPlayer key={l.id} lesson={l} videoRef={videoRef} onEnded={onEnded} onNext={next ? goNext : undefined} />
           ) : l.kind === 'text' ? (
@@ -181,27 +197,55 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
           )}
         </div>
 
-        {attachments.length > 0 && (
-          <section className="mt-6 rounded-xl border border-border bg-surface p-4">
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-medium">
-              <Paperclip size={16} /> Anexos ({attachments.length})
-            </h2>
-            <ul className="space-y-1">
-              {attachments.map((a) => (
-                <li key={a.id}>
-                  <button
-                    type="button"
-                    onClick={() => window.api.files.openAsset(a.id).catch((e) => toast(errorMessage(e), 'error'))}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2"
-                  >
-                    <ExternalLink size={14} className="shrink-0 text-muted" />
-                    <span className="truncate">{a.name}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <section className="mt-6 rounded-xl border border-border bg-surface">
+          <div role="tablist" className="flex gap-1 border-b border-border px-3 pt-2">
+            {(
+              [
+                ['notes', `Anotações (${notes.data?.length ?? 0})`],
+                ...(attachments.length > 0 ? [['attachments', `Anexos (${attachments.length})`]] : [])
+              ] as [typeof tab, string][]
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={tab === value}
+                onClick={() => setTab(value)}
+                className={`-mb-px border-b-2 px-3 py-2 text-sm ${
+                  tab === value ? 'border-accent text-text' : 'border-transparent text-muted hover:text-text'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div role="tabpanel" className="p-3">
+            {tab === 'notes' || attachments.length === 0 ? (
+              <NotesPanel
+                lessonId={l.id}
+                notes={notes.data ?? []}
+                loading={notes.isPending}
+                getTime={getTime}
+                onSeek={isVideo ? seek : undefined}
+              />
+            ) : (
+              <ul className="space-y-1">
+                {attachments.map((a) => (
+                  <li key={a.id}>
+                    <button
+                      type="button"
+                      onClick={() => window.api.files.openAsset(a.id).catch((e) => toast(errorMessage(e), 'error'))}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2"
+                    >
+                      <ExternalLink size={14} className="shrink-0 text-muted" />
+                      <span className="truncate">{a.name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
       </div>
 
       {course.data ? (

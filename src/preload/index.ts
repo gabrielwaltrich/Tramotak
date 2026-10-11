@@ -33,6 +33,12 @@ const api: TramotakApi = {
     openLesson: (id) => ipcRenderer.invoke(IPC.filesOpenLesson, id),
     openAsset: (id) => ipcRenderer.invoke(IPC.filesOpenAsset, id),
     showLesson: (id) => ipcRenderer.invoke(IPC.filesShowLesson, id)
+  },
+  notes: {
+    list: (lessonId) => ipcRenderer.invoke(IPC.notesList, lessonId),
+    create: (input) => ipcRenderer.invoke(IPC.notesCreate, input),
+    update: (id, body) => ipcRenderer.invoke(IPC.notesUpdate, id, body),
+    delete: (id) => ipcRenderer.invoke(IPC.notesDelete, id)
   }
 }
 

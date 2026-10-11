@@ -5,6 +5,7 @@ import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
 import { registerCourseIpc } from './ipc/courses'
 import { registerLessonIpc } from './ipc/lessons'
+import { registerNoteIpc } from './ipc/notes'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
 registerMediaScheme()
@@ -64,6 +65,7 @@ app.whenReady().then(() => {
   registerIpc()
   registerCourseIpc(db)
   registerLessonIpc(db)
+  registerNoteIpc(db)
   handleMediaProtocol(db)
   createWindow()
 

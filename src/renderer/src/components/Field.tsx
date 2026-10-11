@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 
 const INPUT =
   'w-full rounded-md border border-border bg-bg px-3 py-2 text-sm text-text placeholder:text-muted focus:border-accent focus:outline-none select-text'
@@ -11,11 +11,11 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
   )
 }
 
-export function TextInput(props: InputHTMLAttributes<HTMLInputElement>) {
+export function TextInput(props: ComponentProps<'input'>) {
   return <input {...props} className={`${INPUT} h-9 ${props.className ?? ''}`} />
 }
 
-export function TextArea(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextArea(props: ComponentProps<'textarea'>) {
   return <textarea {...props} className={`${INPUT} min-h-24 resize-y ${props.className ?? ''}`} />
 }
 

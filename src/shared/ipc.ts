@@ -1,5 +1,6 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type {
+  Note,
   LessonView,
   ProgressUpdate,
   CourseDetail,
@@ -36,7 +37,11 @@ export const IPC = {
   progressSetCompleted: 'progress:setCompleted',
   filesOpenLesson: 'files:openLesson',
   filesOpenAsset: 'files:openAsset',
-  filesShowLesson: 'files:showLesson'
+  filesShowLesson: 'files:showLesson',
+  notesList: 'notes:list',
+  notesCreate: 'notes:create',
+  notesUpdate: 'notes:update',
+  notesDelete: 'notes:delete'
 } as const
 
 export interface LessonText {
@@ -79,5 +84,11 @@ export interface TramotakApi {
     openLesson(id: number): Promise<void>
     openAsset(id: number): Promise<void>
     showLesson(id: number): Promise<void>
+  }
+  notes: {
+    list(lessonId: number): Promise<Note[]>
+    create(input: { lessonId: number; timestampSec: number | null; body: string }): Promise<Note>
+    update(id: number, body: string): Promise<Note>
+    delete(id: number): Promise<void>
   }
 }

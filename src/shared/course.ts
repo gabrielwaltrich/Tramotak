@@ -166,3 +166,13 @@ export interface ProgressUpdate {
   /** Segundos efetivamente assistidos desde o último envio (alimenta o tempo de estudo). */
   watchedSec: number
 }
+
+export interface Note {
+  id: number
+  lessonId: number
+  /** Segundo do vídeo em que a nota foi criada; `null` em aulas sem vídeo. */
+  timestampSec: number | null
+  body: string
+  createdAt: number
+  updatedAt: number
+}
