@@ -1,0 +1,23 @@
+appId: com.tramotak.app
+productName: Tramotak
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - package.json
+asarUnpack:
+  - resources/**
+win:
+  target: [nsis, portable]
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+mac:
+  target: [dmg]
+  category: public.app-category.education
+linux:
+  target: [AppImage, deb]
+  category: Education
+  maintainer: Gabriel Waltrich
+publish: null

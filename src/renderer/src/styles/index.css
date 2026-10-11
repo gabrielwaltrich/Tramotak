@@ -1,0 +1,62 @@
+@import 'tailwindcss';
+
+/* Tokens de tema. Escuro é o padrão; [data-theme='light'] troca a paleta. */
+:root {
+  --bg: #0b0b0f;
+  --surface: #13131a;
+  --surface-2: #1b1b24;
+  --border: #262631;
+  --text: #ececf1;
+  --text-muted: #8b8b9a;
+  --accent: #8b5cf6;
+  --accent-soft: rgb(139 92 246 / 0.14);
+  --success: #22c55e;
+  --warning: #f59e0b;
+  color-scheme: dark;
+}
+
+:root[data-theme='light'] {
+  --bg: #f7f7fa;
+  --surface: #ffffff;
+  --surface-2: #f0f0f5;
+  --border: #e2e2ea;
+  --text: #17171c;
+  --text-muted: #63636f;
+  --accent: #7c3aed;
+  --accent-soft: rgb(124 58 237 / 0.1);
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
