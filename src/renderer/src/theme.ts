@@ -1,28 +1,57 @@
+import {
+  accentVars,
+  DENSITIES,
+  DEFAULT_APPEARANCE,
+  normalizeAppearance,
+  resolveTheme,
+  themeMode,
+  type Appearance
+} from '@shared/appearance'
 import { readPref, writePref } from './storage'
 
-export type Theme = 'dark' | 'light' | 'system'
+const KEY = 'tramotak.appearance'
+/** Preferência da versão anterior (só claro/escuro/sistema). */
+const LEGACY_KEY = 'tramotak.theme'
 
-const KEY = 'tramotak.theme'
+const prefersLight = () => window.matchMedia('(prefers-color-scheme: light)').matches
 
-export function getStoredTheme(): Theme {
-  const value = readPref(KEY)
-  return value === 'light' || value === 'system' ? value : 'dark'
+export function getAppearance(): Appearance {
+  const stored = readPref(KEY)
+  if (stored) {
+    try {
+      return normalizeAppearance(JSON.parse(stored))
+    } catch {
+      // preferência corrompida: volta ao padrão
+    }
+  }
+  const legacy = readPref(LEGACY_KEY)
+  return legacy === 'light' || legacy === 'system' ? { ...DEFAULT_APPEARANCE, theme: legacy } : DEFAULT_APPEARANCE
 }
 
-function resolve(theme: Theme): 'dark' | 'light' {
-  if (theme !== 'system') return theme
-  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+/** Aplica no documento: atributos para o CSS e variáveis da cor de destaque. */
+function apply(appearance: Appearance): void {
+  const root = document.documentElement
+  const theme = resolveTheme(appearance.theme, prefersLight())
+  const mode = themeMode(theme)
+  root.dataset.theme = theme
+  root.dataset.mode = mode
+  root.dataset.corners = appearance.corners
+  root.dataset.font = appearance.font
+  root.dataset.motion = appearance.reduceMotion ? 'reduce' : 'full'
+  for (const [name, value] of Object.entries(accentVars(appearance.accent, mode))) root.style.setProperty(name, value)
+  // O Tailwind mede tudo em rem: mudar a fonte da raiz escala a interface inteira.
+  root.style.fontSize = `${DENSITIES.find((d) => d.id === appearance.density)?.rootPx ?? 16}px`
 }
 
-export function setTheme(theme: Theme): void {
-  writePref(KEY, theme)
-  document.documentElement.dataset.theme = resolve(theme)
+export function setAppearance(appearance: Appearance): void {
+  writePref(KEY, JSON.stringify(appearance))
+  apply(appearance)
 }
 
-export function applyStoredTheme(): void {
-  const theme = getStoredTheme()
-  document.documentElement.dataset.theme = resolve(theme)
+export function applyStoredAppearance(): void {
+  apply(getAppearance())
   window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
-    if (getStoredTheme() === 'system') document.documentElement.dataset.theme = resolve('system')
+    const current = getAppearance()
+    if (current.theme === 'system') apply(current)
   })
 }

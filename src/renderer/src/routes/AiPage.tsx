@@ -108,7 +108,7 @@ export function AiPage() {
           title={provider === 'none' ? 'Escolha um provedor de IA' : 'Falta a chave de API'}
           description="Dá para começar de graça: Gemini com a sua conta Google, modelos gratuitos do OpenRouter ou um modelo leve (Llama, Qwen) rodando no seu computador pelo Ollama. Nada é enviado sem você pedir."
           action={
-            <Link to="/settings" className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-white hover:brightness-110">
+            <Link to="/settings" className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-on-accent hover:brightness-110">
               <Settings size={16} /> Abrir Configurações
             </Link>
           }

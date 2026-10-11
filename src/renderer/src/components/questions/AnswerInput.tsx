@@ -50,7 +50,7 @@ export function AnswerInput({ question, answer, onChange, readOnly }: {
                 : 'border-border hover:border-accent/50'
               } ${readOnly ? 'cursor-default' : ''}`}
             >
-              <span className={`grid size-6 shrink-0 place-items-center rounded-${question.type === 'single' ? 'full' : 'md'} border text-xs font-medium ${isChosen ? 'border-accent bg-accent text-white' : 'border-border text-muted'}`}>
+              <span className={`grid size-6 shrink-0 place-items-center rounded-${question.type === 'single' ? 'full' : 'md'} border text-xs font-medium ${isChosen ? 'border-accent bg-accent text-on-accent' : 'border-border text-muted'}`}>
                 {LETTER(i)}
               </span>
               <span className="flex-1 pt-0.5">

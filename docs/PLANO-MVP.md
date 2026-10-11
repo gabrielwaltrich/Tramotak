@@ -425,6 +425,17 @@ Tramotak/
    - Fica para depois: incluir sessões de estudo e tarefas nos pacotes, backup para a nuvem, criptografia do
      backup com senha, exportar o curso com os vídeos.
 
+10. ✅ **Aparência** (depois do roadmap)
+   - Núcleo puro em `src/shared/appearance.ts`: temas Grafite (padrão), Meia-noite, Azul-marinho, Claro, Papel e
+     "Sistema"; 8 cores de destaque com um tom para fundo escuro e outro para claro (azul do ícone é o padrão); o
+     texto sobre o destaque (`--on-accent`) é branco ou quase preto pelo maior contraste. Testes garantem 4,5:1 do
+     texto sobre o destaque e 3:1 do destaque sobre cada fundo, em todas as combinações.
+   - Tamanho da interface muda a fonte da raiz (o Tailwind mede em rem); cantos trocam as variáveis `--radius-*`
+     do Tailwind; fonte com serifa; "reduzir animações" zera transições (spinners continuam).
+   - Estilos prontos (Tramotak, Foco, Noturno azul, Leitura, Claro) com miniaturas desenhadas nas próprias cores;
+     ajuste fino depois e "voltar ao padrão". Guardado por computador (localStorage), migrando a preferência
+     antiga de claro/escuro. Mapa mental (nó central e PNG) segue a cor escolhida.
+
 ---
 
 ## 10. Riscos

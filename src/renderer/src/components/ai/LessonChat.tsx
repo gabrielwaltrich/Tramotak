@@ -275,7 +275,7 @@ export function LessonChat({ lessonId, getTime, onSeek, onOpenTranscript }: {
             <Square size={16} />
           </button>
         ) : (
-          <button type="submit" disabled={!draft.trim()} className="grid size-10 place-items-center rounded-md bg-accent text-white hover:brightness-110 disabled:opacity-50" aria-label="Enviar pergunta">
+          <button type="submit" disabled={!draft.trim()} className="grid size-10 place-items-center rounded-md bg-accent text-on-accent hover:brightness-110 disabled:opacity-50" aria-label="Enviar pergunta">
             <Send size={16} />
           </button>
         )}

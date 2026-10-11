@@ -10,13 +10,7 @@ import { MediaSettings } from '../components/media/MediaSettings'
 import { AiSettings } from '../components/ai/AiSettings'
 import { BackupSettings } from '../components/backup/BackupSettings'
 import { PackageSettings } from '../components/backup/PackageSettings'
-import { getStoredTheme, setTheme, type Theme } from '../theme'
-
-const THEMES: { value: Theme; label: string }[] = [
-  { value: 'dark', label: 'Escuro' },
-  { value: 'light', label: 'Claro' },
-  { value: 'system', label: 'Sistema' }
-]
+import { AppearanceSettings } from '../components/AppearanceSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -152,37 +146,16 @@ function NotificationSettings({ enabled, lead }: { enabled: boolean; lead: (type
 }
 
 export function SettingsPage() {
-  const [theme, setThemeState] = useState<Theme>(getStoredTheme)
   const info = useQuery({ queryKey: ['app-info'], queryFn: () => window.api.app.info() })
   const settings = useQuery({ queryKey: queryKeys.settings, queryFn: () => window.api.settings.get(), staleTime: 0 })
   const toast = useToast()
-
-  const choose = (value: Theme) => {
-    setTheme(value)
-    setThemeState(value)
-  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-8">
       <PageHeader title="Configurações" />
 
-      <Section title="Aparência" description="Tema da interface.">
-        <div role="radiogroup" aria-label="Tema" className="inline-flex rounded-lg border border-border p-1">
-          {THEMES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              role="radio"
-              aria-checked={theme === t.value}
-              onClick={() => choose(t.value)}
-              className={`rounded-md px-4 py-1.5 text-sm ${
-                theme === t.value ? 'bg-accent-soft text-accent' : 'text-muted hover:text-text'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <Section title="Aparência" description="Escolha um estilo pronto ou ajuste tema, cor, tamanho, cantos e fonte. A mudança vale na hora e fica salva neste computador.">
+        <AppearanceSettings />
       </Section>
 
       <Section title="Meta diária" description="Quantos minutos você quer estudar por dia. Aparece na tela Início.">

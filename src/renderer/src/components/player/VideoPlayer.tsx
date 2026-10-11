@@ -364,7 +364,7 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
           type="button"
           onClick={togglePlay}
           aria-label="Reproduzir"
-          className="absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-accent/90 text-white shadow-lg hover:bg-accent"
+          className="absolute top-1/2 left-1/2 grid size-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-accent/90 text-on-accent shadow-lg hover:bg-accent"
         >
           <Play size={28} className="ml-1" fill="currentColor" />
         </button>

@@ -87,7 +87,7 @@ export function MonthCalendar({ month, onMonth, selected, onSelect, onOpenTask, 
                 <span className="flex items-center justify-between">
                   <span
                     className={`grid size-6 place-items-center rounded-full text-xs tabular-nums ${
-                      key === today ? 'bg-accent font-semibold text-white' : inMonth ? 'text-text' : 'text-muted/60'
+                      key === today ? 'bg-accent font-semibold text-on-accent' : inMonth ? 'text-text' : 'text-muted/60'
                     }`}
                   >
                     {Number(key.slice(8))}

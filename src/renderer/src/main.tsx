@@ -4,10 +4,10 @@ import { HashRouter } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { App } from './App'
 import { ToastProvider } from './components/Toast'
-import { applyStoredTheme } from './theme'
+import { applyStoredAppearance } from './theme'
 import './styles/index.css'
 
-applyStoredTheme()
+applyStoredAppearance()
 
 // Os dados são locais: sem refetch automático por foco ou retry de rede.
 const queryClient = new QueryClient({

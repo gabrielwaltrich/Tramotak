@@ -112,7 +112,7 @@ function NodeBox({ node, root, selected, childCount, onPointerDown, onDoubleClic
   const h = nodeHeight(node)
   const lines = wrapLines(node)
   const fill = root ? 'var(--accent)' : (node.color ?? 'var(--surface-2)')
-  const ink = root ? '#ffffff' : node.color ? textColorFor(node.color) : 'var(--text)'
+  const ink = root ? 'var(--on-accent)' : node.color ? textColorFor(node.color) : 'var(--text)'
   const textX = node.x + (node.attachment ? (w - 18) / 2 : w / 2)
   return (
     <g data-node-id={node.id} onPointerDown={onPointerDown} onDoubleClick={onDoubleClick} className="cursor-pointer">
@@ -144,7 +144,7 @@ function NodeBox({ node, root, selected, childCount, onPointerDown, onDoubleClic
         >
           <title>{node.attachment.title}</title>
           <circle cx={node.x + w - 16} cy={node.y + h / 2} r={9} fill={root ? 'rgb(255 255 255 / 0.2)' : 'var(--accent-soft)'} />
-          <Paperclip x={node.x + w - 22} y={node.y + h / 2 - 6} size={12} color={root ? '#fff' : 'var(--accent)'} />
+          <Paperclip x={node.x + w - 22} y={node.y + h / 2 - 6} size={12} color={root ? 'var(--on-accent)' : 'var(--accent)'} />
         </g>
       )}
       {childCount > 0 && (

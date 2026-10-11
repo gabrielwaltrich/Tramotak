@@ -1,4 +1,6 @@
 import { edgePath, mapBounds, nodeHeight, nodeWidth, textColorFor, visibleNodes, wrapLines, type MindMapData } from '@shared/mindmap'
+import { accentVars } from '@shared/appearance'
+import { getAppearance } from '../../theme'
 
 const MARGIN = 32
 const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
@@ -7,6 +9,8 @@ const escape = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<':
 export function mapToSvg(map: MindMapData): { svg: string; width: number; height: number } {
   const nodes = visibleNodes(map)
   const byId = new Map(nodes.map((n) => [n.id, n]))
+  // A imagem tem fundo branco: usa a cor de destaque escolhida, no tom para fundo claro.
+  const { '--accent': accent, '--on-accent': onAccent } = accentVars(getAppearance().accent, 'light')
   const b = mapBounds(map)
   const width = Math.ceil(b.width + MARGIN * 2)
   const height = Math.ceil(b.height + MARGIN * 2)
@@ -17,15 +21,15 @@ export function mapToSvg(map: MindMapData): { svg: string; width: number; height
   const boxes = nodes
     .map((n) => {
       const root = n.id === map.rootId
-      const fill = root ? '#7c3aed' : (n.color ?? '#f4f4f5')
-      const ink = root ? '#ffffff' : textColorFor(fill)
+      const fill = root ? accent : (n.color ?? '#f4f4f5')
+      const ink = root ? onAccent : textColorFor(fill)
       const w = nodeWidth(n)
       const h = nodeHeight(n)
       const lines = wrapLines(n)
       const text = lines
         .map((line, i) => `<tspan x="${n.x + w / 2}" y="${n.y + h / 2 + (i - (lines.length - 1) / 2) * 18 + 5}">${escape(line)}</tspan>`)
         .join('')
-      return `<rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${root ? '#6d28d9' : '#d4d4d8'}"/><text text-anchor="middle" font-size="${root ? 15 : 13}" font-weight="${root ? 600 : 400}" fill="${ink}">${text}</text>`
+      return `<rect x="${n.x}" y="${n.y}" width="${w}" height="${h}" rx="10" fill="${fill}" stroke="${root ? accent : '#d4d4d8'}"/><text text-anchor="middle" font-size="${root ? 15 : 13}" font-weight="${root ? 600 : 400}" fill="${ink}">${text}</text>`
     })
     .join('')
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="${b.x - MARGIN} ${b.y - MARGIN} ${width} ${height}" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"><rect x="${b.x - MARGIN}" y="${b.y - MARGIN}" width="${width}" height="${height}" fill="#ffffff"/>${edges}${boxes}</svg>`
