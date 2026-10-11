@@ -39,7 +39,13 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
   })
 
   // Ao sair do player, cartões e detalhes precisam refletir o novo progresso.
-  useEffect(() => () => void queryClient.invalidateQueries({ queryKey: queryKeys.courses }), [queryClient, lessonId])
+  useEffect(
+    () => () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.courses })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+    },
+    [queryClient, lessonId]
+  )
 
   const notes = useQuery({ queryKey: queryKeys.notes(lessonId), queryFn: () => window.api.notes.list(lessonId) })
   const isVideo = lesson.data?.kind === 'video'

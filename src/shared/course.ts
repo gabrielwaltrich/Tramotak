@@ -176,3 +176,24 @@ export interface Note {
   createdAt: number
   updatedAt: number
 }
+
+export interface ContinueLesson {
+  lessonId: number
+  title: string
+  kind: LessonKind
+  courseId: number
+  courseTitle: string
+  moduleTitle: string | null
+  positionSec: number
+  durationSec: number | null
+  /** A última aula vista já foi concluída e esta é a seguinte. */
+  isNext: boolean
+}
+
+export interface DashboardData {
+  todaySeconds: number
+  goalMinutes: number
+  lessonsCompletedToday: number
+  streak: { current: number; todayDone: boolean; best: number }
+  continueLesson: ContinueLesson | null
+}

@@ -1,5 +1,6 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type {
+  DashboardData,
   Note,
   LessonView,
   ProgressUpdate,
@@ -17,6 +18,12 @@ export interface AppInfo {
   version: string
   platform: NodeJS.Platform
   electron: string
+  /** Pasta onde ficam o banco e as preferências do app. */
+  dataPath: string
+}
+
+export interface AppSettings {
+  dailyGoalMinutes: number
 }
 
 export const IPC = {
@@ -41,7 +48,11 @@ export const IPC = {
   notesList: 'notes:list',
   notesCreate: 'notes:create',
   notesUpdate: 'notes:update',
-  notesDelete: 'notes:delete'
+  notesDelete: 'notes:delete',
+  dashboardGet: 'dashboard:get',
+  settingsGet: 'settings:get',
+  settingsUpdate: 'settings:update',
+  filesOpenDataFolder: 'files:openDataFolder'
 } as const
 
 export interface LessonText {
@@ -52,6 +63,14 @@ export interface LessonText {
 export interface TramotakApi {
   app: {
     info(): Promise<AppInfo>
+    openDataFolder(): Promise<void>
+  }
+  dashboard: {
+    get(): Promise<DashboardData>
+  }
+  settings: {
+    get(): Promise<AppSettings>
+    update(patch: Partial<AppSettings>): Promise<AppSettings>
   }
   dialog: {
     /** Abre o seletor nativo de pasta; `null` se o usuário cancelar. */

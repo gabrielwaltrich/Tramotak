@@ -3,6 +3,8 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
+import { getDashboard } from './db/dashboard'
+import { getSettings, updateSettings } from './db/settings'
 import { registerCourseIpc } from './ipc/courses'
 import { registerLessonIpc } from './ipc/lessons'
 import { registerNoteIpc } from './ipc/notes'
@@ -45,16 +47,24 @@ function createWindow(): void {
   }
 }
 
-function registerIpc(): void {
+function registerIpc(db: Database): void {
   ipcMain.handle(
     IPC.appInfo,
     (): AppInfo => ({
       name: app.getName(),
       version: app.getVersion(),
       platform: process.platform,
-      electron: process.versions.electron
+      electron: process.versions.electron,
+      dataPath: app.getPath('userData')
     })
   )
+  ipcMain.handle(IPC.filesOpenDataFolder, async () => {
+    const error = await shell.openPath(app.getPath('userData'))
+    if (error) throw new Error(error)
+  })
+  ipcMain.handle(IPC.dashboardGet, () => getDashboard(db))
+  ipcMain.handle(IPC.settingsGet, () => getSettings(db))
+  ipcMain.handle(IPC.settingsUpdate, (_e, patch) => updateSettings(db, patch ?? {}))
 }
 
 app.whenReady().then(() => {
@@ -62,7 +72,7 @@ app.whenReady().then(() => {
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
   db = openDatabase(join(app.getPath('userData'), 'tramotak.db'))
-  registerIpc()
+  registerIpc(db)
   registerCourseIpc(db)
   registerLessonIpc(db)
   registerNoteIpc(db)

@@ -3,7 +3,15 @@ import { IPC, type TramotakApi } from '@shared/ipc'
 
 const api: TramotakApi = {
   app: {
-    info: () => ipcRenderer.invoke(IPC.appInfo)
+    info: () => ipcRenderer.invoke(IPC.appInfo),
+    openDataFolder: () => ipcRenderer.invoke(IPC.filesOpenDataFolder)
+  },
+  dashboard: {
+    get: () => ipcRenderer.invoke(IPC.dashboardGet)
+  },
+  settings: {
+    get: () => ipcRenderer.invoke(IPC.settingsGet),
+    update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch)
   },
   dialog: {
     pickFolder: () => ipcRenderer.invoke(IPC.pickFolder)
