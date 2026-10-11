@@ -90,9 +90,11 @@ function PopMenu<T extends string | number>({ label, icon, value, options, onCha
   )
 }
 
-export function VideoPlayer({ lesson, videoRef, onEnded, onNext }: {
+export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext }: {
   lesson: LessonView
   videoRef: RefObject<HTMLVideoElement | null>
+  /** Segundo inicial pedido explicitamente (tem prioridade sobre a posição salva). */
+  startAt?: number | null
   onEnded: () => void
   onNext?: () => void
 }) {
@@ -107,7 +109,7 @@ export function VideoPlayer({ lesson, videoRef, onEnded, onNext }: {
   const [fullscreen, setFullscreen] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
   const [error, setError] = useState(false)
-  const [resumedAt, setResumedAt] = useState<number | null>(null)
+  const [jump, setJump] = useState<{ sec: number; label: string } | null>(null)
 
   // Fica aqui (e não na página) porque precisa do <video> já montado.
   useProgressTracker(videoRef, lesson.id)
@@ -267,10 +269,14 @@ export function VideoPlayer({ lesson, videoRef, onEnded, onNext }: {
       window.api.lessons.setDuration(lesson.id, video.duration).catch(() => {})
     }
     const saved = lesson.progress.positionSec
-    if (saved > RESUME_MIN_SEC && saved < video.duration - SEEK_STEP) {
+    if (startAt !== null && startAt < video.duration) {
+      video.currentTime = startAt
+      setJump({ sec: startAt, label: 'Indo para' })
+      setTimeout(() => setJump(null), 3000)
+    } else if (saved > RESUME_MIN_SEC && saved < video.duration - SEEK_STEP) {
       video.currentTime = saved
-      setResumedAt(saved)
-      setTimeout(() => setResumedAt(null), 3000)
+      setJump({ sec: saved, label: 'Retomando de' })
+      setTimeout(() => setJump(null), 3000)
     }
     video.play().catch(() => {})
   }
@@ -331,9 +337,9 @@ export function VideoPlayer({ lesson, videoRef, onEnded, onNext }: {
         </div>
       )}
 
-      {resumedAt !== null && (
+      {jump !== null && (
         <div className="pointer-events-none absolute top-4 left-1/2 -translate-x-1/2 rounded-full bg-black/75 px-3 py-1 text-sm text-white">
-          Retomando de {formatClock(resumedAt)}
+          {jump.label} {formatClock(jump.sec)}
         </div>
       )}
 

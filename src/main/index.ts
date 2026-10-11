@@ -5,6 +5,7 @@ import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
 import { getDashboard } from './db/dashboard'
 import { getSettings, updateSettings } from './db/settings'
+import { search } from './db/search'
 import { registerCourseIpc } from './ipc/courses'
 import { registerLessonIpc } from './ipc/lessons'
 import { registerNoteIpc } from './ipc/notes'
@@ -63,6 +64,7 @@ function registerIpc(db: Database): void {
     if (error) throw new Error(error)
   })
   ipcMain.handle(IPC.dashboardGet, () => getDashboard(db))
+  ipcMain.handle(IPC.searchQuery, (_e, text: unknown) => search(db, String(text ?? '').slice(0, 200)))
   ipcMain.handle(IPC.settingsGet, () => getSettings(db))
   ipcMain.handle(IPC.settingsUpdate, (_e, patch) => updateSettings(db, patch ?? {}))
 }

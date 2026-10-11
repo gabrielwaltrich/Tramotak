@@ -4,12 +4,17 @@ import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { NAV_FOOTER, NAV_ITEMS, type NavItem } from '@shared/nav'
 import { NavIcon } from './NavIcon'
 import { readPref, writePref } from '../storage'
+import { useSearch } from '../lib/searchContext'
 
 const KEY = 'tramotak.sidebar.collapsed'
 
 function Item({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
   const base =
     'flex h-9 items-center gap-3 rounded-md px-3 text-sm transition-colors whitespace-nowrap'
+
+  if (item.action) {
+    return <ActionItem item={item} collapsed={collapsed} className={base} />
+  }
 
   if (item.soon) {
     return (
@@ -43,6 +48,31 @@ function Item({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
       <NavIcon name={item.icon} className="shrink-0" />
       {!collapsed && <span className="truncate">{item.label}</span>}
     </NavLink>
+  )
+}
+
+function ActionItem({ item, collapsed, className }: { item: NavItem; collapsed: boolean; className: string }) {
+  const search = useSearch()
+  const isMac = navigator.platform.toLowerCase().includes('mac')
+  return (
+    <button
+      type="button"
+      onClick={search.open}
+      title={collapsed ? item.label : undefined}
+      className={`${className} w-full text-muted hover:bg-surface-2 hover:text-text`}
+    >
+      <NavIcon name={item.icon} className="shrink-0" />
+      {!collapsed && (
+        <>
+          <span className="truncate">{item.label}</span>
+          {item.shortcut && (
+            <kbd className="ml-auto rounded border border-border px-1.5 text-[10px] tracking-wide">
+              {isMac ? item.shortcut.replace('Ctrl', '⌘') : item.shortcut}
+            </kbd>
+          )}
+        </>
+      )}
+    </button>
   )
 }
 

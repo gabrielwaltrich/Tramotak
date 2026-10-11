@@ -88,5 +88,56 @@ export const MIGRATIONS: string[] = [
   /* 2 — estrutura escolhida no import (inclui 'auto'), usada ao revalidar */ `
   ALTER TABLE courses ADD COLUMN scan_structure TEXT NOT NULL DEFAULT 'auto'
     CHECK (scan_structure IN ('auto', 'flat', 'modules', 'submodules'));
+  `,
+  /* 3 — busca global (FTS5). rowid = id * 8 + tipo: 1 curso, 2 módulo, 3 aula, 4 anotação */ `
+  CREATE VIRTUAL TABLE search_index USING fts5(
+    title, body,
+    tokenize = 'unicode61 remove_diacritics 2'
+  );
+
+  CREATE TRIGGER search_course_ai AFTER INSERT ON courses BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 1, new.title, new.description);
+  END;
+  CREATE TRIGGER search_course_au AFTER UPDATE OF title, description ON courses BEGIN
+    UPDATE search_index SET title = new.title, body = new.description WHERE rowid = new.id * 8 + 1;
+  END;
+  CREATE TRIGGER search_course_ad AFTER DELETE ON courses BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 1;
+  END;
+
+  CREATE TRIGGER search_module_ai AFTER INSERT ON modules BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 2, new.title, '');
+  END;
+  CREATE TRIGGER search_module_au AFTER UPDATE OF title ON modules BEGIN
+    UPDATE search_index SET title = new.title WHERE rowid = new.id * 8 + 2;
+  END;
+  CREATE TRIGGER search_module_ad AFTER DELETE ON modules BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 2;
+  END;
+
+  CREATE TRIGGER search_lesson_ai AFTER INSERT ON lessons BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 3, new.title, '');
+  END;
+  CREATE TRIGGER search_lesson_au AFTER UPDATE OF title ON lessons BEGIN
+    UPDATE search_index SET title = new.title WHERE rowid = new.id * 8 + 3;
+  END;
+  CREATE TRIGGER search_lesson_ad AFTER DELETE ON lessons BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 3;
+  END;
+
+  CREATE TRIGGER search_note_ai AFTER INSERT ON notes BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 4, '', new.body_md);
+  END;
+  CREATE TRIGGER search_note_au AFTER UPDATE OF body_md ON notes BEGIN
+    UPDATE search_index SET body = new.body_md WHERE rowid = new.id * 8 + 4;
+  END;
+  CREATE TRIGGER search_note_ad AFTER DELETE ON notes BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 4;
+  END;
+
+  INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 1, title, description FROM courses;
+  INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 2, title, '' FROM modules;
+  INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 3, title, '' FROM lessons;
+  INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 4, '', body_md FROM notes;
   `
 ]

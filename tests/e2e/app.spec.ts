@@ -93,3 +93,29 @@ test('aula em Markdown abre isolada, sem scripts', async () => {
   await expect(frame.contentFrame().getByRole('heading', { name: 'Leia antes' })).toBeVisible()
   await app.close()
 })
+
+test('busca global: Ctrl+K encontra a anotação e abre o vídeo no horário dela', async () => {
+  const { app, page } = await launch()
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K')
+  const input = page.getByRole('combobox', { name: 'Buscar' })
+  await expect(input).toBeFocused()
+
+  // Sem acento e só o começo da palavra
+  await input.fill('primeira anot')
+  const note = page.getByRole('group', { name: 'Anotações' }).getByRole('option')
+  await expect(note).toHaveCount(1)
+  await expect(note).toContainText('Boas-vindas')
+
+  await input.fill('boas')
+  await expect(page.getByRole('group', { name: 'Aulas' }).getByRole('option')).toContainText('Boas-vindas')
+
+  await input.fill('primeira anotacao')
+  await expect(note).toHaveCount(1)
+  await input.press('Enter')
+
+  await expect(page).toHaveURL(/#\/lesson\/\d+\?t=\d+$/)
+  const t = Number(new URL(page.url().replace('#/', '')).searchParams.get('t'))
+  const video = page.locator('video')
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThanOrEqual(t)
+  await app.close()
+})

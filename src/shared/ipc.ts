@@ -1,5 +1,6 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type {
+  SearchHit,
   DashboardData,
   Note,
   LessonView,
@@ -52,7 +53,8 @@ export const IPC = {
   dashboardGet: 'dashboard:get',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
-  filesOpenDataFolder: 'files:openDataFolder'
+  filesOpenDataFolder: 'files:openDataFolder',
+  searchQuery: 'search:query'
 } as const
 
 export interface LessonText {
@@ -67,6 +69,10 @@ export interface TramotakApi {
   }
   dashboard: {
     get(): Promise<DashboardData>
+  }
+  search: {
+    /** Busca global em cursos, módulos, aulas e anotações. */
+    query(text: string): Promise<SearchHit[]>
   }
   settings: {
     get(): Promise<AppSettings>

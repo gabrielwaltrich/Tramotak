@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Star } from 'lucide-react'
 import type { LessonView } from '@shared/course'
@@ -17,10 +17,14 @@ const NEXT_COUNTDOWN_SEC = 3
 /** Remonta a página a cada aula: estado local (contagem, foco, player) começa do zero. */
 export function PlayerPage() {
   const { id } = useParams()
-  return <LessonPlayer key={id} lessonId={Number(id)} />
+  const [params] = useSearchParams()
+  // `?t=495` abre a aula nesse segundo (ex.: vindo de uma anotação na busca).
+  const raw = params.get('t')
+  const startAt = raw !== null && Number.isFinite(Number(raw)) ? Math.max(0, Number(raw)) : null
+  return <LessonPlayer key={`${id}:${raw}`} lessonId={Number(id)} startAt={startAt} />
 }
 
-function LessonPlayer({ lessonId }: { lessonId: number }) {
+function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number | null }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -123,7 +127,7 @@ function LessonPlayer({ lessonId }: { lessonId: number }) {
 
         <div ref={playerRef} className="relative">
           {l.kind === 'video' ? (
-            <VideoPlayer key={l.id} lesson={l} videoRef={videoRef} onEnded={onEnded} onNext={next ? goNext : undefined} />
+            <VideoPlayer key={l.id} lesson={l} videoRef={videoRef} startAt={startAt} onEnded={onEnded} onNext={next ? goNext : undefined} />
           ) : l.kind === 'text' ? (
             <TextLesson lessonId={l.id} />
           ) : (

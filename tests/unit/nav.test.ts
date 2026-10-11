@@ -9,8 +9,12 @@ describe('navegação', () => {
     expect(new Set(paths).size).toBe(paths.length)
   })
 
-  it('só Início, Meus Cursos e Configurações estão liberados', () => {
+  it('libera Início, Meus Cursos, Buscar e Configurações', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
-    expect(enabled).toEqual(['/', '/courses', '/settings'])
+    expect(enabled).toEqual(['/', '/courses', '/search', '/settings'])
+  })
+
+  it('Buscar abre a paleta em vez de navegar', () => {
+    expect(NAV_ITEMS.find((i) => i.path === '/search')).toMatchObject({ action: 'search' })
   })
 })

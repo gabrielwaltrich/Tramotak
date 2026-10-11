@@ -197,3 +197,25 @@ export interface DashboardData {
   streak: { current: number; todayDone: boolean; best: number }
   continueLesson: ContinueLesson | null
 }
+
+export type SearchKind = 'course' | 'module' | 'lesson' | 'note'
+
+/**
+ * Resultado da busca global. `title` e `snippet` trazem os trechos encontrados entre
+ * `HL_START` e `HL_END` (caracteres de controle; a interface os troca por destaque).
+ */
+export interface SearchHit {
+  kind: SearchKind
+  id: number
+  title: string
+  snippet: string | null
+  courseId: number
+  courseTitle: string
+  moduleTitle: string | null
+  lessonId: number | null
+  lessonKind: LessonKind | null
+  timestampSec: number | null
+}
+
+export const HL_START = '\u0001'
+export const HL_END = '\u0002'

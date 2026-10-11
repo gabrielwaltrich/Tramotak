@@ -17,12 +17,16 @@ export interface NavItem {
   label: string
   icon: NavIcon
   soon?: boolean
+  /** Item que dispara uma ação em vez de navegar. */
+  action?: 'search'
+  /** Atalho mostrado ao lado do rótulo. */
+  shortcut?: string
 }
 
 export const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Início', icon: 'home' },
   { path: '/courses', label: 'Meus Cursos', icon: 'book' },
-  { path: '/search', label: 'Buscar', icon: 'search', soon: true },
+  { path: '/search', label: 'Buscar', icon: 'search', action: 'search', shortcut: 'Ctrl K' },
   { path: '/flashcards', label: 'Flashcards', icon: 'layers', soon: true },
   { path: '/questions', label: 'Questões', icon: 'clipboard', soon: true },
   { path: '/planner', label: 'Planner', icon: 'calendar', soon: true },

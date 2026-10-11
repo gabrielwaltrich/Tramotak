@@ -267,7 +267,14 @@ Tramotak/
 
 ## 9. Roadmap dos próximos objetivos
 
-2. **Busca global** (Ctrl+K) sobre cursos, aulas e anotações (SQLite FTS5)
+2. ✅ **Busca global** (Ctrl+K) sobre cursos, módulos, aulas e anotações (SQLite FTS5)
+   - Índice `search_index` (migration 3) com `unicode61 remove_diacritics 2`: ignora acentos e maiúsculas.
+     `rowid = id × 8 + tipo` (1 curso, 2 módulo, 3 aula, 4 anotação); *triggers* mantêm o índice em dia,
+     inclusive nas exclusões em cascata e na revalidação; a migration indexa os dados já existentes.
+   - Cada palavra digitada vira um prefixo obrigatório (`calc deriv` → `"calc"* "deriv"*`); operadores e
+     pontuação são descartados. Ordenação por `bm25`, com peso 4 no título.
+   - Paleta com resultados agrupados, trechos destacados, setas/Enter/Esc e buscas recentes.
+     Anotações abrem a aula no horário delas (`/lesson/:id?t=segundos`).
 3. **Flashcards** com SRS (SM-2 e depois FSRS), cards criados a partir de anotações, import `.apkg`
 4. **Planner + Progresso** (calendário, kanban, heatmap, metas)
 5. **Questões e simulados** (bancos, blueprints, cronômetro)

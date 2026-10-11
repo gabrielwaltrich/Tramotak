@@ -9,6 +9,9 @@ const api: TramotakApi = {
   dashboard: {
     get: () => ipcRenderer.invoke(IPC.dashboardGet)
   },
+  search: {
+    query: (text) => ipcRenderer.invoke(IPC.searchQuery, text)
+  },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch)
