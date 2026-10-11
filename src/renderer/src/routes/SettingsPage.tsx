@@ -8,6 +8,8 @@ import { GOAL_MAX, GOAL_MIN } from '../components/GoalCard'
 import { useToast } from '../components/Toast'
 import { MediaSettings } from '../components/media/MediaSettings'
 import { AiSettings } from '../components/ai/AiSettings'
+import { BackupSettings } from '../components/backup/BackupSettings'
+import { PackageSettings } from '../components/backup/PackageSettings'
 import { getStoredTheme, setTheme, type Theme } from '../theme'
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -199,7 +201,7 @@ export function SettingsPage() {
         {settings.data && <AiSettings key={settings.data.aiProvider} settings={settings.data} />}
       </Section>
 
-      <Section title="Dados" description="Biblioteca, progresso e anotações ficam só neste computador.">
+      <Section title="Dados e backup" description="Biblioteca, progresso e anotações ficam neste computador, na pasta abaixo.">
         {info.data && (
           <div className="flex items-center gap-3">
             <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-bg px-3 py-2 text-xs select-text" title={info.data.dataPath}>
@@ -210,6 +212,15 @@ export function SettingsPage() {
             </Button>
           </div>
         )}
+        {settings.data && (
+          <div className="mt-5 border-t border-border pt-5">
+            <BackupSettings settings={settings.data} />
+          </div>
+        )}
+      </Section>
+
+      <Section title="Pacotes de estudo" description="Exporte baralhos, bancos de questões, cadernos, mapas e as anotações dos cursos para outro computador ou para outra pessoa, e importe pacotes recebidos.">
+        <PackageSettings />
       </Section>
 
       <Section title="Sobre">

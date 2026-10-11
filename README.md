@@ -14,6 +14,7 @@ Windows, macOS e Linux.
 - **IA (dá para usar de graça):** gere flashcards, questões, resumos e mapas mentais a partir da transcrição, legendas e anotações de uma aula (ou de uma página de caderno), revise e salve. Gemini grátis com a conta Google, login no OpenRouter (modelos grátis e pagos), modelos leves no seu computador pelo Ollama (Llama, Qwen, Gemma), chave do Claude ou qualquer API compatível com a OpenAI.
 - **Planner:** tarefas em quadro (arrastar e soltar) e calendário com as revisões previstas; avisos antes dos blocos de estudo.
 - **Progresso:** mapa de atividade, minutos dos últimos 30 dias contra a meta, progresso por curso e histórico.
+- **Backup e pacotes:** backup completo do banco (manual e automático diário) com restauração; pacotes `.tramotak` para levar baralhos, questões, cadernos, mapas e anotações a outro computador ou pessoa.
 - **Início:** continuar assistindo, tarefas e flashcards do dia, meta diária de minutos e sequência de dias de estudo.
 
 Tudo fica no seu computador (exceto o que você mandar transcrever ou gerar com um provedor na nuvem): o Tramotak lê as pastas dos cursos sem alterá-las e guarda progresso e anotações num banco local.
@@ -47,6 +48,8 @@ Baixe a versão mais recente em **[Releases](https://github.com/gabrielwaltrich/
 | Compatível com OpenAI | Depende do servidor | OpenAI, LM Studio, vLLM… com endereço e chave. |
 
 As chaves ficam cifradas pelo cofre do sistema e nunca voltam para a interface.
+
+**Backup e outro computador:** em Configurações → Dados e backup. O backup é um arquivo `.db` com tudo, menos os vídeos e as chaves de API. Para migrar, restaure o backup no computador novo e use **Trocar pasta…** no menu dos cursos que estiverem em outro caminho; o progresso e as anotações são mantidos. Para compartilhar só parte do material, use **Exportar pacote…**.
 
 **Licença do FFmpeg:** o Tramotak inclui o FFmpeg (GPL) como programa separado; a licença está em Configurações → Sobre.
 

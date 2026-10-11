@@ -15,6 +15,9 @@ import { registerQuestionIpc } from './ipc/questions'
 import { registerNotebookIpc } from './ipc/notebooks'
 import { registerMediaIpc } from './ipc/media'
 import { registerAiIpc } from './ipc/ai'
+import { registerBackupIpc } from './ipc/backup'
+import { applyPendingRestore, autoBackup } from './backup/backup'
+import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
@@ -80,7 +83,11 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.tramotak.app')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
-  db = openDatabase(join(app.getPath('userData'), 'tramotak.db'))
+  const userData = app.getPath('userData')
+  const dbPath = join(userData, 'tramotak.db')
+  const backupsDir = join(userData, 'backups')
+  if (applyPendingRestore(userData, dbPath, backupsDir)) console.log('Backup restaurado')
+  db = openDatabase(dbPath)
   registerIpc(db)
   registerCourseIpc(db)
   registerLessonIpc(db)
@@ -93,6 +100,19 @@ app.whenReady().then(() => {
   handleMediaProtocol(db, convertedDir)
   registerMediaIpc(db, convertedDir)
   registerAiIpc(db)
+  registerBackupIpc({
+    db,
+    userData,
+    backupsDir,
+    appVersion: app.getVersion(),
+    restart: () => {
+      db?.close()
+      db = undefined
+      app.relaunch()
+      app.exit(0)
+    }
+  })
+  scheduleAutoBackup(backupsDir)
   createWindow()
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 
@@ -100,6 +120,21 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+/** Backup automático: um minuto depois de abrir e a cada 6 h (só grava se o último tiver mais de ~20 h). */
+function scheduleAutoBackup(backupsDir: string): void {
+  const run = () => {
+    if (!db || !getSettings(db).autoBackup) return
+    try {
+      const last = getInternal(db, 'lastAutoBackupAt')
+      if (autoBackup(db, backupsDir, typeof last === 'number' ? last : null)) setInternal(db, 'lastAutoBackupAt', Math.floor(Date.now() / 1000))
+    } catch (error) {
+      console.error('Backup automático falhou:', error)
+    }
+  }
+  setTimeout(run, 60_000).unref()
+  setInterval(run, 6 * 3600_000).unref()
+}
 
 app.on('will-quit', () => {
   db?.close()

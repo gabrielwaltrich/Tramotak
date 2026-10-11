@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router'
-import { MoreVertical, Pencil, RefreshCw, Trash2 } from 'lucide-react'
+import { MoreVertical, Pencil, RefreshCw, Trash2, FolderInput } from 'lucide-react'
 import type { CourseSummary } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { Menu } from './Menu'
@@ -20,10 +20,12 @@ function initials(title: string): string {
     .join('')
 }
 
-export function CourseCard({ course, onEdit, onRevalidate, onDelete, revalidating = false }: {
+export function CourseCard({ course, onEdit, onRevalidate, onRelocate, onDelete, revalidating = false }: {
   course: CourseSummary
   onEdit?: () => void
   onRevalidate?: () => void
+  /** Apontar para outra pasta (curso movido ou restaurado em outro computador). */
+  onRelocate?: () => void
   onDelete?: () => void
   revalidating?: boolean
 }) {
@@ -66,6 +68,9 @@ export function CourseCard({ course, onEdit, onRevalidate, onDelete, revalidatin
                 ...(onEdit ? [{ label: 'Editar', icon: <Pencil size={14} />, onSelect: onEdit }] : []),
                 ...(onRevalidate
                   ? [{ label: 'Revalidar pasta', icon: <RefreshCw size={14} />, onSelect: onRevalidate, disabled: revalidating }]
+                  : []),
+                ...(onRelocate
+                  ? [{ label: 'Trocar pasta…', icon: <FolderInput size={14} />, onSelect: onRelocate, disabled: revalidating }]
                   : []),
                 ...(onDelete ? [{ label: 'Excluir', icon: <Trash2 size={14} />, onSelect: onDelete, danger: true }] : [])
               ]}

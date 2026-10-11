@@ -1,9 +1,9 @@
 import { stat } from 'node:fs/promises'
 import { basename, resolve } from 'node:path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import type { ImportRequest, Numbering, PreviewResponse, Structure } from '@shared/course'
+import type { ImportRequest, Numbering, PreviewResponse, ScanResult, Structure } from '@shared/course'
 import { IPC } from '@shared/ipc'
-import type { Database } from '../db/database'
+import { transaction, type Database } from '../db/database'
 import {
   deleteCourse,
   findCourseByRoot,
@@ -29,6 +29,19 @@ async function assertDirectory(path: string): Promise<string> {
 
 function assertOptions(structure: Structure, numbering: Numbering) {
   if (!STRUCTURES.includes(structure) || !NUMBERINGS.includes(numbering)) throw new Error('Opções de importação inválidas')
+}
+
+/** Caminhos relativos de todas as aulas de um scan. */
+function scannedPaths(scan: ScanResult): string[] {
+  const out = scan.lessons.map((l) => l.relPath)
+  const walk = (mods: ScanResult['modules']) => {
+    for (const m of mods) {
+      out.push(...m.lessons.map((l) => l.relPath))
+      walk(m.children)
+    }
+  }
+  walk(scan.modules)
+  return out
 }
 
 function assertId(id: unknown): number {
@@ -76,9 +89,38 @@ export function registerCourseIpc(db: Database): void {
   ipcMain.handle(IPC.coursesRevalidate, async (_e, id: number) => {
     const course = getCourseRow(db, assertId(id))
     const root = await assertDirectory(course.rootPath).catch(() => {
-      throw new Error('A pasta do curso não existe mais neste caminho')
+      throw new Error('A pasta do curso não existe mais neste caminho. Se ela mudou de lugar, use “Trocar pasta…” no menu do curso.')
     })
     const scan = await scanCourse(root, { structure: course.scanStructure, numbering: course.numbering })
     return revalidateCourse(db, course.id, scan)
+  })
+
+  /** Nova pasta para o curso: casa as aulas pelo caminho relativo, mantendo progresso e anotações. */
+  ipcMain.handle(IPC.coursesRelocate, async (event, id: number) => {
+    const course = getCourseRow(db, assertId(id))
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options = { title: `Nova pasta de “${course.title}”`, properties: ['openDirectory' as const] }
+    const picked = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+    if (picked.canceled || !picked.filePaths[0]) return null
+    const root = await assertDirectory(picked.filePaths[0])
+    const other = findCourseByRoot(db, root)
+    if (other !== null && other !== course.id) throw new Error('Esta pasta já pertence a outro curso')
+    const scan = await scanCourse(root, { structure: course.scanStructure, numbering: course.numbering })
+    if (scan.stats.lessons === 0) throw new Error('Nenhuma aula encontrada nesta pasta')
+    // Pasta errada apagaria as aulas que não batem (com anotações e progresso): exige que a maioria corresponda.
+    const existing = (db.prepare('SELECT rel_path AS p FROM lessons WHERE course_id = ?').all(course.id) as { p: string }[]).map((r) => r.p)
+    const found = new Set(scannedPaths(scan))
+    const matching = existing.filter((p) => found.has(p)).length
+    if (existing.length > 0 && matching < existing.length / 2) {
+      throw new Error(
+        `Só ${matching} de ${existing.length} aulas do curso foram encontradas nesta pasta. Confira se é a pasta certa (se for outro curso, importe como novo).`
+      )
+    }
+    return transaction(db, () => {
+      db.prepare('UPDATE courses SET root_path = ? WHERE id = ?').run(root, course.id)
+      const result = revalidateCourse(db, course.id, scan)
+      const kept = (db.prepare('SELECT COUNT(*) AS n FROM lessons WHERE course_id = ?').get(course.id) as { n: number }).n - result.added
+      return { ...result, kept }
+    })
   })
 }

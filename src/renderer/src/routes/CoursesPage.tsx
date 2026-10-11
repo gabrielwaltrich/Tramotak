@@ -85,6 +85,24 @@ export function CoursesPage() {
     }
   }
 
+  const relocate = async (course: CourseSummary) => {
+    setRevalidating((s) => new Set(s).add(course.id))
+    try {
+      const result = await window.api.courses.relocate(course.id)
+      if (!result) return
+      await queryClient.invalidateQueries({ queryKey: queryKeys.courses })
+      toast(`${course.title}: pasta trocada · ${plural(result.kept, 'aula mantida', 'aulas mantidas')}${result.added ? ` · ${result.added} nova(s)` : ''}${result.removed ? ` · ${result.removed} não encontrada(s)` : ''}`)
+    } catch (error) {
+      toast(`${course.title}: ${errorMessage(error)}`, 'error')
+    } finally {
+      setRevalidating((s) => {
+        const next = new Set(s)
+        next.delete(course.id)
+        return next
+      })
+    }
+  }
+
   const list = courses.data ?? []
 
   return (
@@ -150,6 +168,7 @@ export function CoursesPage() {
                   revalidating={revalidating.has(course.id)}
                   onEdit={() => setEditing(course)}
                   onRevalidate={() => revalidate(course)}
+                  onRelocate={() => relocate(course)}
                   onDelete={() => setDeleting(course)}
                 />
               ))}

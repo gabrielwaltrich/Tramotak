@@ -143,7 +143,22 @@ const api: TramotakApi = {
     get: (id) => ipcRenderer.invoke(IPC.coursesGet, id),
     update: (id, patch) => ipcRenderer.invoke(IPC.coursesUpdate, id, patch),
     delete: (id) => ipcRenderer.invoke(IPC.coursesDelete, id),
-    revalidate: (id) => ipcRenderer.invoke(IPC.coursesRevalidate, id)
+    revalidate: (id) => ipcRenderer.invoke(IPC.coursesRevalidate, id),
+    relocate: (id) => ipcRenderer.invoke(IPC.coursesRelocate, id)
+  },
+  backup: {
+    create: () => ipcRenderer.invoke(IPC.backupCreate),
+    list: () => ipcRenderer.invoke(IPC.backupList),
+    openFolder: () => ipcRenderer.invoke(IPC.backupOpenFolder),
+    inspectFile: () => ipcRenderer.invoke(IPC.backupInspectFile),
+    inspect: (name) => ipcRenderer.invoke(IPC.backupInspect, name),
+    restore: (name) => ipcRenderer.invoke(IPC.backupRestore, name)
+  },
+  packages: {
+    catalog: () => ipcRenderer.invoke(IPC.packageCatalog),
+    export: (selection) => ipcRenderer.invoke(IPC.packageExport, selection),
+    open: () => ipcRenderer.invoke(IPC.packageOpen),
+    import: (request) => ipcRenderer.invoke(IPC.packageImport, request)
   },
   lessons: {
     get: (id) => ipcRenderer.invoke(IPC.lessonsGet, id),

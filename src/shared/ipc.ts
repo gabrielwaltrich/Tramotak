@@ -8,6 +8,7 @@ import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
+import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
 import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef } from './ai'
 import type {
   SearchHit,
@@ -55,6 +56,8 @@ export interface AppSettings {
   ollamaUrl: string
   /** Base de uma API compatível com a da OpenAI (…/v1). */
   openaiBaseUrl: string
+  /** Backup automático diário na pasta do app (guarda os 7 mais recentes). */
+  autoBackup: boolean
 }
 
 export const IPC = {
@@ -178,7 +181,18 @@ export const IPC = {
   aiOllamaStatus: 'ai:ollamaStatus',
   aiOllamaPull: 'ai:ollamaPull',
   aiOllamaPullCancel: 'ai:ollamaPullCancel',
-  aiOllamaPullProgress: 'ai:ollamaPullProgress'
+  aiOllamaPullProgress: 'ai:ollamaPullProgress',
+  coursesRelocate: 'courses:relocate',
+  backupCreate: 'backup:create',
+  backupList: 'backup:list',
+  backupOpenFolder: 'backup:openFolder',
+  backupInspectFile: 'backup:inspectFile',
+  backupInspect: 'backup:inspect',
+  backupRestore: 'backup:restore',
+  packageCatalog: 'package:catalog',
+  packageExport: 'package:export',
+  packageOpen: 'package:open',
+  packageImport: 'package:import'
 } as const
 
 export interface OllamaPullState {
@@ -382,6 +396,25 @@ export interface TramotakApi {
     ollamaPullCancel(): Promise<void>
     onPullProgress(callback: (p: OllamaPullState) => void): () => void
   }
+  backup: {
+    /** "Salvar como" e cria um backup completo (sem as chaves de API). `null` se cancelar. */
+    create(): Promise<{ path: string; bytes: number } | null>
+    list(): Promise<{ dir: string; backups: BackupEntry[] }>
+    openFolder(): Promise<void>
+    /** Escolhe um arquivo de backup e mostra o que tem nele. `null` se cancelar. */
+    inspectFile(): Promise<BackupInfo | null>
+    inspect(name: string): Promise<BackupInfo>
+    /** Restaura (backup da pasta do app pelo nome, ou o arquivo inspecionado com `null`) e reinicia o app. */
+    restore(name: string | null): Promise<void>
+  }
+  packages: {
+    catalog(): Promise<ExportCatalog>
+    /** Monta o pacote e abre "Salvar como". `null` se cancelar. */
+    export(selection: ExportSelection): Promise<{ path: string; bytes: number } | null>
+    /** Abre um pacote e devolve o resumo para confirmar. `null` se cancelar. */
+    open(): Promise<PackagePreview | null>
+    import(request: PackageImportRequest): Promise<PackageImportResult>
+  }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {
     get(): Promise<ProgressData>
@@ -405,6 +438,8 @@ export interface TramotakApi {
     update(id: number, patch: { title: string; description: string }): Promise<void>
     delete(id: number): Promise<void>
     revalidate(id: number): Promise<RevalidateResult>
+    /** Aponta o curso para outra pasta (ex.: depois de restaurar em outro computador). `null` se cancelar. */
+    relocate(id: number): Promise<(RevalidateResult & { kept: number }) | null>
   }
   lessons: {
     get(id: number): Promise<LessonView>

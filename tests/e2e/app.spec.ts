@@ -398,3 +398,55 @@ test('IA: provedor local gera flashcards de uma aula, revisão escolhe e salva n
     server.close()
   }
 })
+
+test('backup e pacote: salva o banco, exporta baralho com anotações e importa ligado ao curso', async () => {
+  const backupFile = join(workdir, 'backup.db')
+  const packageFile = join(workdir, 'pacote.tramotak')
+  const { app, page } = await launch()
+  try {
+    const stubDialogs = (save: string | null, open: string | null) =>
+      app.evaluate(
+        ({ dialog }, paths) => {
+          dialog.showSaveDialog = (async () => (paths.save ? { canceled: false, filePath: paths.save } : { canceled: true })) as typeof dialog.showSaveDialog
+          dialog.showOpenDialog = (async () => (paths.open ? { canceled: false, filePaths: [paths.open] } : { canceled: true, filePaths: [] })) as typeof dialog.showOpenDialog
+        },
+        { save, open }
+      )
+
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    await stubDialogs(backupFile, null)
+    await page.getByRole('button', { name: 'Fazer backup agora' }).click()
+    await expect(page.getByText(/Backup salvo/)).toBeVisible()
+
+    // O arquivo salvo é reconhecido como backup restaurável
+    await stubDialogs(null, backupFile)
+    await page.getByRole('button', { name: 'Restaurar de um arquivo…' }).click()
+    const restore = page.getByRole('dialog', { name: 'Restaurar backup' })
+    await expect(restore.getByText(/\d+ cursos? · \d+ aulas/)).toBeVisible()
+    await restore.getByRole('button', { name: 'Cancelar' }).click()
+
+    // Exporta o baralho "Baralho da IA" (cartas ligadas à aula) e as anotações do curso
+    await stubDialogs(packageFile, null)
+    await page.getByRole('button', { name: 'Exportar pacote…' }).click()
+    const exportDialog = page.getByRole('dialog', { name: 'Exportar pacote de estudo' })
+    await exportDialog.getByRole('checkbox', { name: /Curso E2E · \d+ anotaç/ }).check()
+    await exportDialog.getByRole('checkbox', { name: /Baralho da IA/ }).check()
+    await exportDialog.getByRole('button', { name: /Exportar \(2\)/ }).click()
+    await expect(page.getByText(/Pacote exportado/)).toBeVisible()
+
+    await stubDialogs(null, packageFile)
+    await page.getByRole('button', { name: 'Importar pacote…' }).click()
+    const importDialog = page.getByRole('dialog', { name: 'Importar pacote de estudo' })
+    await expect(importDialog.getByRole('combobox', { name: 'Curso local para Curso E2E' })).toHaveValue(/\d+/)
+    await importDialog.getByRole('button', { name: 'Importar', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Pacote importado' }).getByText(/1 baralho com 1 carta/)).toBeVisible()
+
+    const decks = await page.evaluate(() => window.api.decks.list())
+    const copies = decks.filter((d) => d.title === 'Baralho da IA')
+    expect(copies).toHaveLength(2)
+    const imported = await page.evaluate((id) => window.api.decks.get(id), Math.max(...copies.map((d) => d.id)))
+    expect(imported.cards[0]).toMatchObject({ front: 'O que a legenda diz?', lessonTitle: 'Boas-vindas' })
+  } finally {
+    await app.close()
+  }
+})

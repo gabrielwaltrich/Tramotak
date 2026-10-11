@@ -384,7 +384,25 @@ Tramotak/
        Free/Pro/Max em apps de terceiros; a tela explica e aponta o OpenRouter como alternativa.
    - Fica para depois: conversa sobre a aula, gerar do curso inteiro, PDFs como material, streaming da resposta,
      custo estimado por pedido.
-9. **Exportar/Importar** pacotes e backup do banco
+9. ✅ **Exportar/Importar** pacotes e backup do banco
+   - Backup: `VACUUM INTO` (cópia consistente com o banco aberto) num `.db`, sem as chaves de API (só decifram
+     neste computador). Backup automático diário (1 min após abrir e a cada 6 h, se o último tiver > 20 h) em
+     `<dados>/backups`, guardando os 7 mais recentes; manuais e "antes de restaurar" nunca são apagados.
+   - Restaurar: confere cabeçalho SQLite, tabelas do Tramotak, `quick_check` e versão do esquema (recusa backup de
+     versão mais nova), mostra o conteúdo e reinicia o app. A troca acontece no início, antes de abrir o banco:
+     o atual vira `antes-de-restaurar-…`, o backup entra no lugar (migrations sobem a versão) e as chaves deste
+     computador são mantidas. Pendência inválida é descartada.
+   - "Trocar pasta…" no curso: aponta para a nova pasta e revalida casando as aulas pelo caminho relativo
+     (progresso e anotações ficam). Recusa se menos da metade das aulas corresponder (pasta errada apagaria dados)
+     ou se a pasta for de outro curso.
+   - Pacotes `.tramotak` (JSON em gzip, `format: tramotak-package`, versão 1): baralhos (com ou sem agendamento),
+     bancos com simulados, cadernos, mapas e, por curso, anotações, transcrições e progresso. Sem caminhos do disco:
+     cursos viram chave + títulos + caminhos relativos das aulas; ligações de cartas, blocos de caderno e anexos de
+     mapa viram `{curso, caminho}`. Na importação, cada curso do pacote é ligado a um curso local (sugestão por
+     título ou ≥ 50% das aulas em comum); tudo entra como item novo numa transação, anotações não duplicam e o
+     progresso mantém o mais recente/adiantado. Ligações sem destino são contadas e descartadas.
+   - Fica para depois: incluir sessões de estudo e tarefas nos pacotes, backup para a nuvem, criptografia do
+     backup com senha, exportar o curso com os vídeos.
 
 ---
 
