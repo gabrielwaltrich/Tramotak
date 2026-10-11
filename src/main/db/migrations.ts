@@ -335,5 +335,29 @@ export const MIGRATIONS: string[] = [
   CREATE TRIGGER search_mindmap_ad AFTER DELETE ON mindmaps BEGIN
     DELETE FROM search_index WHERE rowid = old.id * 8;
   END;
+  `,
+  /* 8 — vídeos convertidos (cópia na pasta do app) e transcrições. O texto falado entra na busca da aula. */ `
+  ALTER TABLE lessons ADD COLUMN converted_file TEXT;      -- nome do arquivo em <dados do app>/converted
+  ALTER TABLE lessons ADD COLUMN converted_at INTEGER;
+
+  CREATE TABLE transcripts (
+    lesson_id     INTEGER PRIMARY KEY REFERENCES lessons(id) ON DELETE CASCADE,
+    provider      TEXT    NOT NULL,
+    model         TEXT    NOT NULL,
+    language      TEXT    NOT NULL,
+    segments_json TEXT    NOT NULL,
+    text          TEXT    NOT NULL,
+    created_at    INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TRIGGER search_transcript_ai AFTER INSERT ON transcripts BEGIN
+    UPDATE search_index SET body = new.text WHERE rowid = new.lesson_id * 8 + 3;
+  END;
+  CREATE TRIGGER search_transcript_au AFTER UPDATE OF text ON transcripts BEGIN
+    UPDATE search_index SET body = new.text WHERE rowid = new.lesson_id * 8 + 3;
+  END;
+  CREATE TRIGGER search_transcript_ad AFTER DELETE ON transcripts BEGIN
+    UPDATE search_index SET body = '' WHERE rowid = old.lesson_id * 8 + 3;
+  END;
   `
 ]

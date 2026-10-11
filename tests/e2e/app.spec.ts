@@ -314,3 +314,28 @@ test('cadernos e mapas: Markdown seguro com fórmula, salvamento automático e m
   await expect(page.getByText('3 tópicos')).toBeVisible()
   await app.close()
 })
+
+test('vídeo HEVC: o player detecta, oferece conversão e passa a mostrar a imagem', async () => {
+  // Vídeo HEVC gerado na hora com o FFmpeg embutido
+  const { execFileSync } = await import('node:child_process')
+  const { mkdirSync } = await import('node:fs')
+  const ffmpeg = (await import('ffmpeg-static')).default as unknown as string
+  const hevcCourse = join(workdir, 'Curso HEVC')
+  mkdirSync(join(hevcCourse, '1. Módulo'), { recursive: true })
+  execFileSync(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=size=320x180:rate=10:duration=4', '-f', 'lavfi', '-i', 'sine=duration=4', '-c:v', 'libx265', '-preset', 'ultrafast', '-x265-params', 'log-level=error', '-c:a', 'aac', join(hevcCourse, '1. Módulo', '1. Aula HEVC.mp4')])
+
+  const { app, page } = await launch()
+  const lessonId = await page.evaluate(async (path) => {
+    const id = await window.api.courses.import({ path, title: 'Curso HEVC', structure: 'auto', numbering: 'dot' })
+    return (await window.api.courses.get(id)).modules[0].lessons[0].id
+  }, hevcCourse)
+  await page.evaluate((id) => (location.hash = `#/lesson/${id}`), lessonId)
+
+  // Sem a verificação, o Chromium tocaria só o áudio com tela preta, sem erro nenhum
+  await expect(page.getByText('Vídeo em HEVC, que o player não toca')).toBeVisible()
+  await page.getByRole('button', { name: 'Converter para tocar aqui' }).click()
+  const video = page.locator('video')
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.videoWidth), { timeout: 60_000 }).toBe(320)
+  await expect(page.getByText('Este vídeo não pode ser reproduzido aqui')).toHaveCount(0)
+  await app.close()
+})

@@ -5,6 +5,7 @@ import { NAV_FOOTER, NAV_ITEMS, type NavItem } from '@shared/nav'
 import { NavIcon } from './NavIcon'
 import { readPref, writePref } from '../storage'
 import { useSearch } from '../lib/searchContext'
+import { JobsIndicator } from './media/JobsIndicator'
 
 const KEY = 'tramotak.sidebar.collapsed'
 
@@ -106,6 +107,7 @@ export function Sidebar() {
       </nav>
 
       <div className="flex flex-col gap-0.5 border-t border-border px-2 py-2">
+        <JobsIndicator collapsed={collapsed} />
         {NAV_FOOTER.map((item) => (
           <Item key={item.path} item={item} collapsed={collapsed} />
         ))}

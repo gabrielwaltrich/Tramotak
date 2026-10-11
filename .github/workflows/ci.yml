@@ -77,7 +77,21 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx electron-vite build
-      - run: npx electron-builder ${{ matrix.target }} --publish never
+      - name: Instaladores
+        if: runner.os != 'macOS'
+        run: npx electron-builder ${{ matrix.target }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+      # O ffmpeg-static baixa o binário da arquitetura da máquina. O runner é Apple Silicon:
+      # gera o .dmg arm64, troca o FFmpeg pelo de Intel e gera o .dmg x64.
+      - name: Instaladores macOS (arm64 e x64, cada um com o FFmpeg da sua arquitetura)
+        if: runner.os == 'macOS'
+        run: |
+          npx electron-builder --mac --arm64 --publish never
+          rm -f node_modules/ffmpeg-static/ffmpeg node_modules/ffmpeg-static/ffmpeg.*
+          npm_config_arch=x64 npm rebuild ffmpeg-static
+          file node_modules/ffmpeg-static/ffmpeg | grep -q x86_64
+          npx electron-builder --mac --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v7

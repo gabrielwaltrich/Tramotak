@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import {
   Captions,
   Check,
-  ExternalLink,
   Maximize,
   Minimize,
   Pause,
@@ -16,6 +16,7 @@ import type { LessonView } from '@shared/course'
 import { formatClock } from '@shared/format'
 import { playerPrefs, SPEEDS } from './prefs'
 import { useProgressTracker } from './useProgressTracker'
+import { ConvertOffer } from './ConvertOffer'
 
 const HIDE_CONTROLS_MS = 2500
 const SEEK_STEP = 10
@@ -108,13 +109,32 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
   const [muted, setMuted] = useState(playerPrefs.muted)
   const [fullscreen, setFullscreen] = useState(false)
   const [controlsVisible, setControlsVisible] = useState(true)
-  const [error, setError] = useState(false)
+  const [mediaError, setMediaError] = useState(false)
+  // O Chromium não acusa erro em vídeo HEVC: toca só o áudio, com imagem 0×0. Por isso o formato
+  // é conferido com o FFmpeg ao abrir (rápido) — a cópia convertida já é compatível por construção.
+  const format = useQuery({
+    queryKey: ['probe', lesson.id],
+    queryFn: () => window.api.media.probe(lesson.id),
+    enabled: !lesson.converted,
+    retry: false,
+    staleTime: 0
+  })
+  const unsupported = !lesson.converted && format.data !== undefined && !format.data.playable
+  const error = mediaError || unsupported
+  const setError = setMediaError
+
+  useEffect(() => {
+    if (unsupported) videoRef.current?.pause()
+  }, [unsupported, videoRef])
   const [jump, setJump] = useState<{ sec: number; label: string } | null>(null)
 
   // Fica aqui (e não na página) porque precisa do <video> já montado.
   useProgressTracker(videoRef, lesson.id)
 
-  const subtitles = lesson.assets.filter((a) => a.kind === 'subtitle')
+  const subtitles = [
+    ...lesson.assets.filter((a) => a.kind === 'subtitle'),
+    ...(lesson.transcriptUrl ? [{ id: -1, kind: 'subtitle' as const, name: 'Transcrição automática', lang: null, url: lesson.transcriptUrl }] : [])
+  ]
   const preferred = playerPrefs.subtitle()
   const initialTrack =
     preferred === 'off' ? -1 : Math.max(subtitles.findIndex((s) => (s.lang ?? '') === preferred), subtitles.length ? 0 : -1)
@@ -264,6 +284,11 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
 
   const onLoadedMetadata = () => {
     const video = videoRef.current!
+    // Reforço: faixa de vídeo que o navegador não decodifica chega com dimensão zero.
+    if (video.videoWidth === 0 && video.videoHeight === 0 && lesson.kind === 'video') {
+      setError(true)
+      return
+    }
     setDuration(video.duration)
     if (Number.isFinite(video.duration) && video.duration > 0 && lesson.durationSec === null) {
       window.api.lessons.setDuration(lesson.id, video.duration).catch(() => {})
@@ -324,16 +349,7 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
       {error && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/85 p-6 text-center text-white">
           <p className="font-medium">Este vídeo não pode ser reproduzido aqui</p>
-          <p className="max-w-sm text-sm text-white/70">
-            O formato ou o codec não é suportado pelo player interno. Você pode abri-lo no player do sistema.
-          </p>
-          <button
-            type="button"
-            onClick={() => window.api.files.openLesson(lesson.id)}
-            className="mt-1 inline-flex items-center gap-2 rounded-md bg-white/15 px-4 py-2 text-sm hover:bg-white/25"
-          >
-            <ExternalLink size={16} /> Abrir no player do sistema
-          </button>
+          <ConvertOffer lessonId={lesson.id} />
         </div>
       )}
 

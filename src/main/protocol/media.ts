@@ -6,6 +6,8 @@ import { protocol } from 'electron'
 import { MEDIA_SCHEME, parseMediaUrl } from '@shared/media'
 import type { Database } from '../db/database'
 import { assetFilePath, lessonFilePath } from '../db/lessons'
+import { getTranscript } from '../db/media'
+import { segmentsToVtt } from '@shared/media'
 import { srtToVtt } from '../scanner/subtitles'
 import { contentTypeFor, parseRange } from './range'
 
@@ -52,12 +54,17 @@ async function serveFile(path: string, rangeHeader: string | null): Promise<Resp
   return new Response(info.size === 0 ? null : stream, { status: range ? 206 : 200, headers })
 }
 
-export function handleMediaProtocol(db: Database): void {
+export function handleMediaProtocol(db: Database, convertedDir: string): void {
   protocol.handle(MEDIA_SCHEME, async (request) => {
     const target = parseMediaUrl(request.url)
     if (!target) return text(400, 'URL inválida')
     try {
-      const path = target.type === 'lesson' ? lessonFilePath(db, target.id) : assetFilePath(db, target.id)
+      if (target.type === 'transcript') {
+        const transcript = getTranscript(db, target.id)
+        if (!transcript) return text(404, 'Sem transcrição')
+        return new Response(segmentsToVtt(transcript.segments), { headers: { 'Content-Type': 'text/vtt; charset=utf-8', ...CORS } })
+      }
+      const path = target.type === 'lesson' ? lessonFilePath(db, target.id, convertedDir) : assetFilePath(db, target.id)
       return await serveFile(path, request.headers.get('range'))
     } catch (error) {
       return text(404, error instanceof Error ? error.message : 'Não encontrado')

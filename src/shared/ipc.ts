@@ -7,6 +7,7 @@ import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam,
 import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
+import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
 import type {
   SearchHit,
   DashboardData,
@@ -37,6 +38,14 @@ export interface AppSettings {
   notificationsEnabled: boolean
   /** Antecedência do aviso de início de bloco, em minutos. */
   notifyLeadMinutes: 0 | 5 | 10 | 15
+  /** Parâmetros do FFmpeg para a conversão completa de vídeos. */
+  conversionArgs: string
+  transcriptionProvider: 'none' | 'groq' | 'local'
+  transcriptionModel: string
+  /** Código ISO ("pt") ou vazio para o provedor detectar. */
+  transcriptionLanguage: string
+  /** Base de um servidor Whisper compatível com a API da OpenAI (…/v1). */
+  localWhisperUrl: string
 }
 
 export const IPC = {
@@ -133,7 +142,21 @@ export const IPC = {
   mindmapsSave: 'mindmaps:save',
   mindmapsDelete: 'mindmaps:delete',
   mindmapsImport: 'mindmaps:import',
-  filesSave: 'files:save'
+  filesSave: 'files:save',
+  mediaJobs: 'media:jobs',
+  mediaJobsChanged: 'media:jobsChanged',
+  mediaEnqueue: 'media:enqueue',
+  mediaCancel: 'media:cancel',
+  mediaClearFinished: 'media:clearFinished',
+  mediaProbe: 'media:probe',
+  mediaCheckCourse: 'media:checkCourse',
+  mediaRemoveConversion: 'media:removeConversion',
+  mediaStorage: 'media:storage',
+  transcriptGet: 'transcript:get',
+  transcriptDelete: 'transcript:delete',
+  secretsSetGroqKey: 'secrets:setGroqKey',
+  secretsHasGroqKey: 'secrets:hasGroqKey',
+  openFfmpegLicense: 'app:openFfmpegLicense'
 } as const
 
 export interface MindMapSummary {
@@ -173,6 +196,7 @@ export interface TramotakApi {
     openDataFolder(): Promise<void>
     /** O processo principal pede para abrir uma rota (ex.: clique numa notificação). Devolve o "desinscrever". */
     onNavigate(callback: (path: string) => void): () => void
+    openFfmpegLicense(): Promise<void>
   }
   dashboard: {
     get(): Promise<DashboardData>
@@ -282,6 +306,28 @@ export interface TramotakApi {
     showLesson(id: number): Promise<void>
     /** "Salvar como" genérico. Devolve o caminho escolhido ou `null`. */
     save(request: SaveFileRequest): Promise<string | null>
+  }
+  media: {
+    jobs(): Promise<MediaJob[]>
+    /** Avisa quando a fila muda (progresso, conclusão). Devolve o "desinscrever". */
+    onJobs(callback: (jobs: MediaJob[]) => void): () => void
+    enqueue(kind: MediaJobKind, lessonId: number): Promise<MediaJob>
+    cancel(id: number): Promise<void>
+    clearFinished(): Promise<void>
+    probe(lessonId: number): Promise<Compatibility & { converted: boolean }>
+    checkCourse(courseId: number): Promise<{ checked: number; incompatible: { lessonId: number; title: string; reason: string; plan: string }[] }>
+    removeConversion(lessonId: number): Promise<void>
+    /** Espaço das cópias convertidas; com `clean`, apaga as que nenhuma aula usa. */
+    storage(clean: boolean): Promise<{ files: number; bytes: number; removed: number }>
+  }
+  transcripts: {
+    get(lessonId: number): Promise<Transcript | null>
+    delete(lessonId: number): Promise<void>
+  }
+  secrets: {
+    /** Guarda (cifrada pelo sistema) ou remove (`null`) a chave do Groq. Ela nunca volta para a interface. */
+    setGroqKey(key: string | null): Promise<void>
+    hasGroqKey(): Promise<boolean>
   }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {

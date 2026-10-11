@@ -333,7 +333,23 @@ Tramotak/
      reorganização automática a cada mudança de estrutura, PNG (2×) e JSON, importação de JSON.
    - Fica para depois: texto livre, caneta e grupos no mapa, minimapa, mini-player de vídeo no nó, imagens
      nos cadernos.
-7. **FFmpeg**: re-encode de vídeos incompatíveis + transcrição (Whisper)
+7. ✅ **FFmpeg**: conversão de vídeos incompatíveis + transcrição (Whisper)
+   - FFmpeg embutido (`ffmpeg-static` 5.3, FFmpeg 7.0, GPL, programa separado com aviso de licença no app;
+     +30 MB no instalador). Fica fora do asar (`asarUnpack`). Sem ffprobe: os codecs vêm do `ffmpeg -i`.
+   - Plano por vídeo, do mais barato ao mais caro: trocar contêiner (ex.: AVI com H.264), converter só o áudio
+     (ex.: AC-3) ou recodificar (ex.: HEVC → H.264). Cópia em `<dados>/converted`; os arquivos do curso nunca
+     são alterados; revalidar com o arquivo mudado descarta a cópia.
+   - O Chromium não acusa erro em HEVC (toca só o áudio, imagem 0×0): o player confere o formato com o FFmpeg
+     ao abrir a aula e oferece "Converter para tocar aqui"; reforço por imagem 0×0.
+   - Fila no processo principal (uma tarefa por vez, progresso via `-progress`, cancelamento sem arquivo pela
+     metade) com indicador na barra lateral; "Verificar formatos" converte um curso inteiro.
+   - Transcrição: Groq (chave cifrada pelo `safeStorage`, nunca volta para a interface) ou Whisper local
+     compatível com a API da OpenAI. Áudio mono 16 kHz 32 kb/s em pedaços de 10 min; trechos com horário
+     contínuo. Migration 8: `transcripts`; o texto falado entra na busca da aula. Aba "Transcrição" no player
+     (trecho atual destacado, clique pula, busca) e legenda "Transcrição automática".
+   - CI do macOS gera o .dmg arm64, troca o FFmpeg pelo de Intel e gera o .dmg x64.
+   - Fica para depois: aceleração por GPU, transcrever o curso inteiro de uma vez, edição da transcrição,
+     tradução, modo destrutivo (substituir o original).
 8. **IA BYOK** (Claude, Gemini, Ollama) gerando cards e questões
 9. **Exportar/Importar** pacotes e backup do banco
 

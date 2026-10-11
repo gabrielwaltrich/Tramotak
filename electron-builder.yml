@@ -9,6 +9,9 @@ files:
   - out/**
   - package.json
 icon: resources/icon.png
+# O FFmpeg embutido precisa ficar fora do asar para poder ser executado.
+asarUnpack:
+  - node_modules/ffmpeg-static/**
 win:
   target: [nsis, portable]
 nsis:

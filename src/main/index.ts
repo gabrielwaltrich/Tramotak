@@ -13,6 +13,7 @@ import { registerFlashcardIpc } from './ipc/flashcards'
 import { registerPlannerIpc } from './ipc/planner'
 import { registerQuestionIpc } from './ipc/questions'
 import { registerNotebookIpc } from './ipc/notebooks'
+import { registerMediaIpc } from './ipc/media'
 import { startNotifier } from './notifier'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
@@ -87,7 +88,9 @@ app.whenReady().then(() => {
   registerPlannerIpc(db)
   registerQuestionIpc(db)
   registerNotebookIpc(db)
-  handleMediaProtocol(db)
+  const convertedDir = join(app.getPath('userData'), 'converted')
+  handleMediaProtocol(db, convertedDir)
+  registerMediaIpc(db, convertedDir)
   createWindow()
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 

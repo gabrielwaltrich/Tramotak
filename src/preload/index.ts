@@ -11,7 +11,31 @@ const api: TramotakApi = {
       }
       ipcRenderer.on(IPC.navigate, listener)
       return () => ipcRenderer.removeListener(IPC.navigate, listener)
-    }
+    },
+    openFfmpegLicense: () => ipcRenderer.invoke(IPC.openFfmpegLicense)
+  },
+  media: {
+    jobs: () => ipcRenderer.invoke(IPC.mediaJobs),
+    onJobs: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, jobs: unknown) => Array.isArray(jobs) && callback(jobs)
+      ipcRenderer.on(IPC.mediaJobsChanged, listener)
+      return () => ipcRenderer.removeListener(IPC.mediaJobsChanged, listener)
+    },
+    enqueue: (kind, lessonId) => ipcRenderer.invoke(IPC.mediaEnqueue, kind, lessonId),
+    cancel: (id) => ipcRenderer.invoke(IPC.mediaCancel, id),
+    clearFinished: () => ipcRenderer.invoke(IPC.mediaClearFinished),
+    probe: (lessonId) => ipcRenderer.invoke(IPC.mediaProbe, lessonId),
+    checkCourse: (courseId) => ipcRenderer.invoke(IPC.mediaCheckCourse, courseId),
+    removeConversion: (lessonId) => ipcRenderer.invoke(IPC.mediaRemoveConversion, lessonId),
+    storage: (clean) => ipcRenderer.invoke(IPC.mediaStorage, clean)
+  },
+  transcripts: {
+    get: (lessonId) => ipcRenderer.invoke(IPC.transcriptGet, lessonId),
+    delete: (lessonId) => ipcRenderer.invoke(IPC.transcriptDelete, lessonId)
+  },
+  secrets: {
+    setGroqKey: (key) => ipcRenderer.invoke(IPC.secretsSetGroqKey, key),
+    hasGroqKey: () => ipcRenderer.invoke(IPC.secretsHasGroqKey)
   },
   dashboard: {
     get: () => ipcRenderer.invoke(IPC.dashboardGet)

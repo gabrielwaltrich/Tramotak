@@ -6,6 +6,7 @@ import { PageHeader } from '../components/PageHeader'
 import { Button } from '../components/Button'
 import { GOAL_MAX, GOAL_MIN } from '../components/GoalCard'
 import { useToast } from '../components/Toast'
+import { MediaSettings } from '../components/media/MediaSettings'
 import { getStoredTheme, setTheme, type Theme } from '../theme'
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -189,6 +190,10 @@ export function SettingsPage() {
         {settings.data && <NotificationSettings enabled={settings.data.notificationsEnabled} lead={settings.data.notifyLeadMinutes} />}
       </Section>
 
+      <Section title="Vídeo e transcrição" description="Conversão de vídeos incompatíveis e transcrição automática das aulas.">
+        {settings.data && <MediaSettings key={JSON.stringify(settings.data)} settings={settings.data} />}
+      </Section>
+
       <Section title="Dados" description="Biblioteca, progresso e anotações ficam só neste computador.">
         {info.data && (
           <div className="flex items-center gap-3">
@@ -204,6 +209,7 @@ export function SettingsPage() {
 
       <Section title="Sobre">
         {info.data ? (
+          <>
           <dl className="grid grid-cols-[8rem_1fr] gap-y-1 text-sm text-muted">
             <dt>Versão</dt>
             <dd className="text-text">{info.data.version}</dd>
@@ -212,6 +218,13 @@ export function SettingsPage() {
             <dt>Electron</dt>
             <dd className="text-text">{info.data.electron}</dd>
           </dl>
+          <p className="mt-3 text-xs text-muted">
+            Inclui o FFmpeg (licença GPL), distribuído como programa separado para converter vídeos e extrair áudio.{' '}
+            <button type="button" onClick={() => window.api.app.openFfmpegLicense().catch((e) => toast(errorMessage(e), 'error'))} className="text-accent hover:underline">
+              Ver licença
+            </button>
+          </p>
+          </>
         ) : (
           <p className="text-sm text-muted">Carregando…</p>
         )}

@@ -233,7 +233,10 @@ export function revalidateCourse(db: Database, courseId: number, scan: ScanResul
 
   const updateModule = db.prepare('UPDATE modules SET parent_id = ?, title = ?, position = ? WHERE id = ?')
   const updateLesson = db.prepare('UPDATE lessons SET module_id = ?, title = ?, kind = ?, position = ? WHERE id = ?')
-  const updateLessonFile = db.prepare('UPDATE lessons SET file_size = ?, mtime_ms = ?, duration_sec = NULL WHERE id = ?')
+  // Arquivo mudou no disco: a duração e uma eventual conversão antiga deixam de valer.
+  const updateLessonFile = db.prepare(
+    'UPDATE lessons SET file_size = ?, mtime_ms = ?, duration_sec = NULL, converted_file = NULL, converted_at = NULL WHERE id = ?'
+  )
   const deleteLesson = db.prepare('DELETE FROM lessons WHERE id = ?')
   const deleteModule = db.prepare('DELETE FROM modules WHERE id = ?')
 

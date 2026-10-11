@@ -4,7 +4,7 @@ Central de estudos desktop: importe cursos que já estão no seu computador e es
 Windows, macOS e Linux.
 
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
-- **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado.
+- **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele.
 - **Busca global:** `Ctrl+K` em qualquer tela encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
 - **Flashcards:** repetição espaçada no estilo do Anki (SM-2); transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
@@ -31,7 +31,11 @@ Os instaladores são gerados pelo CI a cada tag `v*` (aba **Actions** → execu�
 
 **Ubuntu 24.04+ e AppImage:** a proteção AppArmor pode impedir o sandbox do Chromium. Prefira o `.deb`, ou rode o AppImage com `--no-sandbox`.
 
-**Formatos de vídeo:** o player toca o que o Chromium suporta (H.264, VP8/VP9, AV1 em `.mp4`/`.webm`; `.mkv` com esses codecs costuma funcionar). Vídeos HEVC/H.265, `.avi` e `.wmv` mostram a opção de abrir no player do sistema.
+**Formatos de vídeo:** o player toca o que o Chromium suporta (H.264, VP8/VP9, AV1 em `.mp4`/`.webm`/`.mkv`). Vídeos em HEVC/H.265, `.avi`, `.wmv` e afins são detectados e podem ser convertidos pelo FFmpeg embutido, em uma cópia na pasta do app (os arquivos do curso não são alterados).
+
+**Transcrição:** opcional, em Configurações → Vídeo e transcrição. Use o Groq (nuvem, com a sua chave de API, guardada cifrada pelo sistema) ou um servidor Whisper local compatível com a API da OpenAI (ex.: faster-whisper, speaches). Sem configurar, nenhum áudio sai do computador.
+
+**Licença do FFmpeg:** o Tramotak inclui o FFmpeg (GPL) como programa separado; a licença está em Configurações → Sobre.
 
 ## Desenvolvimento
 

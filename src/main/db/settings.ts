@@ -3,7 +3,18 @@ import type { Database } from './database'
 
 export type { AppSettings }
 
-export const DEFAULT_SETTINGS: AppSettings = { dailyGoalMinutes: 60, notificationsEnabled: true, notifyLeadMinutes: 5 }
+export const DEFAULT_CONVERSION_ARGS = '-c:v libx264 -crf 23 -preset medium -pix_fmt yuv420p -c:a aac -b:a 128k'
+
+export const DEFAULT_SETTINGS: AppSettings = {
+  dailyGoalMinutes: 60,
+  notificationsEnabled: true,
+  notifyLeadMinutes: 5,
+  conversionArgs: DEFAULT_CONVERSION_ARGS,
+  transcriptionProvider: 'none',
+  transcriptionModel: 'whisper-large-v3-turbo',
+  transcriptionLanguage: 'pt',
+  localWhisperUrl: 'http://localhost:8000/v1'
+}
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
 
@@ -25,6 +36,32 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
   if (patch.notifyLeadMinutes !== undefined) {
     if (!LEAD_OPTIONS.includes(patch.notifyLeadMinutes)) throw new Error('Antecedência deve ser 0, 5, 10 ou 15 minutos')
     out.notifyLeadMinutes = patch.notifyLeadMinutes
+  }
+  if (patch.conversionArgs !== undefined) {
+    const args = String(patch.conversionArgs).trim()
+    if (!args || args.length > 500) throw new Error('Parâmetros de conversão inválidos')
+    // Entrada e saída são do app; aqui só entram as opções de codificação.
+    if (/(^|\s)-(i|y|n)(\s|$)/.test(args)) throw new Error('Os parâmetros não podem incluir -i, -y ou -n')
+    out.conversionArgs = args
+  }
+  if (patch.transcriptionProvider !== undefined) {
+    if (!['none', 'groq', 'local'].includes(patch.transcriptionProvider)) throw new Error('Provedor de transcrição inválido')
+    out.transcriptionProvider = patch.transcriptionProvider
+  }
+  if (patch.transcriptionModel !== undefined) {
+    const model = String(patch.transcriptionModel).trim()
+    if (!/^[\w.:/-]{1,100}$/.test(model)) throw new Error('Nome de modelo inválido')
+    out.transcriptionModel = model
+  }
+  if (patch.transcriptionLanguage !== undefined) {
+    const lang = String(patch.transcriptionLanguage).trim().toLowerCase()
+    if (lang && !/^[a-z]{2,3}$/.test(lang)) throw new Error('Idioma deve ser um código como "pt" ou "en" (ou vazio para detectar)')
+    out.transcriptionLanguage = lang
+  }
+  if (patch.localWhisperUrl !== undefined) {
+    const url = String(patch.localWhisperUrl).trim()
+    if (!/^https?:\/\/[^\s/]+/.test(url)) throw new Error('URL do servidor local inválida')
+    out.localWhisperUrl = url.replace(/\/+$/, '')
   }
   return out
 }

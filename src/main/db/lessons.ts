@@ -13,12 +13,25 @@ export function resolveInside(root: string, relPath: string): string {
   return abs
 }
 
-export function lessonFilePath(db: Database, lessonId: number): string {
+/** Arquivo original da aula, dentro da pasta do curso. */
+export function lessonOriginalPath(db: Database, lessonId: number): string {
   const row = db
     .prepare('SELECT c.root_path AS root, l.rel_path AS rel FROM lessons l JOIN courses c ON c.id = l.course_id WHERE l.id = ?')
     .get(lessonId) as { root: string; rel: string } | undefined
   if (!row) throw new Error('Aula não encontrada')
   return resolveInside(row.root, row.rel)
+}
+
+/**
+ * Arquivo que o player deve tocar: a cópia convertida (se existir, em `convertedDir`) ou o original.
+ * Sem `convertedDir`, sempre o original (ex.: "abrir no sistema").
+ */
+export function lessonFilePath(db: Database, lessonId: number, convertedDir?: string): string {
+  if (convertedDir) {
+    const row = db.prepare('SELECT converted_file AS f FROM lessons WHERE id = ?').get(lessonId) as { f: string | null } | undefined
+    if (row?.f) return resolveInside(convertedDir, row.f)
+  }
+  return lessonOriginalPath(db, lessonId)
 }
 
 export function assetFilePath(db: Database, assetId: number): string {
@@ -37,10 +50,12 @@ export function getLessonView(db: Database, lessonId: number): LessonView {
     .prepare(
       `SELECT l.id, l.course_id AS courseId, l.title, l.kind, l.rel_path AS relPath, l.duration_sec AS durationSec,
               m.title AS moduleTitle, COALESCE(p.position_sec, 0) AS positionSec,
-              (p.completed_at IS NOT NULL) AS completed, COALESCE(p.favorite, 0) AS favorite
+              (p.completed_at IS NOT NULL) AS completed, COALESCE(p.favorite, 0) AS favorite,
+              l.converted_at AS convertedAt, t.created_at AS transcriptAt
          FROM lessons l
          LEFT JOIN modules m ON m.id = l.module_id
          LEFT JOIN lesson_progress p ON p.lesson_id = l.id
+         LEFT JOIN transcripts t ON t.lesson_id = l.id
         WHERE l.id = ?`
     )
     .get(lessonId) as
@@ -55,6 +70,8 @@ export function getLessonView(db: Database, lessonId: number): LessonView {
         positionSec: number
         completed: number
         favorite: number
+        convertedAt: number | null
+        transcriptAt: number | null
       }
     | undefined
   if (!lesson) throw new Error('Aula não encontrada')
@@ -75,7 +92,9 @@ export function getLessonView(db: Database, lessonId: number): LessonView {
     title: lesson.title,
     kind: lesson.kind,
     relPath: lesson.relPath,
-    url: mediaUrl.lesson(lesson.id),
+    url: mediaUrl.lesson(lesson.id, lesson.convertedAt),
+    converted: lesson.convertedAt !== null,
+    transcriptUrl: lesson.transcriptAt !== null ? mediaUrl.transcript(lesson.id, lesson.transcriptAt) : null,
     durationSec: lesson.durationSec,
     course: { id: course.id, title: course.title },
     moduleTitle: lesson.moduleTitle,

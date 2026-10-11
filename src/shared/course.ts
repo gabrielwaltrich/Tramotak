@@ -148,8 +148,12 @@ export interface LessonView {
   title: string
   kind: LessonKind
   relPath: string
-  /** URL do arquivo da aula no protocolo do app. */
+  /** URL do arquivo da aula no protocolo do app (a cópia convertida, se houver). */
   url: string
+  /** A aula toca a partir de uma cópia convertida pelo app. */
+  converted: boolean
+  /** Legenda gerada pela transcrição, se houver. */
+  transcriptUrl: string | null
   durationSec: number | null
   course: { id: number; title: string }
   moduleTitle: string | null
