@@ -84,5 +84,9 @@ export const MIGRATIONS: string[] = [
     key        TEXT PRIMARY KEY,
     value_json TEXT NOT NULL
   );
+  `,
+  /* 2 — estrutura escolhida no import (inclui 'auto'), usada ao revalidar */ `
+  ALTER TABLE courses ADD COLUMN scan_structure TEXT NOT NULL DEFAULT 'auto'
+    CHECK (scan_structure IN ('auto', 'flat', 'modules', 'submodules'));
   `
 ]

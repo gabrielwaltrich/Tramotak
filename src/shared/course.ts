@@ -68,3 +68,63 @@ export interface ScanOptions {
   structure: Structure
   numbering: Numbering
 }
+
+/** Cartão de curso em Meus Cursos. */
+export interface CourseSummary {
+  id: number
+  title: string
+  description: string
+  rootPath: string
+  lessonCount: number
+  completedCount: number
+  /** Soma das durações conhecidas (as durações são lidas no primeiro play). */
+  durationSec: number
+  createdAt: number
+  lastOpenedAt: number | null
+  /** Aula para o botão "Continuar": a última assistida ou a primeira do curso. */
+  resumeLessonId: number | null
+}
+
+export type CourseSort = 'recent' | 'title' | 'progress'
+
+export interface ImportRequest {
+  path: string
+  title: string
+  structure: Structure
+  numbering: Numbering
+}
+
+export interface PreviewResponse {
+  scan: ScanResult
+  suggestedTitle: string
+  /** Curso já importado a partir desta mesma pasta, se houver. */
+  existingCourseId: number | null
+}
+
+export interface RevalidateResult {
+  added: number
+  removed: number
+  updated: number
+}
+
+export interface CourseLesson {
+  id: number
+  title: string
+  relPath: string
+  kind: LessonKind
+  durationSec: number | null
+  completed: boolean
+}
+
+export interface CourseModuleNode {
+  id: number
+  title: string
+  lessons: CourseLesson[]
+  children: CourseModuleNode[]
+}
+
+export interface CourseDetail extends CourseSummary {
+  structure: Exclude<Structure, 'auto'>
+  lessons: CourseLesson[]
+  modules: CourseModuleNode[]
+}

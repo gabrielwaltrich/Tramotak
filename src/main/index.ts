@@ -3,6 +3,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
+import { registerCourseIpc } from './ipc/courses'
 
 let db: Database | undefined
 
@@ -57,6 +58,7 @@ app.whenReady().then(() => {
 
   db = openDatabase(join(app.getPath('userData'), 'tramotak.db'))
   registerIpc()
+  registerCourseIpc(db)
   createWindow()
 
   app.on('activate', () => {

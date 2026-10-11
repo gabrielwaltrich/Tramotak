@@ -9,7 +9,7 @@ describe('navegação', () => {
     expect(new Set(paths).size).toBe(paths.length)
   })
 
-  it('libera Início, Meus Cursos e Configurações no M0', () => {
+  it('só Início, Meus Cursos e Configurações estão liberados', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
     expect(enabled).toEqual(['/', '/courses', '/settings'])
   })
