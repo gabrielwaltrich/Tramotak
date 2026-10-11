@@ -78,5 +78,5 @@ src/shared/     tipos e lógica compartilhados
 src/renderer/   interface React
 tests/unit/     testes Vitest
 tests/e2e/      testes Playwright + curso de exemplo
-resources/      ícone (gerado por scripts/make-icon.py)
+resources/      ícone: arte original em icon-source.png; icon.png e icons/ gerados por scripts/prepare-icon.py
 ```

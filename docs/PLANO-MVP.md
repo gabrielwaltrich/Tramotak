@@ -386,6 +386,11 @@ Tramotak/
      "Transcrição automática da fala"). Por padrão só a fala/texto da aula; anexos e anotações são opcionais. As
      regras proíbem perguntas sobre a organização do curso ou sobre o próprio texto e avisam que a transcrição
      automática pode ter erros.
+   - Sobre o assunto, não sobre o vídeo: o material só indica os temas; cada carta/questão precisa se sustentar
+     sozinha para quem nunca viu o vídeo, e exemplos do vídeo viram conhecimento geral ou situações-problema
+     novas. Rede de segurança `aboutTheMedium` descarta itens que falam do vídeo como acontecimento ("no vídeo",
+     "o professor disse", "no minuto 5", "[12:34]", "segundo a aula") e a revisão mostra quantos saíram; resumo e
+     mapa explicam o conteúdo, não as etapas do vídeo; quiz pedido na conversa segue a mesma regra.
    - Pesquisa na internet (opcional, guardada em `aiWebSearch`): Gemini com `google_search` (sem o modo JSON, que
      não combina), Claude com `web_search_20250305` (`max_uses` 3) e OpenRouter com o plugin `web` (cobra créditos).
      Só para conferir/complementar os temas da aula; fontes (http/https, sem repetir) aparecem na revisão.

@@ -15,6 +15,7 @@ import {
   chatHistory,
   parseClock,
   splitTimestamps,
+  aboutTheMedium,
   timestampedTranscript,
   type AiGenerateRequest
 } from '@shared/ai'
@@ -183,11 +184,11 @@ describe('pedido e prompt', () => {
     expect(user).not.toContain('Aula 03')
     expect(user).not.toContain('Curso XYZ')
     expect(system).toMatch(/Não use nem mencione título da aula/)
-    expect(system).toMatch(/Use apenas informações presentes no material/)
+    expect(system).toMatch(/não invente fatos, números ou nomes/)
     expect(system).not.toMatch(/pesquisar na internet/)
     const web = buildPrompt({ ...REQ, webSearch: true }, 'x')
     expect(web.system).toMatch(/pesquisar na internet para conferir e complementar/)
-    expect(web.system).not.toMatch(/Use apenas informações presentes/)
+    expect(web.system).not.toMatch(/não invente fatos/)
   })
 
   it('composeMaterial usa cabeçalhos neutros e só as partes escolhidas', () => {
@@ -562,5 +563,48 @@ describe('conversa: transcrição com horários e histórico', () => {
       { start: 65, text: 'Oi' },
       { start: 3600, text: 'Tchau' }
     ])
+  })
+})
+
+describe('perguntas sobre o assunto, não sobre o vídeo', () => {
+  it.each([
+    'O que o professor diz no minuto 5?',
+    'Qual exemplo foi mostrado no vídeo para explicar a fotossíntese?',
+    'Segundo a aula, o que é um limite?',
+    'O que acontece no início do vídeo?',
+    'A professora usou qual analogia para explicar a derivada?',
+    'O palestrante menciona quantos tipos de célula?',
+    'Como foi explicado, o que caracteriza um ácido?',
+    'O que é explicado em [12:34]?',
+    'Aos 3 minutos do vídeo, qual conceito aparece?',
+    'De acordo com o texto, qual é a capital?',
+    'Qual exemplo usado para ilustrar a inflação?'
+  ])('descarta: %s', (text) => expect(aboutTheMedium(text)).toBe(true))
+
+  it.each([
+    'O que é um limite lateral?',
+    'Qual é o papel da clorofila na fotossíntese?',
+    'Qual a diferença entre o primeiro e o segundo princípio da termodinâmica?',
+    'Um trem sai às 12:30 a 80 km/h. Em que horário percorre 160 km?',
+    'Uma professora lança uma bola verticalmente para cima. Qual é a velocidade no ponto mais alto?',
+    'Quantos segundos tem uma hora?',
+    'Por que a sala de aula é um exemplo de sistema social?'
+  ])('mantém: %s', (text) => expect(aboutTheMedium(text)).toBe(false))
+
+  it('parseResult descarta e conta os itens que falam do vídeo', () => {
+    const result = parseResult(REQ, JSON.stringify({ cards: [{ front: 'O que é limite?', back: 'Aproximação' }, { front: 'O que o professor mostrou no vídeo?', back: 'Um gráfico' }] }))
+    expect(result).toEqual({ task: 'cards', cards: [{ front: 'O que é limite?', back: 'Aproximação' }], discarded: 1 })
+    expect(() => parseResult(REQ, JSON.stringify({ cards: [{ front: 'O que acontece no início do vídeo?', back: 'x' }] }))).toThrow(/falavam do vídeo/)
+    const q = parseResult({ ...REQ, task: 'questions', questionTypes: ['truefalse'] }, JSON.stringify({ questions: [{ type: 'truefalse', statement: 'Na aula, o professor diz que 2+2=4.', answer: true }, { type: 'truefalse', statement: '2+2=4', answer: true }] }))
+    expect(q).toMatchObject({ task: 'questions', discarded: 1 })
+  })
+
+  it('as regras pedem itens que se sustentam sozinhos e exemplos transformados em situações', () => {
+    const { system, user } = buildPrompt(REQ, 'x')
+    expect(system).toMatch(/estudar o ASSUNTO, não o vídeo/)
+    expect(system).toMatch(/nunca viu o vídeo/)
+    expect(system).toMatch(/situações-problema novas/)
+    expect(user).toMatch(/conceitos mais importantes do assunto/)
+    expect(buildChatSystem('x', { web: false, hasNotes: false })).toMatch(/quiz para revisar, faça perguntas sobre o assunto/)
   })
 })

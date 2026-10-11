@@ -234,6 +234,12 @@ export function AiPage() {
             Gerado por {AI_PROVIDERS[generated.response.provider].label} · {generated.response.model}. A IA pode errar: confira antes de salvar.
           </p>
           <SourceLinks sources={generated.response.sources} className="mb-4" />
+          {'discarded' in generated.response.result && (generated.response.result.discarded ?? 0) > 0 && (
+            <p className="mb-4 text-xs text-muted">
+              {generated.response.result.discarded === 1 ? '1 item descartado' : `${generated.response.result.discarded} itens descartados`} porque falava do vídeo (momentos, quem fala,
+              “segundo a aula”) em vez do assunto.
+            </p>
+          )}
           <ResultReview key={generated.id} result={generated.response.result} source={generated.source} deckId={deckId} bankId={bankId} />
         </Card>
       )}
