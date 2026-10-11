@@ -2,6 +2,9 @@ import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { IPC, type AppInfo } from '@shared/ipc'
+import { openDatabase, type Database } from './db/database'
+
+let db: Database | undefined
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -52,12 +55,17 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.tramotak.app')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
+  db = openDatabase(join(app.getPath('userData'), 'tramotak.db'))
   registerIpc()
   createWindow()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
+})
+
+app.on('will-quit', () => {
+  db?.close()
 })
 
 app.on('window-all-closed', () => {

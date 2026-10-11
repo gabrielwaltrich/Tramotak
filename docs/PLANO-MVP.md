@@ -16,7 +16,7 @@
 | Estilo | **Tailwind CSS** + **shadcn/ui** (Radix) | Componentes acessíveis, tema claro/escuro por tokens |
 | Rotas | **React Router** | Uma rota por aba (`/`, `/courses`, `/courses/:id`, `/lesson/:id`) |
 | Estado/dados | **TanStack Query** sobre IPC | Cache, loading e invalidação sem boilerplate |
-| Banco | **SQLite** (`better-sqlite3`) + **Drizzle ORM** | Local, um arquivo, migrations tipadas |
+| Banco | **SQLite** embutido (`node:sqlite`) + SQL direto | Local, um arquivo; sem módulo nativo para compilar por sistema (com FTS5 para a busca futura) |
 | Empacotamento | **electron-builder** | `.exe` (NSIS/portable), `.dmg`, `.AppImage` e `.deb` |
 | Testes | **Vitest** (unidade) + **Playwright** (e2e com Electron) | |
 | CI | **GitHub Actions** (matriz win/mac/linux) | Gera os 3 instaladores a cada tag |
@@ -52,7 +52,7 @@ backups, stream, servidor de mídia, re-encode com FFmpeg e transcrição.
 ```
 ┌──────────────────────── Electron ────────────────────────┐
 │  MAIN (Node)                                              │
-│   ├─ db/        SQLite + Drizzle + migrations             │
+│   ├─ db/        node:sqlite + migrations (user_version)   │
 │   ├─ scanner/   lê pasta → árvore curso/módulo/aula       │
 │   ├─ protocol/  tramotak-media://  (stream c/ Range)      │
 │   └─ ipc/       handlers tipados (courses, lessons, …)    │
@@ -118,6 +118,8 @@ settings       (key PK, value_json)
 2. **Legenda:** `.vtt`/`.srt` com o mesmo nome-base do vídeo, e o sufixo de idioma vira `lang` (`aula.pt.srt`). O `.srt` é convertido para VTT na hora de servir.
 3. **Ordenação natural** (`2` vem antes de `10`). O padrão de numeração `1. Nome`, `1 - Nome` ou sem número define como o prefixo é removido do título exibido.
 4. No modo `auto`, a profundidade é deduzida pelo nível em que aparecem os vídeos: 0 é flat, 1 é módulos e 2 é submódulos.
+4b. **Pastas-aula** (só no `auto`): se uma pasta tem 2 ou mais subpastas e todas têm exatamente um vídeo e nenhuma subpasta, cada subpasta vira uma aula (título = nome da pasta, demais arquivos = anexos). Submódulos de uma aula só ficam idênticos a isso; nesse caso o usuário escolhe "Módulos > Submódulos" na prévia.
+4c. Subpastas além da profundidade escolhida são achatadas no nível acima, com aviso.
 5. A duração vem dos metadados do vídeo, lidos no renderer com um `<video>` oculto em lote após o import, sem precisar de FFmpeg no MVP.
 6. Arquivos ocultos e lixo do sistema (`.DS_Store`, `Thumbs.db`, `desktop.ini`) são ignorados.
 7. **Avisos da prévia:** pasta vazia, vídeo em formato possivelmente incompatível (HEVC/H.265) e caminhos muito longos no Windows.
@@ -230,12 +232,11 @@ Sidebar ─┬─ Início             /
 Tramotak/
 ├─ electron.vite.config.ts
 ├─ electron-builder.yml
-├─ drizzle.config.ts
 ├─ src/
 │  ├─ main/
 │  │  ├─ index.ts            # janela, ciclo de vida
-│  │  ├─ db/ (schema.ts, client.ts, migrations/)
-│  │  ├─ scanner/ (scan.ts, naturalSort.ts, subtitles.ts)
+│  │  ├─ db/ (database.ts, migrations.ts, courses.ts)
+│  │  ├─ scanner/ (scan.ts, files.ts, titles.ts, naturalSort.ts, subtitles.ts)
 │  │  ├─ protocol/media.ts   # tramotak-media:// com Range
 │  │  └─ ipc/ (courses.ts, lessons.ts, notes.ts, dashboard.ts, settings.ts)
 │  ├─ preload/index.ts       # contextBridge → window.api (tipado)
@@ -284,5 +285,5 @@ Tramotak/
 | Vídeos em HEVC/MKV que não tocam | Aviso na prévia e no player; FFmpeg no Objetivo 7 |
 | Pastas enormes (milhares de arquivos) | Scanner assíncrono com progresso; inserts em transação |
 | Caminhos longos no Windows | Aviso na prévia; caminhos relativos no banco |
-| `better-sqlite3` é módulo nativo | `electron-builder install-app-deps` + CI por sistema operacional |
+| `node:sqlite` ainda é marcado como experimental no Node 22 | Funciona no Electron 44 (Node 24, SQLite 3.53); acesso isolado em `src/main/db/` para trocar de driver se preciso |
 | Assinatura de código (SmartScreen/Gatekeeper) | Sem assinatura no MVP, com instruções no README; assinar antes do lançamento público |
