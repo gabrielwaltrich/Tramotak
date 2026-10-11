@@ -382,8 +382,22 @@ Tramotak/
        progresso, cancelar) e "Usar".
      - Claude: só chave do Claude Console. Desde fev/2026 a Anthropic proíbe e bloqueia no servidor o uso do login
        Free/Pro/Max em apps de terceiros; a tela explica e aponta o OpenRouter como alternativa.
-   - Fica para depois: conversa sobre a aula, gerar do curso inteiro, PDFs como material, streaming da resposta,
-     custo estimado por pedido.
+   - Sem metadados: título da aula, curso, módulo e nomes de arquivos não vão para a IA (cabeçalhos neutros como
+     "Transcrição automática da fala"). Por padrão só a fala/texto da aula; anexos e anotações são opcionais. As
+     regras proíbem perguntas sobre a organização do curso ou sobre o próprio texto e avisam que a transcrição
+     automática pode ter erros.
+   - Pesquisa na internet (opcional, guardada em `aiWebSearch`): Gemini com `google_search` (sem o modo JSON, que
+     não combina), Claude com `web_search_20250305` (`max_uses` 3) e OpenRouter com o plugin `web` (cobra créditos).
+     Só para conferir/complementar os temas da aula; fontes (http/https, sem repetir) aparecem na revisão.
+   - Conversa sobre a aula (aba "Perguntar à IA" no player, aulas de vídeo e de texto): base é a transcrição (ou a
+     legenda do curso) com marcas [m:ss] a cada ~30 s; respostas em tempo real (SSE no Claude/Gemini/OpenAI/
+     OpenRouter, NDJSON no Ollama), horários citados viram botões que pulam o vídeo, momento atual do vídeo vai
+     junto da pergunta ("explique este trecho"), fontes da internet, parar no meio (guarda o parcial), copiar e
+     salvar a resposta como anotação. Migration 9: `ai_chats` (mensagens por aula, até 200; somem com a aula).
+     Histórico enviado: últimas 16 mensagens/24 mil caracteres. No Claude, as instruções com a transcrição ficam
+     em cache entre perguntas.
+   - Fica para depois: gerar do curso inteiro, PDFs como material, custo estimado por pedido, conversa sobre o
+     curso todo.
 9. ✅ **Exportar/Importar** pacotes e backup do banco
    - Backup: `VACUUM INTO` (cópia consistente com o banco aberto) num `.db`, sem as chaves de API (só decifram
      neste computador). Backup automático diário (1 min após abrir e a cada 6 h, se o último tiver > 20 h) em

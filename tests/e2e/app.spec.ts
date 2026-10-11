@@ -377,14 +377,22 @@ test('IA: provedor local gera flashcards de uma aula, revisão escolhe e salva n
     await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
     await page.getByRole('link', { name: /Boas-vindas/ }).click()
     await page.getByRole('link', { name: 'Gerar com IA' }).click()
-    await expect(page.getByText(/Legenda · \d+ caracteres/)).toBeVisible()
+    // Por padrão só a fala da aula (legenda) vai para a IA; as anotações ficam desmarcadas
+    await expect(page.getByRole('checkbox', { name: /Legenda · \d+ caracteres/ })).toBeChecked()
+    await expect(page.getByRole('checkbox', { name: /Minhas anotações/ })).not.toBeChecked()
+    // A legenda do curso de teste é curta demais sozinha; as anotações entram quando a pessoa marca
+    await expect(page.getByText(/Material curto demais/)).toBeVisible()
+    await page.getByRole('checkbox', { name: /Minhas anotações/ }).check()
     await page.getByRole('button', { name: 'Gerar flashcards' }).click()
 
     await expect(page.getByText('Revisar e salvar · flashcards')).toBeVisible()
     expect(received).toHaveLength(1)
     expect(received[0]).toMatchObject({ model: 'modelo-teste', format: 'json' })
     expect(received[0].user).toContain('Olá, legenda de teste')
+    expect(received[0].user).toContain('## Anotações do estudante')
     expect(received[0].user).toContain('Minha primeira anotação')
+    expect(received[0].user).not.toContain('Boas-vindas')
+    expect(received[0].user).not.toContain('Curso E2E')
 
     await page.getByRole('checkbox', { name: 'Incluir carta 2' }).uncheck()
     await page.locator('#ai-deck').selectOption('new')
@@ -394,6 +402,63 @@ test('IA: provedor local gera flashcards de uma aula, revisão escolhe e salva n
     await expect(page.getByRole('heading', { name: 'Baralho da IA' })).toBeVisible()
     await expect(page.getByText('O que a legenda diz?')).toBeVisible()
     await expect(page.getByText('Carta descartada')).toHaveCount(0)
+  } finally {
+    await app.close()
+    server.close()
+  }
+})
+
+test('conversa com a IA: resposta em tempo real só com a fala da aula e horário clicável', async () => {
+  const { createServer } = await import('node:http')
+  const received: { system: string; user: string }[] = []
+  const server = createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    if (req.url === '/api/version') return res.end(JSON.stringify({ version: '0.0.0-teste' }))
+    if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'modelo-teste' }] }))
+    const data = JSON.parse(body)
+    received.push({ system: data.messages[0].content, user: data.messages.at(-1).content })
+    res.setHeader('content-type', 'application/x-ndjson')
+    for (const piece of ['A aula diz ', '“olá” logo no início [0:00].']) res.write(JSON.stringify({ message: { content: piece } }) + '\n')
+    res.end(JSON.stringify({ message: { content: '' }, done: true }) + '\n')
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const port = (server.address() as { port: number }).port
+
+  const { app, page } = await launch()
+  try {
+    await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('link', { name: /Boas-vindas/ }).click()
+    await page.getByRole('tab', { name: 'Perguntar à IA' }).click()
+    await expect(page.getByText(/Base: legenda do curso/)).toBeVisible()
+
+    const input = page.getByRole('textbox', { name: 'Pergunta para a IA' })
+    await input.fill('O que a aula fala no começo?')
+    await input.press('Enter')
+    await expect(page.getByText('“olá” logo no início')).toBeVisible()
+
+    // Só a fala, com marcas de tempo; sem título da aula nem nome do curso
+    expect(received).toHaveLength(1)
+    expect(received[0].system).toContain('[0:00] Olá, legenda de teste')
+    expect(received[0].system).not.toContain('Boas-vindas')
+    expect(received[0].system).not.toContain('Curso E2E')
+    expect(received[0].user).toMatch(/^\[momento do vídeo: 0:\d\d\] O que a aula fala no começo\?$/)
+
+    // O horário da resposta vira botão que leva o vídeo até ele
+    const video = page.locator('video')
+    await video.evaluate((v: HTMLVideoElement) => {
+      v.pause()
+      v.currentTime = 5
+    })
+    await page.getByRole('button', { name: 'Ir para 0:00 no vídeo' }).click()
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeLessThan(1)
+
+    // A conversa fica salva na aula
+    await page.getByRole('tab', { name: /Anotações/ }).click()
+    await page.getByRole('tab', { name: 'Perguntar à IA' }).click()
+    await expect(page.getByText('O que a aula fala no começo?')).toBeVisible()
   } finally {
     await app.close()
     server.close()

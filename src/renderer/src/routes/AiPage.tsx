@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { AlertTriangle, Loader2, Settings, Sparkles, X } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Globe, Loader2, Settings, Sparkles, X } from 'lucide-react'
 import {
   AI_PROVIDERS,
   AI_TASK_LABEL,
+  composeMaterial,
   COUNT_LIMITS,
   type AiGenerateResponse,
   type AiQuestionType,
@@ -18,7 +19,8 @@ import { EmptyState } from '../components/EmptyState'
 import { Button } from '../components/Button'
 import { Label, Segmented, TextArea } from '../components/Field'
 import { aiKeysQuery, aiReady } from '../components/ai/AiSettings'
-import { SourcePicker, useSource, type SourceState } from '../components/ai/SourcePicker'
+import { SourcePicker, selectedSections, useSource, type SourceState } from '../components/ai/SourcePicker'
+import { SourceLinks } from '../components/ai/SourceLinks'
 import { ResultReview } from '../components/ai/ResultReview'
 
 const TASKS: AiTask[] = ['cards', 'questions', 'summary', 'mindmap']
@@ -67,7 +69,8 @@ export function AiPage() {
     notebookId: numberParam(params.get('notebook')),
     pageId: pageParam,
     pastedTitle: '',
-    pastedText: ''
+    pastedText: '',
+    sections: null
   })
   const onChange = useCallback((patch: Partial<SourceState>) => setState((s) => ({ ...s, ...patch })), [])
   const { source, loading, error } = useSource(state)
@@ -76,11 +79,19 @@ export function AiPage() {
   const [count, setCount] = useState(10)
   const [types, setTypes] = useState<AiQuestionType[]>(['single', 'truefalse'])
   const [instructions, setInstructions] = useState('')
+  const queryClient = useQueryClient()
+  const web = Boolean(settings.data?.aiWebSearch)
+  const setWeb = useMutation({
+    mutationFn: (value: boolean) => window.api.settings.update({ aiWebSearch: value }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.settings })
+  })
   const [generated, setGenerated] = useState<{ id: number; response: AiGenerateResponse; source: AiSource } | null>(null)
 
   const generate = useMutation({
     mutationFn: (src: AiSource) =>
-      window.api.ai.generate({ task, title: src.title, text: src.text, count, questionTypes: types, instructions }).then((response) => ({ id: Date.now(), response, source: src })),
+      window.api.ai
+        .generate({ task, title: src.title, text: composeMaterial(src.sections, selectedSections(state, src)), count, questionTypes: types, instructions, webSearch: web })
+        .then((response) => ({ id: Date.now(), response, source: src })),
     onMutate: () => setGenerated(null),
     onSuccess: setGenerated
   })
@@ -108,7 +119,9 @@ export function AiPage() {
 
   const info = AI_PROVIDERS[provider as Exclude<typeof provider, 'none'>]
   const model = settings.data.aiModels[info.id]
-  const usable = source !== null && source.text.trim().length >= 50
+  const materialChars = source ? composeMaterial(source.sections, selectedSections(state, source)).trim().length : 0
+  const usable = source !== null && materialChars >= 50
+  const canWeb = info.web !== null
   const needsCount = task === 'cards' || task === 'questions'
 
   return (
@@ -175,7 +188,20 @@ export function AiPage() {
               className="min-h-16"
             />
           </div>
-          {info.cloud && usable && <p className="text-xs text-muted">Ao gerar, o material acima é enviado a {info.label}.</p>}
+          {canWeb ? (
+            <label className="flex cursor-pointer items-start gap-2 text-sm">
+              <input type="checkbox" checked={web} onChange={(e) => setWeb.mutate(e.target.checked)} className="mt-0.5 size-4 accent-[var(--accent)]" />
+              <span>
+                <Globe size={14} className="mr-1 inline text-accent" />
+                Permitir pesquisa na internet para conferir e complementar os conceitos da aula
+                <span className="block text-xs text-muted">Usa a {info.web}. As perguntas continuam sendo só sobre os temas da aula.</span>
+              </span>
+            </label>
+          ) : (
+            <p className="text-xs text-muted">{info.label} não pesquisa na internet: a IA usa só o material marcado.</p>
+          )}
+          {info.cloud && usable && <p className="text-xs text-muted">Ao gerar, o material marcado é enviado a {info.label}.</p>}
+          {source !== null && !usable && <p className="text-xs text-warning">Material curto demais para gerar algo útil: marque mais partes ou use outra aula.</p>}
           <div className="flex items-center gap-3">
             {generate.isPending ? (
               <>
@@ -207,6 +233,7 @@ export function AiPage() {
           <p className="mb-4 text-xs text-muted">
             Gerado por {AI_PROVIDERS[generated.response.provider].label} · {generated.response.model}. A IA pode errar: confira antes de salvar.
           </p>
+          <SourceLinks sources={generated.response.sources} className="mb-4" />
           <ResultReview key={generated.id} result={generated.response.result} source={generated.source} deckId={deckId} bankId={bankId} />
         </Card>
       )}

@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, FileText, Loader2 } from 'lucide-react'
-import type { AiSource, AiSourceRef } from '@shared/ai'
+import { composeMaterial, type AiSectionKind, type AiSource, type AiSourceRef } from '@shared/ai'
 import type { CourseDetail, CourseLesson } from '@shared/course'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Label, Segmented, TextArea, TextInput } from '../Field'
@@ -16,6 +16,8 @@ export interface SourceState {
   pageId: number | null
   pastedTitle: string
   pastedText: string
+  /** Partes do material marcadas (`null` = as marcadas por padrão). */
+  sections: AiSectionKind[] | null
 }
 
 const SELECT = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-text disabled:opacity-50'
@@ -32,6 +34,13 @@ function flatLessons(course: CourseDetail): { lesson: CourseLesson; module: stri
   }
   walk(course.modules, '')
   return out
+}
+
+/** Partes marcadas: as escolhidas pela pessoa ou, sem escolha, as marcadas por padrão. */
+export function selectedSections(state: SourceState, source: AiSource | null): AiSectionKind[] {
+  if (!source) return []
+  const available = source.sections.map((s) => s.kind)
+  return state.sections === null ? source.sections.filter((s) => s.defaultOn).map((s) => s.kind) : state.sections.filter((k) => available.includes(k))
 }
 
 export function sourceRef(state: SourceState): AiSourceRef | null {
@@ -52,7 +61,9 @@ export function useSource(state: SourceState): { source: AiSource | null; loadin
   if (state.mode === 'text') {
     const text = state.pastedText.trim()
     return {
-      source: text ? { title: state.pastedTitle.trim() || 'Texto colado', text, parts: [{ label: 'Texto colado', chars: text.length }], lessonId: null, courseId: null } : null,
+      source: text
+        ? { title: state.pastedTitle.trim() || 'Texto colado', sections: [{ kind: 'pasted', label: 'Texto colado', text, defaultOn: true }], lessonId: null, courseId: null }
+        : null,
       loading: false,
       error: null
     }
@@ -92,14 +103,16 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
   }, [lessonView.data, state.courseId, onChange])
 
   const lessons = course.data ? flatLessons(course.data) : []
-  const total = source?.text.length ?? 0
+  const chosen = selectedSections(state, source)
+  const total = source ? composeMaterial(source.sections, chosen).length : 0
+  const toggle = (kind: AiSectionKind, on: boolean) => onChange({ sections: on ? [...chosen, kind] : chosen.filter((k) => k !== kind) })
 
   return (
     <div className="space-y-4">
       <Segmented
         label="Origem do material"
         value={state.mode}
-        onChange={(mode) => onChange({ mode })}
+        onChange={(mode) => onChange({ mode, sections: null })}
         options={[
           { value: 'lesson', label: 'Aula' },
           { value: 'page', label: 'Página de caderno' },
@@ -115,7 +128,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               id="ai-course"
               className={SELECT}
               value={state.courseId ?? ''}
-              onChange={(e) => onChange({ courseId: e.target.value ? Number(e.target.value) : null, lessonId: null })}
+              onChange={(e) => onChange({ courseId: e.target.value ? Number(e.target.value) : null, lessonId: null, sections: null })}
             >
               <option value="">Escolha um curso…</option>
               {courses.data?.map((c) => (
@@ -132,7 +145,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               className={SELECT}
               disabled={!course.data}
               value={state.lessonId ?? ''}
-              onChange={(e) => onChange({ lessonId: e.target.value ? Number(e.target.value) : null })}
+              onChange={(e) => onChange({ lessonId: e.target.value ? Number(e.target.value) : null, sections: null })}
             >
               <option value="">Escolha uma aula…</option>
               {lessons.map(({ lesson, module }) => (
@@ -154,7 +167,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               id="ai-notebook"
               className={SELECT}
               value={state.notebookId ?? ''}
-              onChange={(e) => onChange({ notebookId: e.target.value ? Number(e.target.value) : null, pageId: null })}
+              onChange={(e) => onChange({ notebookId: e.target.value ? Number(e.target.value) : null, pageId: null, sections: null })}
             >
               <option value="">Escolha um caderno…</option>
               {notebooks.data?.map((n) => (
@@ -171,7 +184,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               className={SELECT}
               disabled={!notebook.data}
               value={state.pageId ?? ''}
-              onChange={(e) => onChange({ pageId: e.target.value ? Number(e.target.value) : null })}
+              onChange={(e) => onChange({ pageId: e.target.value ? Number(e.target.value) : null, sections: null })}
             >
               <option value="">Escolha uma página…</option>
               {notebook.data?.pages.map((p) => (
@@ -206,7 +219,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
 
       {source && state.mode !== 'text' && (
         <div className="rounded-lg border border-border bg-bg/50 p-3 text-sm">
-          {source.parts.length === 0 ? (
+          {source.sections.length === 0 ? (
             <p className="flex items-start gap-2 text-warning">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
               {state.mode === 'lesson'
@@ -218,13 +231,20 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               <p className="mb-2 flex items-center gap-2 font-medium">
                 <FileText size={14} className="text-accent" /> {source.title}
               </p>
-              <ul className="flex flex-wrap gap-1.5">
-                {source.parts.map((p) => (
-                  <li key={p.label} className="rounded-md bg-surface-2 px-2 py-0.5 text-xs text-muted">
-                    {p.label} · {p.chars.toLocaleString('pt-BR')} caracteres
+              <ul className="space-y-1">
+                {source.sections.map((p) => (
+                  <li key={p.kind}>
+                    <label className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input type="checkbox" checked={chosen.includes(p.kind)} onChange={(e) => toggle(p.kind, e.target.checked)} className="size-4 accent-[var(--accent)]" />
+                      {p.label}
+                      <span className="text-xs text-muted">· {p.text.trim().length.toLocaleString('pt-BR')} caracteres</span>
+                    </label>
                   </li>
                 ))}
               </ul>
+              <p className="mt-2 text-xs text-muted">
+                A IA recebe só o conteúdo marcado. Título da aula, nome do curso, nomes de arquivos e outros metadados não são enviados.
+              </p>
             </>
           )}
         </div>

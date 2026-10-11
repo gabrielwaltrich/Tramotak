@@ -83,3 +83,16 @@ body {
 .prose-tk th, .prose-tk td { border: 1px solid var(--border); padding: 0.3em 0.6em; }
 .prose-tk hr { border: 0; border-top: 1px solid var(--border); margin: 1em 0; }
 .prose-tk .katex-display { overflow-x: auto; overflow-y: hidden; }
+
+/* Marca de tempo clicável nas respostas da IA. */
+.tk-time {
+  display: inline-block;
+  padding: 0 0.35em;
+  border-radius: 0.3em;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.9em;
+  cursor: pointer;
+}
+.tk-time:hover { text-decoration: underline; }

@@ -84,6 +84,23 @@ describe('revisões', () => {
   })
 })
 
+describe('formatInterval com dias do calendário', () => {
+  it('revisão para daqui a 4 dias é "4 dias" a qualquer hora (vence à meia-noite)', () => {
+    for (const hour of [1, 12, 23]) {
+      const now = Math.floor(new Date(2026, 9, 11, hour, 30).getTime() / 1000)
+      const due = Math.floor(new Date(2026, 9, 15).getTime() / 1000)
+      expect(formatInterval(due - now, now)).toBe('4 dias')
+    }
+  })
+
+  it('no mesmo dia continua em minutos/horas; amanhã é 1 dia', () => {
+    const now = Math.floor(new Date(2026, 9, 11, 20, 0).getTime() / 1000)
+    expect(formatInterval(600, now)).toBe('10 min')
+    expect(formatInterval(2 * 3600, now)).toBe('2 h')
+    expect(formatInterval(5 * 3600, now)).toBe('1 dia')
+  })
+})
+
 describe('formatInterval', () => {
   it.each([
     [30, '<1 min'],

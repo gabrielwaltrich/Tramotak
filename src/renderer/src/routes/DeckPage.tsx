@@ -29,8 +29,9 @@ const STATE_COLOR: Record<CardView['state'], string> = {
 
 function dueLabel(card: CardView): string | null {
   if (card.state === 'new') return null
-  const diff = card.due - Math.floor(Date.now() / 1000)
-  return diff <= 0 ? 'vence agora' : `em ${formatInterval(diff)}`
+  const now = Math.floor(Date.now() / 1000)
+  const diff = card.due - now
+  return diff <= 0 ? 'vence agora' : `em ${formatInterval(diff, now)}`
 }
 
 const isSubmit = (e: React.KeyboardEvent) => e.key === 'Enter' && (e.ctrlKey || e.metaKey)

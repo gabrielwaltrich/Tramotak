@@ -9,7 +9,7 @@ import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
 import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
-import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef } from './ai'
+import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest } from './ai'
 import type {
   SearchHit,
   DashboardData,
@@ -58,6 +58,8 @@ export interface AppSettings {
   openaiBaseUrl: string
   /** Backup automático diário na pasta do app (guarda os 7 mais recentes). */
   autoBackup: boolean
+  /** Deixa a IA pesquisar na internet (gerar e conversar), nos provedores que permitem. */
+  aiWebSearch: boolean
 }
 
 export const IPC = {
@@ -192,7 +194,12 @@ export const IPC = {
   packageCatalog: 'package:catalog',
   packageExport: 'package:export',
   packageOpen: 'package:open',
-  packageImport: 'package:import'
+  packageImport: 'package:import',
+  aiChatGet: 'ai:chatGet',
+  aiChatSend: 'ai:chatSend',
+  aiChatCancel: 'ai:chatCancel',
+  aiChatClear: 'ai:chatClear',
+  aiChatDelta: 'ai:chatDelta'
 } as const
 
 export interface OllamaPullState {
@@ -395,6 +402,13 @@ export interface TramotakApi {
     ollamaPull(model: string): Promise<void>
     ollamaPullCancel(): Promise<void>
     onPullProgress(callback: (p: OllamaPullState) => void): () => void
+    /** Conversa salva da aula e o que ela tem como base (transcrição, legenda, texto). */
+    chatGet(lessonId: number, includeNotes: boolean): Promise<{ messages: ChatMessage[]; material: ChatMaterialInfo }>
+    /** Pergunta; o texto chega aos pedaços por `onChatDelta` e a resposta completa volta no fim. */
+    chatSend(request: ChatSendRequest): Promise<ChatMessage>
+    chatCancel(): Promise<void>
+    chatClear(lessonId: number): Promise<void>
+    onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
   }
   backup: {
     /** "Salvar como" e cria um backup completo (sem as chaves de API). `null` se cancelar. */

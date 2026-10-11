@@ -50,6 +50,15 @@ const api: TramotakApi = {
     ollamaStatus: () => ipcRenderer.invoke(IPC.aiOllamaStatus),
     ollamaPull: (model) => ipcRenderer.invoke(IPC.aiOllamaPull, model),
     ollamaPullCancel: () => ipcRenderer.invoke(IPC.aiOllamaPullCancel),
+    chatGet: (lessonId, includeNotes) => ipcRenderer.invoke(IPC.aiChatGet, lessonId, includeNotes),
+    chatSend: (request) => ipcRenderer.invoke(IPC.aiChatSend, request),
+    chatCancel: () => ipcRenderer.invoke(IPC.aiChatCancel),
+    chatClear: (lessonId) => ipcRenderer.invoke(IPC.aiChatClear, lessonId),
+    onChatDelta: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, delta: unknown) => delta && typeof delta === 'object' && callback(delta as never)
+      ipcRenderer.on(IPC.aiChatDelta, listener)
+      return () => ipcRenderer.removeListener(IPC.aiChatDelta, listener)
+    },
     onPullProgress: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, state: unknown) => state && typeof state === 'object' && callback(state as never)
       ipcRenderer.on(IPC.aiOllamaPullProgress, listener)

@@ -7,7 +7,7 @@ import { createNote } from '../../src/main/db/notes'
 import { saveTranscript } from '../../src/main/db/media'
 import { createNotebook, createPage, savePage } from '../../src/main/db/notebooks'
 import { scanCourse } from '../../src/main/scanner/scan'
-import { resolveSource } from '../../src/main/ai/source'
+import { chatMaterial, resolveSource } from '../../src/main/ai/source'
 import { makeCourse } from '../helpers/fixture'
 
 let db: Database
@@ -34,10 +34,12 @@ describe('material para a IA', () => {
     createNote(db, { lessonId: id, timestampSec: 75, body: 'cuidado com 0/0' })
     const source = await resolveSource(db, { kind: 'lesson', id })
     expect(source.title).toContain('Limites')
-    expect(source.title).toContain('Cálculo')
-    expect(source.parts.map((p) => p.label)).toEqual(['Legenda', 'Minhas anotações'])
-    expect(source.text).toContain('Limite é aproximação')
-    expect(source.text).toContain('[1:15] cuidado com 0/0')
+    expect(source.sections.map((p) => [p.kind, p.defaultOn])).toEqual([
+      ['subtitle', true],
+      ['notes', false]
+    ])
+    expect(source.sections[0].text).toContain('Limite é aproximação')
+    expect(source.sections[1].text).toContain('[1:15] cuidado com 0/0')
     expect(source.lessonId).toBe(id)
   })
 
@@ -45,21 +47,37 @@ describe('material para a IA', () => {
     const id = lessonId('Limites')
     saveTranscript(db, id, { provider: 'groq', model: 'w', language: 'pt', segments: [{ start: 0, end: 2, text: 'fala transcrita' }] })
     const source = await resolveSource(db, { kind: 'lesson', id })
-    expect(source.parts.map((p) => p.label)).toEqual(['Transcrição'])
-    expect(source.text).not.toContain('aproximação')
+    expect(source.sections.map((p) => p.kind)).toEqual(['transcript'])
+    expect(source.sections[0].text).not.toContain('aproximação')
   })
 
   it('aula de texto entra pelo conteúdo do arquivo; aula sem material fica vazia', async () => {
-    expect((await resolveSource(db, { kind: 'lesson', id: lessonId('Resumo') })).text).toContain('Texto do resumo')
+    expect((await resolveSource(db, { kind: 'lesson', id: lessonId('Resumo') })).sections[0].text).toContain('Texto do resumo')
     const empty = await resolveSource(db, { kind: 'lesson', id: lessonId('Derivadas') })
-    expect(empty.parts).toEqual([])
+    expect(empty.sections).toEqual([])
   })
 
   it('página de caderno usa os blocos de texto', async () => {
     const page = createPage(db, createNotebook(db, 'Caderno'))
     savePage(db, page.id, { title: 'Integrais', blocks: [{ id: 'a', type: 'text', text: 'Integral é área' }, { id: 'b', type: 'ink', strokes: [], height: 200 }] })
     const source = await resolveSource(db, { kind: 'page', id: page.id })
-    expect(source).toMatchObject({ title: 'Integrais', text: 'Integral é área', lessonId: null })
+    expect(source).toMatchObject({ title: 'Integrais', sections: [{ kind: 'page', text: 'Integral é área' }], lessonId: null })
+  })
+
+  it('conversa: fala com marcas de tempo, sem título; anotações só quando pedidas', async () => {
+    const id = lessonId('Limites')
+    createNote(db, { lessonId: id, timestampSec: 75, body: 'cuidado com 0/0' })
+    const plain = await chatMaterial(db, id, false)
+    expect(plain.info).toMatchObject({ kind: 'subtitle', notes: 1 })
+    expect(plain.text).toContain('[0:01] Limite é aproximação')
+    expect(plain.text).not.toContain('cuidado')
+    expect(plain.text).not.toContain('Limites')
+    expect(plain.text).not.toContain('Cálculo')
+    saveTranscript(db, id, { provider: 'groq', model: 'w', language: 'pt', segments: [{ start: 90, end: 92, text: 'fala transcrita' }] })
+    const withNotes = await chatMaterial(db, id, true)
+    expect(withNotes.info.kind).toBe('transcript')
+    expect(withNotes.text).toContain('[1:30] fala transcrita')
+    expect(withNotes.text).toContain('[1:15] cuidado com 0/0')
   })
 
   it('recusa referência inválida', async () => {

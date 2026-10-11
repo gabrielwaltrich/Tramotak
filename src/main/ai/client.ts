@@ -1,4 +1,4 @@
-import { AI_PROVIDERS, type AiModelInfo, type AiProvider } from '@shared/ai'
+import { AI_PROVIDERS, mergeSources, type AiModelInfo, type AiProvider, type AiWebSource } from '@shared/ai'
 
 export const ANTHROPIC_URL = 'https://api.anthropic.com/v1'
 export const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta'
@@ -21,10 +21,20 @@ export interface AiClientConfig {
 
 export interface ChatRequest {
   system: string
-  user: string
+  /** Conversa em ordem, começando por uma pergunta. */
+  messages: { role: 'user' | 'assistant'; content: string }[]
   maxTokens: number
   /** Pede JSON ao provedor quando ele tem esse modo. */
   json: boolean
+  /** Deixa o modelo pesquisar na internet (Gemini, Claude e OpenRouter). */
+  web?: boolean
+  /** Guarda as instruções em cache entre perguntas (Claude; nos outros é automático). */
+  cacheSystem?: boolean
+}
+
+export interface ChatResult {
+  text: string
+  sources: AiWebSource[]
 }
 
 type Fetch = typeof fetch
@@ -50,14 +60,16 @@ function trimUrl(url: string): string {
   return url.trim().replace(/\/+$/, '')
 }
 
-async function request(
+/** Faz o pedido e devolve a resposta já conferida (erros viram mensagens em português). */
+async function send(
   config: AiClientConfig,
   url: string,
   init: RequestInit,
   signal: AbortSignal | undefined,
-  fetchImpl: Fetch
-): Promise<unknown> {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS)
+  fetchImpl: Fetch,
+  timeoutMs = TIMEOUT_MS
+): Promise<Response> {
+  const timeout = AbortSignal.timeout(timeoutMs)
   const combined = signal ? AbortSignal.any([signal, timeout]) : timeout
   let response: Response
   try {
@@ -75,8 +87,12 @@ async function request(
     const hint = config.provider === 'ollama' ? ' O Ollama está aberto?' : ''
     throw new Error(`Não foi possível conectar a ${host}.${hint}`, { cause: error })
   }
-  const body = await response.text()
-  if (!response.ok) throw new Error(friendlyError(config.provider, response.status, body))
+  if (!response.ok) throw new Error(friendlyError(config.provider, response.status, await response.text()))
+  return response
+}
+
+async function request(config: AiClientConfig, url: string, init: RequestInit, signal: AbortSignal | undefined, fetchImpl: Fetch): Promise<unknown> {
+  const body = await (await send(config, url, init, signal, fetchImpl)).text()
   try {
     return JSON.parse(body)
   } catch {
@@ -89,103 +105,211 @@ function requireKey(config: AiClientConfig): string {
   return config.apiKey
 }
 
-/** Manda um pedido e devolve o texto da resposta. */
-export async function chat(config: AiClientConfig, req: ChatRequest, signal?: AbortSignal, fetchImpl: Fetch = fetch): Promise<string> {
+/** Monta o pedido de cada provedor (com ou sem streaming). */
+function buildRequest(config: AiClientConfig, req: ChatRequest, stream: boolean): { url: string; init: RequestInit } {
   const json = { 'content-type': 'application/json' }
+  const web = Boolean(req.web && AI_PROVIDERS[config.provider].web)
   switch (config.provider) {
-    case 'anthropic': {
-      const data = (await request(
-        config,
-        `${ANTHROPIC_URL}/messages`,
-        {
+    case 'anthropic':
+      return {
+        url: `${ANTHROPIC_URL}/messages`,
+        init: {
           method: 'POST',
           headers: { ...json, 'x-api-key': requireKey(config), 'anthropic-version': '2023-06-01' },
           body: JSON.stringify({
             model: config.model,
             max_tokens: req.maxTokens,
-            system: req.system,
-            messages: [{ role: 'user', content: req.user }]
+            system: req.cacheSystem ? [{ type: 'text', text: req.system, cache_control: { type: 'ephemeral' } }] : req.system,
+            messages: req.messages,
+            ...(web ? { tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }] } : {}),
+            ...(stream ? { stream: true } : {})
           })
-        },
-        signal,
-        fetchImpl
-      )) as { content?: { type: string; text?: string }[]; stop_reason?: string }
-      if (data.stop_reason === 'refusal') throw new Error('O modelo se recusou a responder a esse pedido')
-      return (data.content ?? []).filter((c) => c.type === 'text').map((c) => c.text ?? '').join('')
-    }
+        }
+      }
     case 'gemini': {
-      const data = (await request(
-        config,
-        `${GEMINI_URL}/models/${encodeURIComponent(config.model.replace(/^models\//, ''))}:generateContent`,
-        {
+      const model = encodeURIComponent(config.model.replace(/^models\//, ''))
+      return {
+        url: `${GEMINI_URL}/models/${model}:${stream ? 'streamGenerateContent?alt=sse' : 'generateContent'}`,
+        init: {
           method: 'POST',
           headers: { ...json, 'x-goog-api-key': requireKey(config) },
           body: JSON.stringify({
             systemInstruction: { parts: [{ text: req.system }] },
-            contents: [{ role: 'user', parts: [{ text: req.user }] }],
-            generationConfig: { maxOutputTokens: req.maxTokens, temperature: 0.4, ...(req.json ? { responseMimeType: 'application/json' } : {}) }
+            contents: req.messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+            // O modo JSON não combina com a pesquisa no Google; a leitura tolerante cuida da resposta.
+            generationConfig: { maxOutputTokens: req.maxTokens, temperature: 0.4, ...(req.json && !web ? { responseMimeType: 'application/json' } : {}) },
+            ...(web ? { tools: [{ google_search: {} }] } : {})
           })
-        },
-        signal,
-        fetchImpl
-      )) as { candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[]; promptFeedback?: { blockReason?: string } }
-      if (data.promptFeedback?.blockReason) throw new Error(`O Gemini bloqueou o pedido (${data.promptFeedback.blockReason})`)
-      return (data.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? '').join('')
+        }
+      }
     }
-    case 'ollama': {
-      const data = (await request(
-        config,
-        `${trimUrl(config.baseUrl || DEFAULT_OLLAMA_URL)}/api/chat`,
-        {
+    case 'ollama':
+      return {
+        url: `${trimUrl(config.baseUrl || DEFAULT_OLLAMA_URL)}/api/chat`,
+        init: {
           method: 'POST',
           headers: json,
           body: JSON.stringify({
             model: config.model,
-            stream: false,
+            stream,
             ...(req.json ? { format: 'json' } : {}),
             options: { num_ctx: OLLAMA_CONTEXT, num_predict: req.maxTokens, temperature: 0.4 },
-            messages: [
-              { role: 'system', content: req.system },
-              { role: 'user', content: req.user }
-            ]
+            messages: [{ role: 'system', content: req.system }, ...req.messages]
           })
-        },
-        signal,
-        fetchImpl
-      )) as { message?: { content?: string } }
-      return data.message?.content ?? ''
-    }
+        }
+      }
     case 'openai':
     case 'openrouter': {
       const router = config.provider === 'openrouter'
       if (router) requireKey(config)
       const base = router ? OPENROUTER_URL : trimUrl(config.baseUrl || OPENAI_URL)
       const official = base.startsWith(OPENAI_URL)
-      const data = (await request(
-        config,
-        `${base}/chat/completions`,
-        {
+      return {
+        url: `${base}/chat/completions`,
+        init: {
           method: 'POST',
           headers: { ...json, ...(router ? OPENROUTER_HEADERS : {}), ...(config.apiKey ? { Authorization: `Bearer ${config.apiKey}` } : {}) },
           body: JSON.stringify({
             model: config.model,
-            messages: [
-              { role: 'system', content: req.system },
-              { role: 'user', content: req.user }
-            ],
+            messages: [{ role: 'system', content: req.system }, ...req.messages],
             // Nem todo servidor compatível aceita o modo JSON; só a API oficial recebe.
             ...(official && req.json ? { response_format: { type: 'json_object' } } : {}),
-            ...(official ? { max_completion_tokens: req.maxTokens } : { max_tokens: req.maxTokens })
+            ...(official ? { max_completion_tokens: req.maxTokens } : { max_tokens: req.maxTokens }),
+            ...(router && web ? { plugins: [{ id: 'web', max_results: 5 }] } : {}),
+            ...(stream ? { stream: true } : {})
           })
-        },
-        signal,
-        fetchImpl
-      )) as { choices?: { message?: { content?: string; refusal?: string } }[] }
-      const message = data.choices?.[0]?.message
-      if (message?.refusal) throw new Error('O modelo se recusou a responder a esse pedido')
-      return message?.content ?? ''
+        }
+      }
     }
   }
+}
+
+type AnthropicBlock = { type: string; text?: string; citations?: { type?: string; url?: string; title?: string }[] }
+type GeminiChunk = {
+  candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] }; groundingMetadata?: { groundingChunks?: { web?: { uri?: string; title?: string } }[] } }[]
+  promptFeedback?: { blockReason?: string }
+}
+type Annotation = { type?: string; url_citation?: { url?: string; title?: string } }
+
+const citationSources = (list: AnthropicBlock['citations']): AiWebSource[] =>
+  (list ?? []).filter((c) => c.url).map((c) => ({ url: c.url!, title: c.title ?? '' }))
+const geminiSources = (chunk: GeminiChunk): AiWebSource[] =>
+  (chunk.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []).filter((c) => c.web?.uri).map((c) => ({ url: c.web!.uri!, title: c.web!.title ?? '' }))
+const annotationSources = (list: Annotation[] | undefined): AiWebSource[] =>
+  (list ?? []).filter((a) => a.url_citation?.url).map((a) => ({ url: a.url_citation!.url!, title: a.url_citation!.title ?? '' }))
+const geminiText = (chunk: GeminiChunk) => (chunk.candidates?.[0]?.content?.parts ?? []).filter((p) => !p.thought).map((p) => p.text ?? '').join('')
+
+/** Manda um pedido e devolve o texto da resposta (e as fontes, se pesquisou). */
+export async function chat(config: AiClientConfig, req: ChatRequest, signal?: AbortSignal, fetchImpl: Fetch = fetch): Promise<ChatResult> {
+  const { url, init } = buildRequest(config, req, false)
+  const data = await request(config, url, init, signal, fetchImpl)
+  switch (config.provider) {
+    case 'anthropic': {
+      const d = data as { content?: AnthropicBlock[]; stop_reason?: string }
+      if (d.stop_reason === 'refusal') throw new Error('O modelo se recusou a responder a esse pedido')
+      const blocks = (d.content ?? []).filter((c) => c.type === 'text')
+      return { text: blocks.map((c) => c.text ?? '').join(''), sources: mergeSources(...blocks.map((b) => citationSources(b.citations))) }
+    }
+    case 'gemini': {
+      const d = data as GeminiChunk
+      if (d.promptFeedback?.blockReason) throw new Error(`O Gemini bloqueou o pedido (${d.promptFeedback.blockReason})`)
+      return { text: geminiText(d), sources: mergeSources(geminiSources(d)) }
+    }
+    case 'ollama':
+      return { text: (data as { message?: { content?: string } }).message?.content ?? '', sources: [] }
+    case 'openai':
+    case 'openrouter': {
+      const message = (data as { choices?: { message?: { content?: string; refusal?: string; annotations?: Annotation[] } }[] }).choices?.[0]?.message
+      if (message?.refusal) throw new Error('O modelo se recusou a responder a esse pedido')
+      return { text: message?.content ?? '', sources: mergeSources(annotationSources(message?.annotations)) }
+    }
+  }
+}
+
+/** Lê o corpo linha a linha (SSE ou NDJSON). */
+async function eachLine(body: ReadableStream<Uint8Array>, onLine: (line: string) => void): Promise<void> {
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for await (const chunk of body as unknown as AsyncIterable<Uint8Array>) {
+    buffer += decoder.decode(chunk, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) onLine(line.replace(/\r$/, ''))
+  }
+  buffer += decoder.decode()
+  if (buffer) onLine(buffer)
+}
+
+/** Como `chat`, mas entrega o texto aos pedaços enquanto o modelo escreve. */
+export async function chatStream(
+  config: AiClientConfig,
+  req: ChatRequest,
+  onDelta: (text: string) => void,
+  signal?: AbortSignal,
+  fetchImpl: Fetch = fetch
+): Promise<ChatResult> {
+  const { url, init } = buildRequest(config, req, true)
+  const response = await send(config, url, init, signal, fetchImpl, 2 * TIMEOUT_MS)
+  if (!response.body) throw new Error('Resposta vazia do provedor de IA')
+  let text = ''
+  const sources: AiWebSource[][] = []
+  const emit = (piece: string | undefined) => {
+    if (!piece) return
+    text += piece
+    onDelta(piece)
+  }
+  const handle = (payload: string) => {
+    let data: Record<string, unknown>
+    try {
+      data = JSON.parse(payload)
+    } catch {
+      return
+    }
+    switch (config.provider) {
+      case 'anthropic': {
+        if (data.type === 'error') throw new Error(`Claude: ${(data.error as { message?: string })?.message ?? 'erro na resposta'}`)
+        const delta = data.delta as { type?: string; text?: string; citation?: { url?: string; title?: string }; stop_reason?: string } | undefined
+        if (data.type === 'content_block_delta' && delta?.type === 'text_delta') emit(delta.text)
+        if (data.type === 'content_block_delta' && delta?.type === 'citations_delta' && delta.citation) sources.push(citationSources([delta.citation]))
+        if (data.type === 'message_delta' && delta?.stop_reason === 'refusal') throw new Error('O modelo se recusou a responder a esse pedido')
+        break
+      }
+      case 'gemini': {
+        const chunk = data as GeminiChunk
+        if (chunk.promptFeedback?.blockReason) throw new Error(`O Gemini bloqueou o pedido (${chunk.promptFeedback.blockReason})`)
+        emit(geminiText(chunk))
+        sources.push(geminiSources(chunk))
+        break
+      }
+      case 'ollama':
+        if (typeof data.error === 'string') throw new Error(`Ollama: ${data.error}`)
+        emit((data.message as { content?: string } | undefined)?.content)
+        break
+      case 'openai':
+      case 'openrouter': {
+        if (data.error) throw new Error(`${AI_PROVIDERS[config.provider].label}: ${(data.error as { message?: string }).message ?? 'erro na resposta'}`)
+        const choice = (data.choices as { delta?: { content?: string; annotations?: Annotation[] }; message?: { annotations?: Annotation[] } }[] | undefined)?.[0]
+        emit(choice?.delta?.content ?? undefined)
+        sources.push(annotationSources(choice?.delta?.annotations ?? choice?.message?.annotations))
+        break
+      }
+    }
+  }
+  try {
+    await eachLine(response.body, (line) => {
+      if (config.provider === 'ollama') {
+        if (line.trim()) handle(line)
+        return
+      }
+      if (!line.startsWith('data:')) return
+      const payload = line.slice(5).trim()
+      if (payload && payload !== '[DONE]') handle(payload)
+    })
+  } catch (error) {
+    if (signal?.aborted) throw Object.assign(new Error('Cancelado', { cause: error }), { partial: text })
+    throw error
+  }
+  return { text, sources: mergeSources(...sources) }
 }
 
 /** Lista os modelos da conta/servidor; serve também para testar a conexão e a chave. */

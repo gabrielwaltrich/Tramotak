@@ -19,7 +19,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   aiModels: DEFAULT_AI_MODELS,
   ollamaUrl: 'http://localhost:11434',
   openaiBaseUrl: 'https://api.openai.com/v1',
-  autoBackup: true
+  autoBackup: true,
+  aiWebSearch: false
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -83,6 +84,10 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
       models[id] = model
     }
     out.aiModels = models
+  }
+  if (patch.aiWebSearch !== undefined) {
+    if (typeof patch.aiWebSearch !== 'boolean') throw new Error('Valor inválido para pesquisa na internet')
+    out.aiWebSearch = patch.aiWebSearch
   }
   if (patch.autoBackup !== undefined) {
     if (typeof patch.autoBackup !== 'boolean') throw new Error('Valor inválido para backup automático')

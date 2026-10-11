@@ -359,5 +359,12 @@ export const MIGRATIONS: string[] = [
   CREATE TRIGGER search_transcript_ad AFTER DELETE ON transcripts BEGIN
     UPDATE search_index SET body = '' WHERE rowid = old.lesson_id * 8 + 3;
   END;
+  `,
+  /* 9 — conversa com a IA sobre cada aula (mensagens em JSON; some junto com a aula) */ `
+  CREATE TABLE ai_chats (
+    lesson_id     INTEGER PRIMARY KEY REFERENCES lessons(id) ON DELETE CASCADE,
+    messages_json TEXT    NOT NULL DEFAULT '[]',
+    updated_at    INTEGER NOT NULL DEFAULT (unixepoch())
+  );
   `
 ]

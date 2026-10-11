@@ -10,6 +10,7 @@ import { DocumentLesson } from '../components/player/DocumentLesson'
 import { LessonSidebar } from '../components/player/LessonSidebar'
 import { NotesPanel } from '../components/player/NotesPanel'
 import { TranscriptPanel } from '../components/player/TranscriptPanel'
+import { LessonChat } from '../components/ai/LessonChat'
 import { playerPrefs } from '../components/player/prefs'
 import { useToast } from '../components/Toast'
 
@@ -32,7 +33,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
   const videoRef = useRef<HTMLVideoElement>(null)
   const [autoplay, setAutoplay] = useState(playerPrefs.autoplay)
   const [countdown, setCountdown] = useState<number | null>(null)
-  const [tab, setTab] = useState<'notes' | 'transcript' | 'attachments'>('notes')
+  const [tab, setTab] = useState<'notes' | 'transcript' | 'ai' | 'attachments'>('notes')
   const playerRef = useRef<HTMLDivElement>(null)
 
   const lesson = useQuery({ queryKey: queryKeys.lesson(lessonId), queryFn: () => window.api.lessons.get(lessonId), staleTime: 0 })
@@ -221,6 +222,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
               [
                 ['notes', `Anotações (${notes.data?.length ?? 0})`],
                 ...(isVideo ? [['transcript', 'Transcrição']] : []),
+                ...(isVideo || l.kind === 'text' ? [['ai', 'Perguntar à IA']] : []),
                 ...(attachments.length > 0 ? [['attachments', `Anexos (${attachments.length})`]] : [])
               ] as [typeof tab, string][]
             ).map(([value, label]) => (
@@ -241,6 +243,8 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
           <div role="tabpanel" className="p-3">
             {tab === 'transcript' && isVideo ? (
               <TranscriptPanel lessonId={l.id} getTime={getTime} onSeek={seek} />
+            ) : tab === 'ai' ? (
+              <LessonChat key={l.id} lessonId={l.id} getTime={getTime} onSeek={isVideo ? seek : undefined} onOpenTranscript={isVideo ? () => setTab('transcript') : undefined} />
             ) : tab === 'notes' || attachments.length === 0 ? (
               <NotesPanel
                 lessonId={l.id}

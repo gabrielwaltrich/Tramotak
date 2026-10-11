@@ -172,12 +172,18 @@ export function previewIntervals(card: SchedulingState, now: number, config = DE
   return out
 }
 
-/** Rótulo curto de um intervalo: "<1 min", "6 min", "1 h", "1 dia", "4 dias", "2,5 meses", "1,2 ano". */
-export function formatInterval(seconds: number): string {
+/**
+ * Rótulo curto de um intervalo: "<1 min", "6 min", "1 h", "1 dia", "4 dias", "2,5 meses", "1,2 ano".
+ * Com `now`, intervalos de dias contam dias do calendário: as revisões vencem à meia-noite, então uma carta
+ * para daqui a 4 dias continua "4 dias" mesmo vista ao meio-dia (são só 3,5 dias de relógio).
+ */
+export function formatInterval(seconds: number, now?: number): string {
   if (seconds < MINUTE) return '<1 min'
   if (seconds < 3600) return `${Math.round(seconds / MINUTE)} min`
-  if (seconds < DAY * 0.75) return `${Math.round(seconds / 3600)} h`
-  const days = Math.round(seconds / DAY)
+  if (seconds < DAY * 0.75 && now === undefined) return `${Math.round(seconds / 3600)} h`
+  const calendar = now === undefined ? null : Math.round((startOfLocalDay(now + seconds) - startOfLocalDay(now)) / DAY)
+  if (calendar === 0) return `${Math.max(1, Math.round(seconds / 3600))} h`
+  const days = calendar ?? Math.round(seconds / DAY)
   if (days < 30) return days === 1 ? '1 dia' : `${days} dias`
   const fmt = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
   if (days < 365) {

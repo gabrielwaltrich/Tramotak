@@ -185,7 +185,7 @@ export function StudyPage() {
                   >
                     {a.label}
                     <span className="mt-0.5 text-xs font-normal opacity-80">
-                      {formatInterval(current.intervals[a.rating])} · {a.rating}
+                      {formatInterval(current.intervals[a.rating], Math.floor(study.dataUpdatedAt / 1000))} · {a.rating}
                     </span>
                   </button>
                 ))}

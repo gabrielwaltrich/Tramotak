@@ -4,6 +4,9 @@ import {
   AI_PROVIDER_IDS,
   AI_PROVIDERS,
   MODEL_NAME,
+  MAX_CHAT_QUESTION,
+  buildChatSystem,
+  chatHistory,
   buildPrompt,
   fitSource,
   maxOutputTokens,
@@ -13,15 +16,23 @@ import {
   type AiLink,
   type AiGenerateResponse,
   type AiProvider,
-  type AiSourceRef
+  type AiSourceRef,
+  type ChatMessage,
+  type ChatSendRequest
 } from '@shared/ai'
 import { IPC, type OllamaPullState } from '@shared/ipc'
 import type { Database } from '../db/database'
 import { getSettings } from '../db/settings'
 import { getSecret, hasSecret, setSecret } from '../secrets'
-import { chat, listModels, ollamaPull, ollamaVersion, type AiClientConfig } from '../ai/client'
+import { chat, chatStream, listModels, ollamaPull, ollamaVersion, type AiClientConfig } from '../ai/client'
+import { appendChat, clearChat, getChat } from '../db/chats'
 import { loginOpenRouter } from '../ai/openrouterAuth'
-import { resolveSource } from '../ai/source'
+import { chatMaterial, resolveSource } from '../ai/source'
+
+function assertId(id: unknown): number {
+  if (!Number.isInteger(id)) throw new Error('Identificador inválido')
+  return id as number
+}
 
 function assertProvider(value: unknown): AiProvider {
   if (!AI_PROVIDER_IDS.includes(value as AiProvider)) throw new Error('Provedor de IA inválido')
@@ -53,9 +64,11 @@ export function registerAiIpc(db: Database): void {
   ipcMain.handle(IPC.aiSource, (_e, ref: AiSourceRef) => resolveSource(db, ref))
 
   ipcMain.handle(IPC.aiGenerate, async (_e, input: AiGenerateRequest): Promise<AiGenerateResponse> => {
-    const req = validateRequest(input)
     const provider = getSettings(db).aiProvider
     if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    const valid = validateRequest(input)
+    // Sem pesquisa no provedor, as regras do prompt são as de "só o material".
+    const req = { ...valid, webSearch: valid.webSearch && AI_PROVIDERS[provider].web !== null }
     if (running) throw new Error('Já existe uma geração em andamento')
     const config = clientConfig(db, provider)
     const { text, truncated } = fitSource(req.text, AI_PROVIDERS[provider].maxSourceChars)
@@ -64,15 +77,76 @@ export function registerAiIpc(db: Database): void {
     const controller = new AbortController()
     running = controller
     try {
-      const answer = await chat(config, { ...prompt, maxTokens: maxOutputTokens(req), json: true }, controller.signal)
-      if (!answer.trim()) throw new Error('A IA devolveu uma resposta vazia')
-      return { result: parseResult(req, answer), provider, model: config.model, truncated, usedChars: text.length }
+      const answer = await chat(
+        config,
+        { system: prompt.system, messages: [{ role: 'user', content: prompt.user }], maxTokens: maxOutputTokens(req), json: true, web: req.webSearch },
+        controller.signal
+      )
+      if (!answer.text.trim()) throw new Error('A IA devolveu uma resposta vazia')
+      return { result: parseResult(req, answer.text), provider, model: config.model, truncated, usedChars: text.length, sources: answer.sources }
     } finally {
       running = null
     }
   })
 
   ipcMain.handle(IPC.aiCancel, () => running?.abort())
+
+  // ── Conversa sobre a aula ──
+  let chatting: AbortController | null = null
+
+  ipcMain.handle(IPC.aiChatGet, async (_e, lessonId: unknown, includeNotes: unknown) => {
+    const id = assertId(lessonId)
+    return { messages: getChat(db, id), material: (await chatMaterial(db, id, includeNotes === true)).info }
+  })
+
+  ipcMain.handle(IPC.aiChatClear, (_e, lessonId: unknown) => clearChat(db, assertId(lessonId)))
+  ipcMain.handle(IPC.aiChatCancel, () => chatting?.abort())
+
+  ipcMain.handle(IPC.aiChatSend, async (event, input: ChatSendRequest): Promise<ChatMessage> => {
+    const lessonId = assertId(input?.lessonId)
+    const question = String(input?.text ?? '').trim().slice(0, MAX_CHAT_QUESTION)
+    if (!question) throw new Error('Escreva uma pergunta')
+    const provider = getSettings(db).aiProvider
+    if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    if (chatting) throw new Error('Espere a resposta anterior terminar')
+    const info = AI_PROVIDERS[provider]
+    const web = input.webSearch === true && info.web !== null
+
+    const material = await chatMaterial(db, lessonId, input.includeNotes === true)
+    if (!material.text.trim()) throw new Error('Esta aula ainda não tem transcrição nem legenda para a IA ler. Transcreva o vídeo na aba Transcrição.')
+    const { text } = fitSource(material.text, info.maxSourceChars)
+    const videoSec = typeof input.videoSec === 'number' && Number.isFinite(input.videoSec) ? Math.max(0, input.videoSec) : null
+    const asked: ChatMessage = { role: 'user', content: question, at: Math.floor(Date.now() / 1000), videoSec }
+    const history = chatHistory([...getChat(db, lessonId), asked])
+
+    const controller = new AbortController()
+    chatting = controller
+    const send = (piece: string) => {
+      if (!event.sender.isDestroyed()) event.sender.send(IPC.aiChatDelta, { lessonId, text: piece })
+    }
+    try {
+      const result = await chatStream(
+        clientConfig(db, provider),
+        { system: buildChatSystem(text, { web, hasNotes: input.includeNotes === true && material.info.notes > 0 }), messages: history, maxTokens: 4000, json: false, web, cacheSystem: true },
+        send,
+        controller.signal
+      )
+      const answer: ChatMessage = { role: 'assistant', content: result.text.trim() || '(sem resposta)', at: Math.floor(Date.now() / 1000), ...(result.sources.length ? { sources: result.sources } : {}) }
+      appendChat(db, lessonId, [asked, answer])
+      return answer
+    } catch (error) {
+      // Interrompida: guarda o que já tinha chegado.
+      const partial = (error as { partial?: string }).partial
+      if (controller.signal.aborted) {
+        const answer: ChatMessage = { role: 'assistant', content: partial?.trim() || '', at: Math.floor(Date.now() / 1000), interrupted: true }
+        appendChat(db, lessonId, [asked, answer])
+        return answer
+      }
+      throw error
+    } finally {
+      chatting = null
+    }
+  })
 
   // Só abre páginas conhecidas: a interface não escolhe URLs.
   ipcMain.handle(IPC.aiOpenLink, (_e, link: unknown) => {
