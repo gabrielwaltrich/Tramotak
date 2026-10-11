@@ -103,3 +103,30 @@ jobs:
             dist/*.AppImage
             dist/*.deb
           if-no-files-found: error
+
+  release:
+    name: Release no GitHub
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: Checksums
+        working-directory: artifacts
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+      - name: Criar a Release com os instaladores
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="docs/releases/${GITHUB_REF_NAME}.md"
+          [ -f "$NOTES" ] || NOTES=/dev/null
+          gh release create "$GITHUB_REF_NAME" artifacts/* \
+            --title "Tramotak ${GITHUB_REF_NAME#v}" \
+            --notes-file "$NOTES" \
+            --verify-tag

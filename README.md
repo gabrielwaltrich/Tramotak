@@ -21,7 +21,7 @@ Plano e roadmap: [docs/PLANO-MVP.md](docs/PLANO-MVP.md).
 
 ## Instalação
 
-Os instaladores são gerados pelo CI a cada tag `v*` (aba **Actions** → execução da tag → **Artifacts**).
+Baixe a versão mais recente em **[Releases](https://github.com/gabrielwaltrich/Tramotak/releases/latest)**. Cada versão traz os instaladores e um `SHA256SUMS.txt` para conferir os arquivos.
 
 | Sistema | Arquivo | Observação |
 |---|---|---|
@@ -51,7 +51,7 @@ npm run test:e2e   # compila e roda o fluxo completo no app real (Playwright)
 npm run dist:linux # gera instaladores em dist/ (também dist:win e dist:mac)
 ```
 
-Para publicar uma versão: atualize `version` no `package.json`, faça commit e crie a tag (`git tag v0.2.0 && git push --tags`). O CI roda lint, testes e E2E nos 3 sistemas e anexa os instaladores à execução.
+Para publicar uma versão: atualize `version` no `package.json`, escreva as notas em `docs/releases/vX.Y.Z.md`, faça commit e crie a tag (`git tag vX.Y.Z && git push --tags`). O CI roda lint, testes e E2E nos 3 sistemas, gera os instaladores e cria a Release no GitHub com eles e os checksums.
 
 ## Estrutura
 
