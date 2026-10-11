@@ -130,8 +130,10 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v7
+      # Só os instaladores: relatórios de testes que falharam e foram repetidos também viram artefatos.
       - uses: actions/download-artifact@v8
         with:
+          pattern: tramotak-*
           path: artifacts
           merge-multiple: true
       - name: Checksums
