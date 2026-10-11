@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
@@ -158,6 +158,9 @@ app.whenReady().then(() => {
   app.on('before-quit', () => {
     durations.stop()
     mediaQueue.cancelAll()
+    // Preferências guardadas pela janela (aparência etc.) vão para o disco já, mesmo que o fechamento demore e o
+    // processo acabe encerrado à força (ex.: instalador de atualização).
+    session.defaultSession.flushStorageData()
   })
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 

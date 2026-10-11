@@ -24,6 +24,8 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
   // compartilhado junto). Dá 15 s para fechar normalmente; depois, encerra o processo.
   const close = app.close.bind(app)
   app.close = async () => {
+    // Grava o localStorage antes: se o fechamento estourar o prazo e o processo for encerrado, nada se perde.
+    await app.evaluate(({ session }) => session.defaultSession.flushStorageData()).catch(() => undefined)
     let timer: NodeJS.Timeout | undefined
     const timeout = new Promise<'timeout'>((resolve) => (timer = setTimeout(() => resolve('timeout'), 15_000)))
     const result = await Promise.race([close().then(() => 'closed' as const), timeout])
