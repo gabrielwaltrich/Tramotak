@@ -194,5 +194,27 @@ export const MIGRATIONS: string[] = [
   CREATE TRIGGER search_card_ad AFTER DELETE ON cards BEGIN
     DELETE FROM search_index WHERE rowid = old.id * 8 + 5;
   END;
+  `,
+  /* 5 — planner: tarefas com agenda, prazo e quadro kanban */ `
+  CREATE TABLE tasks (
+    id             INTEGER PRIMARY KEY,
+    title          TEXT    NOT NULL,
+    description    TEXT    NOT NULL DEFAULT '',
+    status         TEXT    NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'doing', 'done')),
+    position       REAL    NOT NULL DEFAULT 0,             -- ordem dentro da coluna do kanban
+    scheduled_date TEXT,                                   -- 'AAAA-MM-DD', dia local
+    scheduled_time TEXT,                                   -- 'HH:MM', só com data
+    duration_min   INTEGER,
+    due_date       TEXT,                                   -- prazo, 'AAAA-MM-DD'
+    course_id      INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+    lesson_id      INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+    completed_at   INTEGER,
+    notified_at    INTEGER,                                -- aviso de início do bloco já enviado
+    created_at     INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at     INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE INDEX tasks_board ON tasks(status, position);
+  CREATE INDEX tasks_scheduled ON tasks(scheduled_date);
+  CREATE INDEX tasks_due ON tasks(due_date);
   `
 ]

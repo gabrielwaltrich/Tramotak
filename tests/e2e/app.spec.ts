@@ -154,3 +154,44 @@ test('flashcards: anotação vira carta, estudo com teclado e link de volta para
   await expect(page.getByText('em 4 dias')).toBeVisible()
   await app.close()
 })
+
+test('planner e progresso: tarefa de hoje aparece no Início e conclui de lá; progresso mostra o estudo', async () => {
+  const { app, page } = await launch()
+  // Notificações reais do sistema não fazem sentido no CI.
+  await page.evaluate(() => window.api.settings.update({ notificationsEnabled: false }))
+
+  await page.getByRole('link', { name: 'Planner' }).click()
+  await page.getByRole('button', { name: 'Nova tarefa' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Título').fill('Revisar o primeiro módulo')
+  const today = await page.evaluate(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  })
+  await dialog.getByLabel('Agendada para').fill(today)
+  await dialog.getByLabel('Duração (min)').fill('25')
+  await dialog.getByLabel('Curso').selectOption({ label: 'Curso E2E' })
+  await dialog.getByRole('button', { name: 'Criar tarefa' }).click()
+  await expect(page.getByRole('region', { name: 'A fazer' }).getByText('Revisar o primeiro módulo')).toBeVisible()
+
+  // Calendário: a tarefa está no dia de hoje
+  await page.getByRole('tab', { name: 'Calendário' }).click()
+  await expect(page.getByRole('button', { name: new RegExp(`^${today}, 1 tarefa`) })).toBeVisible()
+
+  // Início: painel Hoje conclui a tarefa
+  await page.getByRole('link', { name: 'Início' }).click()
+  await page.getByRole('checkbox', { name: 'Concluir Revisar o primeiro módulo' }).check()
+  await expect(page.getByText('“Revisar o primeiro módulo” concluída')).toBeVisible()
+  await page.getByRole('link', { name: 'Planner' }).click()
+  await page.getByRole('tab', { name: 'Quadro' }).click()
+  await expect(page.getByRole('region', { name: 'Concluído' }).getByText('Revisar o primeiro módulo')).toBeVisible()
+
+  // Progresso: aula concluída no primeiro teste, sequência e histórico
+  await page.getByRole('link', { name: 'Progresso' }).click()
+  await expect(page.getByText('Aulas concluídas')).toBeVisible()
+  await expect(page.getByRole('img', { name: /Mapa de atividade/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Boas-vindas/ })).toBeVisible()
+  await page.getByLabel('Filtrar histórico').fill('nada disso existe')
+  await expect(page.getByText('Nenhuma aula encontrada.')).toBeVisible()
+  await app.close()
+})

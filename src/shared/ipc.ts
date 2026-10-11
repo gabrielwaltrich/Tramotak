@@ -1,6 +1,8 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNext } from './flashcards'
 import type { Rating } from './srs'
+import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
+import type { HistoryEntry, HistoryFilter, ProgressData } from './progress'
 import type {
   SearchHit,
   DashboardData,
@@ -27,6 +29,10 @@ export interface AppInfo {
 
 export interface AppSettings {
   dailyGoalMinutes: number
+  /** Notificações do sistema do Planner (blocos com horário e resumo do dia). */
+  notificationsEnabled: boolean
+  /** Antecedência do aviso de início de bloco, em minutos. */
+  notifyLeadMinutes: 0 | 5 | 10 | 15
 }
 
 export const IPC = {
@@ -69,7 +75,18 @@ export const IPC = {
   cardsDelete: 'cards:delete',
   cardsReset: 'cards:reset',
   studyNext: 'study:next',
-  studyAnswer: 'study:answer'
+  studyAnswer: 'study:answer',
+  navigate: 'app:navigate',
+  tasksList: 'tasks:list',
+  tasksCreate: 'tasks:create',
+  tasksUpdate: 'tasks:update',
+  tasksMove: 'tasks:move',
+  tasksSetDone: 'tasks:setDone',
+  tasksDelete: 'tasks:delete',
+  tasksToday: 'tasks:today',
+  calendarRange: 'calendar:range',
+  statsGet: 'stats:get',
+  statsHistory: 'stats:history'
 } as const
 
 export interface LessonText {
@@ -81,6 +98,8 @@ export interface TramotakApi {
   app: {
     info(): Promise<AppInfo>
     openDataFolder(): Promise<void>
+    /** O processo principal pede para abrir uma rota (ex.: clique numa notificação). Devolve o "desinscrever". */
+    onNavigate(callback: (path: string) => void): () => void
   }
   dashboard: {
     get(): Promise<DashboardData>
@@ -109,6 +128,22 @@ export interface TramotakApi {
   study: {
     next(deckId: number): Promise<StudyNext>
     answer(cardId: number, rating: Rating, durationMs: number): Promise<void>
+  }
+  tasks: {
+    list(): Promise<Task[]>
+    create(input: TaskInput): Promise<Task>
+    update(id: number, input: TaskInput): Promise<Task>
+    /** Arrastar e soltar: coluna e posição dentro dela. */
+    move(id: number, status: TaskStatus, index: number): Promise<void>
+    setDone(id: number, done: boolean): Promise<void>
+    delete(id: number): Promise<void>
+    today(): Promise<Task[]>
+    calendar(from: string, to: string): Promise<CalendarDay[]>
+  }
+  /** Tela Progresso: estatísticas acumuladas e histórico. */
+  stats: {
+    get(): Promise<ProgressData>
+    history(filter: HistoryFilter): Promise<HistoryEntry[]>
   }
   settings: {
     get(): Promise<AppSettings>

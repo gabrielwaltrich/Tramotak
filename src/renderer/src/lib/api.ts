@@ -14,5 +14,10 @@ export const queryKeys = {
   search: (text: string) => ['search', text] as const,
   decks: ['decks'] as const,
   deck: (id: number) => ['decks', id] as const,
-  study: (deckId: number) => ['study', deckId] as const
+  study: (deckId: number) => ['study', deckId] as const,
+  tasks: ['tasks'] as const,
+  tasksToday: ['tasks', 'today'] as const,
+  calendar: (from: string, to: string) => ['tasks', 'calendar', from, to] as const,
+  stats: ['stats'] as const,
+  history: (filter: object) => ['stats', 'history', filter] as const
 }

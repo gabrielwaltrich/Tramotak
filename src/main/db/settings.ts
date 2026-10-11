@@ -3,7 +3,9 @@ import type { Database } from './database'
 
 export type { AppSettings }
 
-export const DEFAULT_SETTINGS: AppSettings = { dailyGoalMinutes: 60 }
+export const DEFAULT_SETTINGS: AppSettings = { dailyGoalMinutes: 60, notificationsEnabled: true, notifyLeadMinutes: 5 }
+
+export const LEAD_OPTIONS = [0, 5, 10, 15] as const
 
 export const GOAL_LIMITS = { min: 5, max: 480 }
 
@@ -15,6 +17,14 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
       throw new Error(`A meta diária deve ficar entre ${GOAL_LIMITS.min} e ${GOAL_LIMITS.max} minutos`)
     }
     out.dailyGoalMinutes = value
+  }
+  if (patch.notificationsEnabled !== undefined) {
+    if (typeof patch.notificationsEnabled !== 'boolean') throw new Error('Valor inválido para notificações')
+    out.notificationsEnabled = patch.notificationsEnabled
+  }
+  if (patch.notifyLeadMinutes !== undefined) {
+    if (!LEAD_OPTIONS.includes(patch.notifyLeadMinutes)) throw new Error('Antecedência deve ser 0, 5, 10 ou 15 minutos')
+    out.notifyLeadMinutes = patch.notifyLeadMinutes
   }
   return out
 }
@@ -50,4 +60,20 @@ export function updateSettings(db: Database, patch: Partial<AppSettings>): AppSe
   )
   for (const [key, value] of Object.entries(valid)) upsert.run(key, JSON.stringify(value))
   return getSettings(db)
+}
+
+/** Valores internos (fora das preferências visíveis), ex.: data do último resumo diário. */
+export function getInternal(db: Database, key: string): unknown {
+  const row = db.prepare('SELECT value_json AS value FROM settings WHERE key = ?').get(`internal.${key}`) as { value: string } | undefined
+  try {
+    return row ? JSON.parse(row.value) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+export function setInternal(db: Database, key: string, value: unknown): void {
+  db.prepare(
+    'INSERT INTO settings (key, value_json) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value_json = excluded.value_json'
+  ).run(`internal.${key}`, JSON.stringify(value))
 }

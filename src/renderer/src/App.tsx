@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Route, Routes } from 'react-router'
+import { Route, Routes, useNavigate } from 'react-router'
 import { Sidebar } from './components/Sidebar'
 import { HomePage } from './routes/HomePage'
 import { CoursesPage } from './routes/CoursesPage'
@@ -11,12 +11,18 @@ import { SearchPalette } from './components/SearchPalette'
 import { FlashcardsPage } from './routes/FlashcardsPage'
 import { DeckPage } from './routes/DeckPage'
 import { StudyPage } from './routes/StudyPage'
+import { PlannerPage } from './routes/PlannerPage'
+import { ProgressPage } from './routes/ProgressPage'
 import { SearchContext } from './lib/searchContext'
 
 export function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const openSearch = useCallback(() => setSearchOpen(true), [])
   const search = useMemo(() => ({ open: openSearch }), [openSearch])
+  const navigate = useNavigate()
+
+  // Clique numa notificação do sistema abre a tela pedida pelo processo principal.
+  useEffect(() => window.api.app.onNavigate((path) => navigate(path)), [navigate])
 
   // Ctrl+K (Cmd+K no macOS) abre a busca de qualquer tela, até de dentro de campos de texto.
   useEffect(() => {
@@ -43,6 +49,8 @@ export function App() {
             <Route path="/flashcards" element={<FlashcardsPage />} />
             <Route path="/flashcards/:id" element={<DeckPage />} />
             <Route path="/flashcards/:id/study" element={<StudyPage />} />
+            <Route path="/planner" element={<PlannerPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<ComingSoonPage />} />
           </Routes>

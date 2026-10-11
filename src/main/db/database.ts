@@ -26,15 +26,25 @@ export function migrate(db: Database): void {
   }
 }
 
-/** Executa `fn` numa transação; desfaz tudo se lançar erro. */
+const depth = new WeakMap<Database, number>()
+
+/**
+ * Executa `fn` numa transação; desfaz tudo se lançar erro.
+ * Chamadas aninhadas viram SAVEPOINTs: um erro interno desfaz só a parte interna.
+ */
 export function transaction<T>(db: Database, fn: () => T): T {
-  db.exec('BEGIN')
+  const level = depth.get(db) ?? 0
+  const savepoint = `sp_${level}`
+  db.exec(level === 0 ? 'BEGIN' : `SAVEPOINT ${savepoint}`)
+  depth.set(db, level + 1)
   try {
     const result = fn()
-    db.exec('COMMIT')
+    db.exec(level === 0 ? 'COMMIT' : `RELEASE ${savepoint}`)
     return result
   } catch (error) {
-    db.exec('ROLLBACK')
+    db.exec(level === 0 ? 'ROLLBACK' : `ROLLBACK TO ${savepoint}; RELEASE ${savepoint}`)
     throw error
+  } finally {
+    depth.set(db, level)
   }
 }

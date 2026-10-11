@@ -29,8 +29,8 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/search', label: 'Buscar', icon: 'search', action: 'search', shortcut: 'Ctrl K' },
   { path: '/flashcards', label: 'Flashcards', icon: 'layers' },
   { path: '/questions', label: 'Questões', icon: 'clipboard', soon: true },
-  { path: '/planner', label: 'Planner', icon: 'calendar', soon: true },
-  { path: '/progress', label: 'Progresso', icon: 'activity', soon: true },
+  { path: '/planner', label: 'Planner', icon: 'calendar' },
+  { path: '/progress', label: 'Progresso', icon: 'activity' },
   { path: '/notebooks', label: 'Cadernos', icon: 'notebook', soon: true },
   { path: '/mindmaps', label: 'Mapas Mentais', icon: 'mindmap', soon: true },
   { path: '/ai', label: 'IA', icon: 'sparkles', soon: true }

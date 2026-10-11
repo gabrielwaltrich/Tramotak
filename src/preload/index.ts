@@ -4,7 +4,14 @@ import { IPC, type TramotakApi } from '@shared/ipc'
 const api: TramotakApi = {
   app: {
     info: () => ipcRenderer.invoke(IPC.appInfo),
-    openDataFolder: () => ipcRenderer.invoke(IPC.filesOpenDataFolder)
+    openDataFolder: () => ipcRenderer.invoke(IPC.filesOpenDataFolder),
+    onNavigate: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, path: unknown) => {
+        if (typeof path === 'string' && path.startsWith('/')) callback(path)
+      }
+      ipcRenderer.on(IPC.navigate, listener)
+      return () => ipcRenderer.removeListener(IPC.navigate, listener)
+    }
   },
   dashboard: {
     get: () => ipcRenderer.invoke(IPC.dashboardGet)
@@ -30,6 +37,20 @@ const api: TramotakApi = {
   study: {
     next: (deckId) => ipcRenderer.invoke(IPC.studyNext, deckId),
     answer: (cardId, rating, durationMs) => ipcRenderer.invoke(IPC.studyAnswer, cardId, rating, durationMs)
+  },
+  tasks: {
+    list: () => ipcRenderer.invoke(IPC.tasksList),
+    create: (input) => ipcRenderer.invoke(IPC.tasksCreate, input),
+    update: (id, input) => ipcRenderer.invoke(IPC.tasksUpdate, id, input),
+    move: (id, status, index) => ipcRenderer.invoke(IPC.tasksMove, id, status, index),
+    setDone: (id, done) => ipcRenderer.invoke(IPC.tasksSetDone, id, done),
+    delete: (id) => ipcRenderer.invoke(IPC.tasksDelete, id),
+    today: () => ipcRenderer.invoke(IPC.tasksToday),
+    calendar: (from, to) => ipcRenderer.invoke(IPC.calendarRange, from, to)
+  },
+  stats: {
+    get: () => ipcRenderer.invoke(IPC.statsGet),
+    history: (filter) => ipcRenderer.invoke(IPC.statsHistory, filter)
   },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),

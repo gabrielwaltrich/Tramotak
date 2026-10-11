@@ -85,7 +85,7 @@ function GoalSetting({ current }: { current: number }) {
           type="number"
           min={GOAL_MIN}
           max={GOAL_MAX}
-          step={5}
+          step={1}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           className="h-9 w-24 rounded-md border border-border bg-bg px-3 text-sm tabular-nums select-text focus:border-accent focus:outline-none"
@@ -100,6 +100,49 @@ function GoalSetting({ current }: { current: number }) {
       <p className="text-xs text-muted">
         Entre {GOAL_MIN} e {GOAL_MAX} minutos. Conta o tempo em que um vídeo está tocando, ajustado pela velocidade.
       </p>
+    </div>
+  )
+}
+
+const LEADS = [0, 5, 10, 15] as const
+
+function NotificationSettings({ enabled, lead }: { enabled: boolean; lead: (typeof LEADS)[number] }) {
+  const queryClient = useQueryClient()
+  const toast = useToast()
+  const save = useMutation({
+    mutationFn: (patch: { notificationsEnabled?: boolean; notifyLeadMinutes?: (typeof LEADS)[number] }) => window.api.settings.update(patch),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
+    onError: (error) => toast(errorMessage(error), 'error')
+  })
+  return (
+    <div className="space-y-3">
+      <label className="flex cursor-pointer items-center gap-3 text-sm">
+        <input
+          type="checkbox"
+          checked={enabled}
+          onChange={(e) => save.mutate({ notificationsEnabled: e.target.checked })}
+          className="size-4 accent-[var(--accent)]"
+        />
+        Ativar notificações do planner
+      </label>
+      <div className={`flex items-center gap-2 text-sm ${enabled ? '' : 'opacity-50'}`}>
+        <span className="text-muted">Avisar</span>
+        <div role="radiogroup" aria-label="Antecedência do aviso" className="inline-flex rounded-lg border border-border p-1">
+          {LEADS.map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={lead === m}
+              disabled={!enabled}
+              onClick={() => save.mutate({ notifyLeadMinutes: m })}
+              className={`rounded-md px-3 py-1 text-sm ${lead === m ? 'bg-accent-soft text-accent' : 'text-muted hover:text-text'}`}
+            >
+              {m === 0 ? 'na hora' : `${m} min antes`}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -140,6 +183,10 @@ export function SettingsPage() {
 
       <Section title="Meta diária" description="Quantos minutos você quer estudar por dia. Aparece na tela Início.">
         {settings.data ? <GoalSetting key={settings.data.dailyGoalMinutes} current={settings.data.dailyGoalMinutes} /> : null}
+      </Section>
+
+      <Section title="Notificações" description="Avisos do sistema para blocos de estudo com horário e um resumo do dia (a partir das 8h).">
+        {settings.data && <NotificationSettings enabled={settings.data.notificationsEnabled} lead={settings.data.notifyLeadMinutes} />}
       </Section>
 
       <Section title="Dados" description="Biblioteca, progresso e anotações ficam só neste computador.">

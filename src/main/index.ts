@@ -10,6 +10,8 @@ import { registerCourseIpc } from './ipc/courses'
 import { registerLessonIpc } from './ipc/lessons'
 import { registerNoteIpc } from './ipc/notes'
 import { registerFlashcardIpc } from './ipc/flashcards'
+import { registerPlannerIpc } from './ipc/planner'
+import { startNotifier } from './notifier'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
 registerMediaScheme()
@@ -80,8 +82,10 @@ app.whenReady().then(() => {
   registerLessonIpc(db)
   registerNoteIpc(db)
   registerFlashcardIpc(db)
+  registerPlannerIpc(db)
   handleMediaProtocol(db)
   createWindow()
+  startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

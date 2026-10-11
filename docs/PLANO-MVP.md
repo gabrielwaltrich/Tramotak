@@ -288,7 +288,19 @@ Tramotak/
      em texto e cloze virando pergunta/resposta; `.txt`/`.tsv` (Anki) ou `frente;verso`. Entra como cartas
      novas (o agendamento do Anki não é importado). Leitor de ZIP próprio, sem dependências.
    - Fica para depois: FSRS, opções por baralho, mídia (imagem/áudio) nas cartas, desfazer resposta.
-4. **Planner + Progresso** (calendário, kanban, heatmap, metas)
+4. ✅ **Planner + Progresso** (calendário, kanban, heatmap, metas)
+   - Migration 5: `tasks` (status/posição do kanban, data e horário locais, duração, prazo, curso/aula, avisado em).
+   - Kanban com arrastar e soltar (reordena a coluna inteira; concluir registra a data) e adição rápida.
+   - Calendário mensal (domingo a sábado) com tarefas, prazos e revisões de flashcards previstas por dia
+     (vencidas contam hoje); painel do dia ao lado; duplo clique cria tarefa na data.
+   - Painel "Hoje" no Início: agendadas para hoje e prazos vencidos, concluídas com um clique.
+   - Notificações do sistema: aviso de bloco com horário (na hora / 5 / 10 / 15 min antes, só uma vez por
+     agendamento) e resumo do dia a partir das 8h; clique abre o Planner. Configurável.
+   - Progresso: totais, sequência, mapa de atividade de 53 semanas (intensidade pela meta), colunas dos
+     últimos 30 dias com a linha da meta, progresso por curso, estados e acerto dos flashcards (30 dias) e
+     histórico de aulas assistidas com filtro por curso, texto sem acento e período.
+   - `transaction()` passou a aceitar aninhamento (SAVEPOINT).
+   - Fica para depois: curva de esquecimento por baralho, tarefas recorrentes.
 5. **Questões e simulados** (bancos, blueprints, cronômetro)
 6. **Cadernos e mapas mentais**
 7. **FFmpeg**: re-encode de vídeos incompatíveis + transcrição (Whisper)

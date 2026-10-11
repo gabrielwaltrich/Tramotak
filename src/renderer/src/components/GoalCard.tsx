@@ -51,7 +51,7 @@ export function GoalCard({ todaySeconds, goalMinutes, lessonsCompletedToday }: {
               type="number"
               min={GOAL_MIN}
               max={GOAL_MAX}
-              step={5}
+              step={1}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => e.key === 'Escape' && setEditing(false)}

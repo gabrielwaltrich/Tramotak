@@ -173,3 +173,27 @@ describe('revalidação', () => {
     expect(getCourseDetail(db, id).modules.map((m) => m.title)).toEqual(['B'])
   })
 })
+
+describe('transações aninhadas', () => {
+  it('erro interno desfaz só a parte interna; erro externo desfaz tudo', async () => {
+    const { transaction } = await import('../../src/main/db/database')
+    transaction(db, () => {
+      db.exec("INSERT INTO settings (key, value_json) VALUES ('a', '1')")
+      expect(() =>
+        transaction(db, () => {
+          db.exec("INSERT INTO settings (key, value_json) VALUES ('b', '2')")
+          throw new Error('falha interna')
+        })
+      ).toThrow('falha interna')
+    })
+    expect(db.prepare('SELECT key FROM settings ORDER BY key').all()).toEqual([{ key: 'a' }])
+
+    expect(() =>
+      transaction(db, () => {
+        transaction(db, () => db.exec("INSERT INTO settings (key, value_json) VALUES ('c', '3')"))
+        throw new Error('falha externa')
+      })
+    ).toThrow('falha externa')
+    expect(db.prepare('SELECT key FROM settings ORDER BY key').all()).toEqual([{ key: 'a' }])
+  })
+})

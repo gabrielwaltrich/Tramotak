@@ -3,6 +3,7 @@ import { computeStreak, dayKey, STREAK_MIN_SECONDS } from '@shared/streak'
 import { getCourseDetail, orderedLessons } from './courses'
 import type { Database } from './database'
 import { getSettings } from './settings'
+import { secondsPerDay } from './progress'
 import { dueToday } from './flashcards'
 
 /** Janela de histórico considerada para a sequência e o recorde. */
@@ -55,15 +56,7 @@ export function getDashboard(db: Database, now = new Date()): DashboardData {
   const todayStart = Math.floor(startOfDay(now).getTime() / 1000)
   const windowStart = todayStart - HISTORY_DAYS * 86_400
 
-  const sessions = db
-    .prepare('SELECT started_at AS startedAt, seconds FROM study_sessions WHERE started_at >= ?')
-    .all(windowStart) as { startedAt: number; seconds: number }[]
-
-  const perDay = new Map<string, number>()
-  for (const s of sessions) {
-    const key = dayKey(new Date(s.startedAt * 1000))
-    perDay.set(key, (perDay.get(key) ?? 0) + s.seconds)
-  }
+  const perDay = secondsPerDay(db, windowStart)
   const activeDays = new Set([...perDay].filter(([, sec]) => sec >= STREAK_MIN_SECONDS).map(([key]) => key))
 
   const completedToday = db

@@ -88,3 +88,15 @@ describe('configurações', () => {
     expect(updateSettings(db, { dailyGoalMinutes: 45 }).dailyGoalMinutes).toBe(45)
   })
 })
+
+describe('configurações de notificação', () => {
+  it('padrões, validação e valores internos', async () => {
+    const { getInternal, setInternal } = await import('../../src/main/db/settings')
+    expect(getSettings(db)).toMatchObject({ notificationsEnabled: true, notifyLeadMinutes: 5 })
+    expect(updateSettings(db, { notificationsEnabled: false, notifyLeadMinutes: 15 })).toMatchObject({ notificationsEnabled: false, notifyLeadMinutes: 15 })
+    expect(() => updateSettings(db, { notifyLeadMinutes: 7 as never })).toThrow('Antecedência')
+    setInternal(db, 'lastSummaryDate', '2026-10-11')
+    expect(getInternal(db, 'lastSummaryDate')).toBe('2026-10-11')
+    expect(getSettings(db)).not.toHaveProperty('internal.lastSummaryDate')
+  })
+})
