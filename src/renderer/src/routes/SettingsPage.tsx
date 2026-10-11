@@ -7,6 +7,7 @@ import { Button } from '../components/Button'
 import { GOAL_MAX, GOAL_MIN } from '../components/GoalCard'
 import { useToast } from '../components/Toast'
 import { MediaSettings } from '../components/media/MediaSettings'
+import { AiSettings } from '../components/ai/AiSettings'
 import { getStoredTheme, setTheme, type Theme } from '../theme'
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -192,6 +193,10 @@ export function SettingsPage() {
 
       <Section title="Vídeo e transcrição" description="Conversão de vídeos incompatíveis e transcrição automática das aulas.">
         {settings.data && <MediaSettings key={JSON.stringify(settings.data)} settings={settings.data} />}
+      </Section>
+
+      <Section title="Inteligência artificial" description="Gere flashcards, questões, resumos e mapas mentais a partir das aulas. Dá para usar de graça (Gemini com a conta Google, OpenRouter ou um modelo local) ou com a sua própria chave.">
+        {settings.data && <AiSettings key={settings.data.aiProvider} settings={settings.data} />}
       </Section>
 
       <Section title="Dados" description="Biblioteca, progresso e anotações ficam só neste computador.">

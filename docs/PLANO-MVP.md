@@ -350,7 +350,40 @@ Tramotak/
    - CI do macOS gera o .dmg arm64, troca o FFmpeg pelo de Intel e gera o .dmg x64.
    - Fica para depois: aceleração por GPU, transcrever o curso inteiro de uma vez, edição da transcrição,
      tradução, modo destrutivo (substituir o original).
-8. **IA BYOK** (Claude, Gemini, Ollama) gerando cards e questões
+8. ✅ **IA BYOK** (Claude, Gemini, Ollama) gerando cards e questões
+   - Provedores sem SDK (só `fetch` no processo principal): Claude (Messages API), Gemini (`generateContent`
+     com `responseMimeType` JSON), Ollama (`/api/chat`, `format: json`, contexto de 16k) e qualquer API
+     compatível com a OpenAI (OpenAI, OpenRouter, LM Studio, vLLM; modo JSON só na API oficial). Chaves por
+     provedor no `safeStorage`; a interface só sabe se existe chave. "Testar conexão" lista os modelos da conta.
+   - Material montado no processo principal: texto da aula (md/html/txt), transcrição (ou, sem ela, a legenda
+     do curso, limpa de horários e repetições), anexos de texto e anotações com horário; ou os blocos de texto
+     de uma página de caderno; ou texto colado. Corte por provedor (150 mil caracteres na nuvem, 24 mil no
+     Ollama) num fim de parágrafo, com aviso.
+   - Saídas: flashcards, questões (múltipla escolha, múltipla resposta, V/F, curta), resumo em Markdown e mapa
+     mental. Prompt pede só JSON; o material vai entre `<material>` e é tratado como conteúdo, não instrução.
+     Leitura tolerante (blocos de código, texto em volta, gabarito por índice 0/1-based, letra ou texto) e
+     validação pelas mesmas regras do resto do app (`validateQuestion`, `applyLayout`); o que vier
+     malformado é descartado. Núcleo puro em `src/shared/ai.ts`.
+   - Revisão antes de salvar: editar e desmarcar cartas (repetidas no baralho de destino são ignoradas),
+     questões com gabarito destacado e LaTeX, resumo com prévia, mapa como estrutura. Destino existente ou novo;
+     cartas ligadas à aula, resumo vira página de caderno com link para a aula, mapa nasce com a aula anexada.
+   - Atalhos "Gerar com IA" no player, no baralho, no banco de questões e no caderno. Um pedido por vez,
+     cancelável, com limite de 5 min.
+   - Opções gratuitas em destaque, escolhidas por cartões com selo (Grátis / Login / Local / Pago / Avançado):
+     - Gemini: passo a passo para criar a chave grátis no Google AI Studio com a conta pessoal (link aberto pelo
+       processo principal, só para URLs conhecidas) e aviso de que o plano grátis pode usar o conteúdo. O login
+       "Entrar com Google" do Gemini CLI é exclusivo dele; OAuth próprio cobraria a cota do projeto do app, não a
+       da pessoa, por isso a chave do AI Studio.
+     - OpenRouter: login OAuth com PKCE (servidor de retorno em 127.0.0.1/::1 numa porta livre, `state` contra
+       CSRF, página só responde depois da troca pela chave, 5 min de limite, cancelável). Lista marca os modelos
+       gratuitos (filtro "Só gratuitos"); padrão `openrouter/free`.
+     - Ollama: detecta se está rodando (`/api/version`), link para baixar, lista de modelos leves (Llama 3.2
+       1B/3B, Qwen 2.5 1.5B/3B, Qwen 3 4B, Gemma 3 4B) com instalação pelo app (`/api/pull` em NDJSON, barra de
+       progresso, cancelar) e "Usar".
+     - Claude: só chave do Claude Console. Desde fev/2026 a Anthropic proíbe e bloqueia no servidor o uso do login
+       Free/Pro/Max em apps de terceiros; a tela explica e aponta o OpenRouter como alternativa.
+   - Fica para depois: conversa sobre a aula, gerar do curso inteiro, PDFs como material, streaming da resposta,
+     custo estimado por pedido.
 9. **Exportar/Importar** pacotes e backup do banco
 
 ---

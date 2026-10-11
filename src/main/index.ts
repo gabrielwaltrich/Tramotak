@@ -14,6 +14,7 @@ import { registerPlannerIpc } from './ipc/planner'
 import { registerQuestionIpc } from './ipc/questions'
 import { registerNotebookIpc } from './ipc/notebooks'
 import { registerMediaIpc } from './ipc/media'
+import { registerAiIpc } from './ipc/ai'
 import { startNotifier } from './notifier'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
@@ -91,6 +92,7 @@ app.whenReady().then(() => {
   const convertedDir = join(app.getPath('userData'), 'converted')
   handleMediaProtocol(db, convertedDir)
   registerMediaIpc(db, convertedDir)
+  registerAiIpc(db)
   createWindow()
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 

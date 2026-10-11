@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Star } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Sparkles, Star } from 'lucide-react'
 import type { LessonView } from '@shared/course'
 import { errorMessage, queryKeys } from '../lib/api'
 import { VideoPlayer } from '../components/player/VideoPlayer'
@@ -156,6 +156,13 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
             {l.moduleTitle && <p className="text-xs text-muted">{l.moduleTitle}</p>}
             <h1 className="text-xl font-semibold tracking-tight">{l.title}</h1>
           </div>
+          <Link
+            to={`/ai?lesson=${lessonId}`}
+            title="Gerar flashcards, questões, resumo ou mapa mental desta aula"
+            className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted hover:bg-surface-2 hover:text-text"
+          >
+            <Sparkles size={16} className="text-accent" /> Gerar com IA
+          </Link>
           <button
             type="button"
             onClick={() => setFavorite.mutate(!l.progress.favorite)}

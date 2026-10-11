@@ -339,3 +339,62 @@ test('vídeo HEVC: o player detecta, oferece conversão e passa a mostrar a imag
   await expect(page.getByText('Este vídeo não pode ser reproduzido aqui')).toHaveCount(0)
   await app.close()
 })
+
+test('IA: provedor local gera flashcards de uma aula, revisão escolhe e salva no baralho', async () => {
+  // Servidor falso no formato do Ollama: devolve cartas e guarda o que recebeu
+  const { createServer } = await import('node:http')
+  const received: { model: string; format: string; user: string }[] = []
+  const server = createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    res.setHeader('content-type', 'application/json')
+    if (req.url === '/api/version') return res.end(JSON.stringify({ version: '0.0.0-teste' }))
+    if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'modelo-teste' }] }))
+    const data = JSON.parse(body)
+    received.push({ model: data.model, format: data.format, user: data.messages.at(-1).content })
+    const cards = [
+      { front: 'O que a legenda diz?', back: 'Olá' },
+      { front: 'Carta descartada', back: 'não salvar' }
+    ]
+    res.end(JSON.stringify({ message: { content: JSON.stringify({ cards }) } }))
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const port = (server.address() as { port: number }).port
+
+  const { app, page } = await launch()
+  try {
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    await page.getByRole('radio', { name: 'Ollama (local)' }).click()
+    await page.locator('#ai-url').fill(`http://127.0.0.1:${port}`)
+    await page.locator('#ai-url').locator('..').getByRole('button', { name: 'Salvar' }).click()
+    await expect(page.getByText('Ollama 0.0.0-teste encontrado')).toBeVisible()
+    await page.getByRole('button', { name: 'modelo-teste' }).click()
+    await expect.poll(() => page.evaluate(() => window.api.settings.get().then((s) => s.aiModels.ollama))).toBe('modelo-teste')
+
+    // Do player para a IA, já com a aula escolhida (legenda + anotação como material)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('link', { name: /Boas-vindas/ }).click()
+    await page.getByRole('link', { name: 'Gerar com IA' }).click()
+    await expect(page.getByText(/Legenda · \d+ caracteres/)).toBeVisible()
+    await page.getByRole('button', { name: 'Gerar flashcards' }).click()
+
+    await expect(page.getByText('Revisar e salvar · flashcards')).toBeVisible()
+    expect(received).toHaveLength(1)
+    expect(received[0]).toMatchObject({ model: 'modelo-teste', format: 'json' })
+    expect(received[0].user).toContain('Olá, legenda de teste')
+    expect(received[0].user).toContain('Minha primeira anotação')
+
+    await page.getByRole('checkbox', { name: 'Incluir carta 2' }).uncheck()
+    await page.locator('#ai-deck').selectOption('new')
+    await page.locator('#ai-deck-name').fill('Baralho da IA')
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+
+    await expect(page.getByRole('heading', { name: 'Baralho da IA' })).toBeVisible()
+    await expect(page.getByText('O que a legenda diz?')).toBeVisible()
+    await expect(page.getByText('Carta descartada')).toHaveCount(0)
+  } finally {
+    await app.close()
+    server.close()
+  }
+})

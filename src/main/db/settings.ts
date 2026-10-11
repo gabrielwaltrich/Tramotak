@@ -1,4 +1,5 @@
 import type { AppSettings } from '@shared/ipc'
+import { AI_PROVIDER_IDS, DEFAULT_AI_MODELS, MODEL_NAME, type AiModels } from '@shared/ai'
 import type { Database } from './database'
 
 export type { AppSettings }
@@ -13,7 +14,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   transcriptionProvider: 'none',
   transcriptionModel: 'whisper-large-v3-turbo',
   transcriptionLanguage: 'pt',
-  localWhisperUrl: 'http://localhost:8000/v1'
+  localWhisperUrl: 'http://localhost:8000/v1',
+  aiProvider: 'none',
+  aiModels: DEFAULT_AI_MODELS,
+  ollamaUrl: 'http://localhost:11434',
+  openaiBaseUrl: 'https://api.openai.com/v1'
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -62,6 +67,27 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
     const url = String(patch.localWhisperUrl).trim()
     if (!/^https?:\/\/[^\s/]+/.test(url)) throw new Error('URL do servidor local inválida')
     out.localWhisperUrl = url.replace(/\/+$/, '')
+  }
+  if (patch.aiProvider !== undefined) {
+    if (patch.aiProvider !== 'none' && !AI_PROVIDER_IDS.includes(patch.aiProvider)) throw new Error('Provedor de IA inválido')
+    out.aiProvider = patch.aiProvider
+  }
+  if (patch.aiModels !== undefined) {
+    const models = { ...DEFAULT_AI_MODELS } as AiModels
+    for (const id of AI_PROVIDER_IDS) {
+      const value = (patch.aiModels as Partial<AiModels> | null)?.[id]
+      if (value === undefined) continue
+      const model = String(value).trim()
+      if (!MODEL_NAME.test(model)) throw new Error('Nome de modelo inválido')
+      models[id] = model
+    }
+    out.aiModels = models
+  }
+  for (const key of ['ollamaUrl', 'openaiBaseUrl'] as const) {
+    if (patch[key] === undefined) continue
+    const url = String(patch[key]).trim()
+    if (!/^https?:\/\/[^\s/]+/.test(url)) throw new Error('Endereço do servidor inválido')
+    out[key] = url.replace(/\/+$/, '')
   }
   return out
 }

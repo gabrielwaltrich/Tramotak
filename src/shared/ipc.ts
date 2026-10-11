@@ -8,6 +8,7 @@ import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
+import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef } from './ai'
 import type {
   SearchHit,
   DashboardData,
@@ -46,6 +47,14 @@ export interface AppSettings {
   transcriptionLanguage: string
   /** Base de um servidor Whisper compatível com a API da OpenAI (…/v1). */
   localWhisperUrl: string
+  /** Provedor de IA usado para gerar cartas, questões, resumos e mapas. */
+  aiProvider: 'none' | AiProvider
+  /** Modelo escolhido em cada provedor. */
+  aiModels: AiModels
+  /** Endereço do Ollama. */
+  ollamaUrl: string
+  /** Base de uma API compatível com a da OpenAI (…/v1). */
+  openaiBaseUrl: string
 }
 
 export const IPC = {
@@ -156,8 +165,29 @@ export const IPC = {
   transcriptDelete: 'transcript:delete',
   secretsSetGroqKey: 'secrets:setGroqKey',
   secretsHasGroqKey: 'secrets:hasGroqKey',
-  openFfmpegLicense: 'app:openFfmpegLicense'
+  openFfmpegLicense: 'app:openFfmpegLicense',
+  secretsSetAiKey: 'secrets:setAiKey',
+  secretsAiKeys: 'secrets:aiKeys',
+  aiModels: 'ai:models',
+  aiSource: 'ai:source',
+  aiGenerate: 'ai:generate',
+  aiCancel: 'ai:cancel',
+  aiOpenLink: 'ai:openLink',
+  aiLoginOpenRouter: 'ai:loginOpenRouter',
+  aiCancelLogin: 'ai:cancelLogin',
+  aiOllamaStatus: 'ai:ollamaStatus',
+  aiOllamaPull: 'ai:ollamaPull',
+  aiOllamaPullCancel: 'ai:ollamaPullCancel',
+  aiOllamaPullProgress: 'ai:ollamaPullProgress'
 } as const
+
+export interface OllamaPullState {
+  model: string
+  status: string
+  fraction: number | null
+  done: boolean
+  error: string | null
+}
 
 export interface MindMapSummary {
   id: number
@@ -328,6 +358,29 @@ export interface TramotakApi {
     /** Guarda (cifrada pelo sistema) ou remove (`null`) a chave do Groq. Ela nunca volta para a interface. */
     setGroqKey(key: string | null): Promise<void>
     hasGroqKey(): Promise<boolean>
+    /** Guarda ou remove (`null`) a chave de um provedor de IA. Ela nunca volta para a interface. */
+    setAiKey(provider: AiProvider, key: string | null): Promise<void>
+    /** Quais provedores têm chave salva. */
+    aiKeys(): Promise<Record<AiProvider, boolean>>
+  }
+  ai: {
+    /** Modelos disponíveis no provedor (testa a conexão e a chave). */
+    models(provider: AiProvider): Promise<AiModelInfo[]>
+    /** Junta o material de uma aula ou página de caderno. */
+    source(ref: AiSourceRef): Promise<AiSource>
+    /** Gera com o provedor configurado. Um pedido por vez. */
+    generate(request: AiGenerateRequest): Promise<AiGenerateResponse>
+    cancel(): Promise<void>
+    /** Abre no navegador uma das páginas conhecidas (criar chave, baixar o Ollama). */
+    openLink(link: AiLink): Promise<void>
+    /** Login do OpenRouter pelo navegador; a chave da conta fica guardada cifrada. */
+    loginOpenRouter(): Promise<void>
+    cancelLogin(): Promise<void>
+    ollamaStatus(): Promise<{ version: string | null }>
+    /** Baixa um modelo no Ollama; o progresso chega por `onPullProgress`. */
+    ollamaPull(model: string): Promise<void>
+    ollamaPullCancel(): Promise<void>
+    onPullProgress(callback: (p: OllamaPullState) => void): () => void
   }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {

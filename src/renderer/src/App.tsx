@@ -20,6 +20,7 @@ import { NotebooksPage } from './routes/NotebooksPage'
 import { NotebookPage } from './routes/NotebookPage'
 import { MindmapsPage } from './routes/MindmapsPage'
 import { MindmapPage } from './routes/MindmapPage'
+import { AiPage } from './routes/AiPage'
 import { SearchContext } from './lib/searchContext'
 
 export function App() {
@@ -65,6 +66,7 @@ export function App() {
             <Route path="/mindmaps/:id" element={<MindmapPage />} />
             <Route path="/planner" element={<PlannerPage />} />
             <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/ai" element={<AiPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<ComingSoonPage />} />
           </Routes>

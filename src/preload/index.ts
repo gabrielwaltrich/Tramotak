@@ -35,7 +35,26 @@ const api: TramotakApi = {
   },
   secrets: {
     setGroqKey: (key) => ipcRenderer.invoke(IPC.secretsSetGroqKey, key),
-    hasGroqKey: () => ipcRenderer.invoke(IPC.secretsHasGroqKey)
+    hasGroqKey: () => ipcRenderer.invoke(IPC.secretsHasGroqKey),
+    setAiKey: (provider, key) => ipcRenderer.invoke(IPC.secretsSetAiKey, provider, key),
+    aiKeys: () => ipcRenderer.invoke(IPC.secretsAiKeys)
+  },
+  ai: {
+    models: (provider) => ipcRenderer.invoke(IPC.aiModels, provider),
+    source: (ref) => ipcRenderer.invoke(IPC.aiSource, ref),
+    generate: (request) => ipcRenderer.invoke(IPC.aiGenerate, request),
+    cancel: () => ipcRenderer.invoke(IPC.aiCancel),
+    openLink: (link) => ipcRenderer.invoke(IPC.aiOpenLink, link),
+    loginOpenRouter: () => ipcRenderer.invoke(IPC.aiLoginOpenRouter),
+    cancelLogin: () => ipcRenderer.invoke(IPC.aiCancelLogin),
+    ollamaStatus: () => ipcRenderer.invoke(IPC.aiOllamaStatus),
+    ollamaPull: (model) => ipcRenderer.invoke(IPC.aiOllamaPull, model),
+    ollamaPullCancel: () => ipcRenderer.invoke(IPC.aiOllamaPullCancel),
+    onPullProgress: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, state: unknown) => state && typeof state === 'object' && callback(state as never)
+      ipcRenderer.on(IPC.aiOllamaPullProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.aiOllamaPullProgress, listener)
+    }
   },
   dashboard: {
     get: () => ipcRenderer.invoke(IPC.dashboardGet)

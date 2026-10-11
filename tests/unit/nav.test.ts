@@ -11,7 +11,7 @@ describe('navegação', () => {
 
   it('libera as abas já construídas', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
-    expect(enabled).toEqual(['/', '/courses', '/search', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/settings'])
+    expect(enabled).toEqual(['/', '/courses', '/search', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/ai', '/settings'])
   })
 
   it('Buscar abre a paleta em vez de navegar', () => {

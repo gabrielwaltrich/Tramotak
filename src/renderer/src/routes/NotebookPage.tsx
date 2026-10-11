@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowDown, ArrowLeft, ArrowUp, BookOpenText, FileDown, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, BookOpenText, FileDown, Loader2, MoreVertical, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { errorMessage } from '../lib/api'
 import { Button } from '../components/Button'
 import { Menu } from '../components/Menu'
@@ -17,7 +17,9 @@ export function NotebookPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [selected, setSelected] = useState<number | null>(null)
+  const [params] = useSearchParams()
+  // `?page=` abre direto numa página (ex.: resumo recém-criado pela IA).
+  const [selected, setSelected] = useState<number | null>(() => Number(params.get('page')) || null)
   const [mode, setMode] = useState<'edit' | 'read'>('edit')
   const [renaming, setRenaming] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -138,6 +140,11 @@ export function NotebookPage() {
               </button>
             ))}
           </div>
+          {currentId !== null && (
+            <Button variant="ghost" className="ml-auto h-8" onClick={() => navigate(`/ai?notebook=${notebookId}&page=${currentId}`)}>
+              <Sparkles size={14} /> Gerar com IA
+            </Button>
+          )}
           <Button variant="ghost" className="h-8" onClick={() => exportPdf.mutate()} disabled={exportPdf.isPending}>
             {exportPdf.isPending ? <Loader2 size={14} className="animate-spin" /> : <FileDown size={14} />} Exportar PDF
           </Button>

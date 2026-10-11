@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, MoreVertical, Pencil, PlayCircle, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, MoreVertical, Pencil, PlayCircle, RotateCcw, Search, Sparkles, Trash2 } from 'lucide-react'
 import type { CardView, DeckDetail } from '@shared/flashcards'
 import { plural } from '@shared/format'
 import { matches } from '@shared/search'
@@ -207,6 +207,9 @@ export function DeckPage() {
             <DeckCounts newCount={d.newCount} learningCount={d.learningCount} reviewCount={d.reviewCount} />
           </div>
         </div>
+        <Button variant="ghost" onClick={() => navigate(`/ai?deck=${deckId}&task=cards`)}>
+          <Sparkles size={16} /> Gerar com IA
+        </Button>
         <Button onClick={() => navigate(`/flashcards/${deckId}/study`)} disabled={due === 0}>
           {due === 0 ? 'Nada para hoje' : `Estudar (${due})`}
         </Button>

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Download, FileUp, Loader2, MoreVertical, Pencil, Play, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { ArrowLeft, Download, FileUp, Loader2, MoreVertical, Pencil, Play, Plus, RotateCcw, Search, Sparkles, Trash2 } from 'lucide-react'
 import type { BankAnalytics, Exam } from '@shared/exams'
 import { plural } from '@shared/format'
 import { QUESTION_TYPE_LABEL, type QuestionType } from '@shared/questions'
@@ -388,6 +388,9 @@ export function BankPage() {
             {plural(b.questionCount, 'questão', 'questões')} · {plural(b.examCount, 'simulado')}
           </p>
         </div>
+        <Button variant="ghost" onClick={() => navigate(`/ai?bank=${b.id}&task=questions`)}>
+          <Sparkles size={16} /> Gerar com IA
+        </Button>
         <Button variant="ghost" onClick={() => importFile.mutate()} disabled={importFile.isPending}>
           <FileUp size={16} /> Importar
         </Button>
