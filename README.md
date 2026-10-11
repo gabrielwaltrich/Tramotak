@@ -6,7 +6,7 @@ Windows, macOS e Linux.
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele.
-- **Busca global:** `Ctrl+K` em qualquer tela encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
+- **Busca global:** barra de pesquisa no topo (ou `Ctrl+K` em qualquer tela) encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
 - **Flashcards:** repetição espaçada no estilo do Anki (SM-2); transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
 - **Questões e simulados:** bancos com 5 tipos de questão e fórmulas LaTeX, simulados cronometrados com anti-cola, correção e desempenho por tópico; importa e exporta JSON, CSV e GIFT (Moodle).
 - **Cadernos:** páginas com Markdown, fórmulas, desenho à mão (caneta com pressão) e links para o seu material; exporta PDF.
@@ -15,6 +15,7 @@ Windows, macOS e Linux.
 - **Planner:** tarefas em quadro (arrastar e soltar) e calendário com as revisões previstas; avisos antes dos blocos de estudo.
 - **Progresso:** mapa de atividade, minutos dos últimos 30 dias contra a meta, progresso por curso e histórico.
 - **Backup e pacotes:** backup completo do banco (manual e automático diário) com restauração; pacotes `.tramotak` para levar baralhos, questões, cadernos, mapas e anotações a outro computador ou pessoa.
+- **Aparência:** estilos prontos (Tramotak, Foco, Noturno azul, Leitura, Claro) e ajustes de tema (Grafite, Meia-noite, Azul-marinho, Claro, Papel ou o do sistema), 8 cores de destaque, tamanho da interface, cantos, fonte com serifa para leitura e animações reduzidas.
 - **Início:** continuar assistindo, tarefas e flashcards do dia, meta diária de minutos e sequência de dias de estudo.
 
 Tudo fica no seu computador (exceto o que você mandar transcrever ou gerar com um provedor na nuvem): o Tramotak lê as pastas dos cursos sem alterá-las e guarda progresso e anotações num banco local.

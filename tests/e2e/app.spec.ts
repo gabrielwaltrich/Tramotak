@@ -94,8 +94,16 @@ test('aula em Markdown abre isolada, sem scripts', async () => {
   await app.close()
 })
 
-test('busca global: Ctrl+K encontra a anotação e abre o vídeo no horário dela', async () => {
+test('busca global: barra superior e Ctrl+K encontram a anotação e abrem o vídeo no horário dela', async () => {
   const { app, page } = await launch()
+  // A barra de pesquisa do topo: digitar com ela focada abre a busca já com a letra
+  const bar = page.getByRole('button', { name: /Buscar cursos, aulas/ })
+  await bar.focus()
+  await page.keyboard.press('p')
+  await expect(page.getByRole('combobox', { name: 'Buscar' })).toHaveValue('p')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('combobox', { name: 'Buscar' })).toHaveCount(0)
+
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K')
   const input = page.getByRole('combobox', { name: 'Buscar' })
   await expect(input).toBeFocused()
@@ -514,5 +522,35 @@ test('backup e pacote: salva o banco, exporta baralho com anotações e importa 
     expect(imported.cards[0]).toMatchObject({ front: 'O que a legenda diz?', lessonTitle: 'Boas-vindas' })
   } finally {
     await app.close()
+  }
+})
+
+test('aparência: estilo pronto e cor de destaque mudam a interface na hora e ficam salvos', async () => {
+  const { app, page } = await launch()
+  try {
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    const root = page.locator('html')
+    await expect(root).toHaveAttribute('data-theme', 'dark')
+
+    await page.getByRole('radiogroup', { name: 'Estilos prontos' }).getByRole('radio', { name: /Leitura/ }).click()
+    await expect(root).toHaveAttribute('data-theme', 'paper')
+    await expect(root).toHaveAttribute('data-font', 'serif')
+    expect(await root.evaluate((el) => el.style.fontSize)).toBe('18px')
+
+    await page.getByRole('radiogroup', { name: 'Cor de destaque' }).getByRole('radio', { name: 'Verde' }).click()
+    expect(await root.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
+    await app.close()
+
+    const second = await launch()
+    const root2 = second.page.locator('html')
+    await expect(root2).toHaveAttribute('data-theme', 'paper')
+    expect(await root2.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
+    await second.page.getByRole('link', { name: 'Configurações' }).click()
+    await second.page.getByRole('button', { name: 'Voltar ao visual padrão' }).click()
+    await expect(root2).toHaveAttribute('data-theme', 'dark')
+    await second.app.close()
+  } catch (error) {
+    await app.close().catch(() => undefined)
+    throw error
   }
 })

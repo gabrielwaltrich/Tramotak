@@ -8,6 +8,7 @@ import { PlayerPage } from './routes/PlayerPage'
 import { SettingsPage } from './routes/SettingsPage'
 import { ComingSoonPage } from './routes/ComingSoonPage'
 import { SearchPalette } from './components/SearchPalette'
+import { TopBar } from './components/TopBar'
 import { FlashcardsPage } from './routes/FlashcardsPage'
 import { DeckPage } from './routes/DeckPage'
 import { StudyPage } from './routes/StudyPage'
@@ -25,7 +26,11 @@ import { SearchContext } from './lib/searchContext'
 
 export function App() {
   const [searchOpen, setSearchOpen] = useState(false)
-  const openSearch = useCallback(() => setSearchOpen(true), [])
+  const [searchInitial, setSearchInitial] = useState('')
+  const openSearch = useCallback((initial = '') => {
+    setSearchInitial(initial)
+    setSearchOpen(true)
+  }, [])
   const search = useMemo(() => ({ open: openSearch }), [openSearch])
   const navigate = useNavigate()
 
@@ -37,18 +42,20 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setSearchOpen(true)
+        openSearch()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [openSearch])
 
   return (
     <SearchContext.Provider value={search}>
       <div className="flex h-full">
         <Sidebar />
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <TopBar />
+          <main className="min-h-0 flex-1 overflow-y-auto">
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/courses" element={<CoursesPage />} />
@@ -70,8 +77,9 @@ export function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<ComingSoonPage />} />
           </Routes>
-        </main>
-        <SearchPalette open={searchOpen} onClose={() => setSearchOpen(false)} />
+          </main>
+        </div>
+        <SearchPalette open={searchOpen} initial={searchInitial} onClose={() => setSearchOpen(false)} />
       </div>
     </SearchContext.Provider>
   )

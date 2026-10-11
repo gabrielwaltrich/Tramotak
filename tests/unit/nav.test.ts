@@ -11,10 +11,10 @@ describe('navegação', () => {
 
   it('libera as abas já construídas', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
-    expect(enabled).toEqual(['/', '/courses', '/search', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/ai', '/settings'])
+    expect(enabled).toEqual(['/', '/courses', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/ai', '/settings'])
   })
 
-  it('Buscar abre a paleta em vez de navegar', () => {
-    expect(NAV_ITEMS.find((i) => i.path === '/search')).toMatchObject({ action: 'search' })
+  it('a busca fica na barra superior, não no menu lateral', () => {
+    expect(all.find((i) => i.path === '/search')).toBeUndefined()
   })
 })

@@ -90,7 +90,7 @@ function useDebounced<T>(value: T, ms: number): T {
   return debounced
 }
 
-export function SearchPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function SearchPalette({ open, initial = '', onClose }: { open: boolean; initial?: string; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -112,16 +112,16 @@ export function SearchPalette({ open, onClose }: { open: boolean; onClose: () =>
       aria-label="Buscar"
       className="mx-auto mt-[12vh] w-full max-w-2xl overflow-hidden rounded-xl border border-border bg-surface p-0 text-text shadow-2xl backdrop:bg-black/50"
     >
-      {open && <PaletteBody onClose={onClose} />}
+      {open && <PaletteBody initial={initial} onClose={onClose} />}
     </dialog>
   )
 }
 
-function PaletteBody({ onClose }: { onClose: () => void }) {
+function PaletteBody({ initial, onClose }: { initial: string; onClose: () => void }) {
   const navigate = useNavigate()
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
-  const [text, setText] = useState('')
+  const [text, setText] = useState(initial)
   const [active, setActive] = useState(0)
   const [recent, setRecent] = useState(readRecent)
   const query = useDebounced(text.trim(), DEBOUNCE_MS)
