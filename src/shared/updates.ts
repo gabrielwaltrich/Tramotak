@@ -3,7 +3,7 @@
 /**
  * Como esta instalação se atualiza:
  * - `auto`: baixa e instala sozinha ao reiniciar (instalador do Windows, AppImage e .deb do Linux);
- * - `notify`: só avisa e leva à página da versão (macOS sem assinatura, .exe portátil);
+ * - `notify`: só avisa e leva à página da versão (.exe portátil; macOS, que não é mais suportado);
  * - `dev`: rodando a partir do código-fonte (não procura).
  */
 export type UpdateMode = 'auto' | 'notify' | 'dev'

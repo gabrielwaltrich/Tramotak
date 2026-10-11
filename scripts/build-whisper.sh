@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Compila o whisper-cli (whisper.cpp) para a transcrição embutida e copia para build/whisper.
-# Uso: scripts/build-whisper.sh            (sistema atual)
-#      WHISPER_MAC_ARCHS="arm64;x86_64" scripts/build-whisper.sh   (macOS universal)
+# Uso: scripts/build-whisper.sh   (Linux ou Windows, para o sistema atual)
 # Requer git, cmake e um compilador C++ (no Windows, o MSVC do Visual Studio).
 set -euo pipefail
 
@@ -19,9 +18,6 @@ fi
 ARGS=(-DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_NATIVE=OFF -DGGML_OPENMP=OFF
   -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_SERVER=OFF -DWHISPER_SDL2=OFF -DWHISPER_BUILD_EXAMPLES=ON)
 case "$(uname -s)" in
-  Darwin)
-    ARGS+=("-DCMAKE_OSX_ARCHITECTURES=${WHISPER_MAC_ARCHS:-$(uname -m)}" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0)
-    ;;
   Linux)
     ARGS+=(-DGGML_AVX=ON -DGGML_AVX2=ON -DGGML_FMA=ON -DGGML_F16C=ON -DGGML_BMI2=OFF
       "-DCMAKE_EXE_LINKER_FLAGS=-static-libstdc++ -static-libgcc")

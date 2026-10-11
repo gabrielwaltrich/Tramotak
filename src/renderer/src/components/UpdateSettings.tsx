@@ -7,7 +7,7 @@ import { useToast } from './Toast'
 
 const MODE_NOTE = {
   auto: 'As versões novas são baixadas em segundo plano e instaladas quando você reinicia o app.',
-  notify: 'Nesta instalação o Tramotak não consegue se trocar sozinho (macOS sem assinatura ou versão portátil): ele avisa e leva à página da versão nova.',
+  notify: 'Nesta instalação o Tramotak não consegue se trocar sozinho (versão portátil): ele avisa e leva à página da versão nova.',
   dev: 'Rodando a partir do código-fonte: sem atualizações automáticas.'
 }
 

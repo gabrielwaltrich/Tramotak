@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -34,7 +34,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -69,8 +69,6 @@ jobs:
             target: --linux
           - os: windows-latest
             target: --win
-          - os: macos-latest
-            target: --mac
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -79,7 +77,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx electron-vite build
-      # Transcrição embutida: whisper-cli compilado para este sistema (no macOS, universal arm64 + x64).
+      # Transcrição embutida: whisper-cli compilado para este sistema.
       - name: Cache do whisper.cpp
         uses: actions/cache@v6
         with:
@@ -89,24 +87,11 @@ jobs:
         shell: bash
         run: |
           if [ ! -f build/whisper/whisper-cli ] && [ ! -f build/whisper/whisper-cli.exe ]; then
-            WHISPER_MAC_ARCHS="arm64;x86_64" scripts/build-whisper.sh
+            scripts/build-whisper.sh
           fi
           ls -la build/whisper
       - name: Instaladores
-        if: runner.os != 'macOS'
         run: npx electron-builder ${{ matrix.target }} --publish never
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-      # O ffmpeg-static baixa o binário da arquitetura da máquina. O runner é Apple Silicon:
-      # gera o .dmg arm64, troca o FFmpeg pelo de Intel e gera o .dmg x64.
-      - name: Instaladores macOS (arm64 e x64, cada um com o FFmpeg da sua arquitetura)
-        if: runner.os == 'macOS'
-        run: |
-          npx electron-builder --mac --arm64 --publish never
-          rm -f node_modules/ffmpeg-static/ffmpeg node_modules/ffmpeg-static/ffmpeg.*
-          npm_config_arch=x64 npm rebuild ffmpeg-static
-          file node_modules/ffmpeg-static/ffmpeg | grep -q x86_64
-          npx electron-builder --mac --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
       - uses: actions/upload-artifact@v7
@@ -114,7 +99,6 @@ jobs:
           name: tramotak-${{ github.ref_name }}-${{ runner.os }}
           path: |
             dist/*.exe
-            dist/*.dmg
             dist/*.AppImage
             dist/*.deb
             dist/latest*.yml

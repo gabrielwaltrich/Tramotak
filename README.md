@@ -1,7 +1,7 @@
 # Tramotak
 
 Central de estudos desktop: importe cursos que já estão no seu computador e estude com eles.
-Windows, macOS e Linux.
+Windows e Linux.
 
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Nomes das aulas:** regras por curso para limpar títulos vindos de nomes de arquivo (código como `#F0009` vira `9`, datas, numeração interna, autor depois do `@`, emojis, `_`, sufixos de cópia, textos e trocas personalizados), com prévia de todas as aulas e sugestão opcional da IA. Os arquivos não são renomeados.
@@ -31,8 +31,9 @@ Baixe a versão mais recente em **[Releases](https://github.com/gabrielwaltrich/
 | Sistema | Arquivo | Observação |
 |---|---|---|
 | Windows | `Tramotak-x.y.z-setup.exe` ou `-portable.exe` | O app ainda não é assinado: no aviso do SmartScreen, clique em **Mais informações → Executar assim mesmo**. |
-| macOS | `Tramotak-x.y.z-arm64.dmg` (Apple Silicon) ou `-x64.dmg` (Intel) | Não assinado: na primeira vez, clique com o botão direito no app → **Abrir**. Se o macOS bloquear, vá em **Ajustes do Sistema → Privacidade e Segurança → Abrir Assim Mesmo**. |
 | Linux | `Tramotak-x.y.z-linux-x86_64.AppImage` ou `-amd64.deb` | AppImage: dê permissão de execução (`chmod +x`). No Ubuntu 24.04+, se não abrir, veja a nota abaixo. |
+
+O macOS deixou de ser suportado a partir da 0.6.0; a 0.5.0 foi a última versão com instalador para Mac.
 
 **Ubuntu 24.04+ e AppImage:** a proteção AppArmor pode impedir o sandbox do Chromium. Prefira o `.deb`, ou rode o AppImage com `--no-sandbox`.
 
@@ -40,7 +41,7 @@ Baixe a versão mais recente em **[Releases](https://github.com/gabrielwaltrich/
 
 **Transcrição:** opcional, em Configurações → Vídeo e transcrição. **No computador (grátis):** o Whisper vem embutido; baixe um modelo pelo app (57 MB a 547 MB) e transcreva sem internet nem chave. Também dá para usar o Groq (nuvem, com a sua chave) ou um servidor Whisper compatível com a API da OpenAI. Dá para transcrever o curso inteiro de uma vez (botão "Transcrever curso").
 
-**Atualizações:** o Tramotak procura versões novas nas Releases do GitHub e, no instalador do Windows, no AppImage e no `.deb`, baixa e instala sozinho ao reiniciar (o `.deb` pede a senha do sistema). No macOS e no `.exe` portátil ele avisa e leva à página da versão. Dá para desligar em Configurações → Atualizações.
+**Atualizações:** o Tramotak procura versões novas nas Releases do GitHub e, no instalador do Windows, no AppImage e no `.deb`, baixa e instala sozinho ao reiniciar (o `.deb` pede a senha do sistema). No `.exe` portátil ele avisa e leva à página da versão. Dá para desligar em Configurações → Atualizações.
 
 **IA:** opcional, em Configurações → Inteligência artificial. O material só é enviado quando você clica em gerar, e tudo passa pela sua revisão antes de virar carta ou questão. Para gerar de um vídeo, transcreva a aula antes (ou use a legenda que veio com o curso).
 
@@ -69,7 +70,7 @@ npm run lint
 npm run typecheck
 npm test           # testes unitários (Vitest)
 npm run test:e2e   # compila e roda o fluxo completo no app real (Playwright)
-npm run dist:linux # gera instaladores em dist/ (também dist:win e dist:mac)
+npm run dist:linux # gera instaladores em dist/ (também dist:win)
 ```
 
 Para publicar uma versão: atualize `version` no `package.json`, escreva as notas em `docs/releases/vX.Y.Z.md`, faça commit e crie a tag (`git tag vX.Y.Z && git push --tags`). O CI roda lint, testes e E2E nos 3 sistemas, gera os instaladores e cria a Release no GitHub com eles e os checksums.

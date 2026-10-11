@@ -45,6 +45,8 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
   não mudam.
 - ✅ **Opções por baralho**: retenção desejada (70–97%), novas e revisões por dia, etapas de aprendizado e de
   reaprendizado, intervalo máximo. Pacotes `.tramotak` levam as opções e a memória das cartas.
+- ✅ **macOS descontinuado**: a partir da 0.6.0 só há instaladores para Windows e Linux (a 0.5.0 foi a última
+  para Mac). CI, empacotamento e `scripts/build-whisper.sh` sem o macOS.
 - Fica para depois: otimizar os parâmetros do FSRS com o histórico da pessoa e reagendar as cartas ao mudar a
   retenção (hoje a mudança vale a partir da próxima resposta).
 
@@ -64,10 +66,10 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - "Relatar problema": arquivo de diagnóstico sem dados pessoais.
 - Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
 - Backup automático para uma pasta escolhida (Drive/Dropbox) como sincronização simples.
-- Beta com usuários em Windows e macOS reais.
+- Beta com usuários em Windows e Linux reais.
 
 ## 1.0.0 ⬜
-- Instaladores assinados (Apple Developer e certificado de código para Windows).
+- Instalador do Windows assinado (certificado de código).
 - Correções do beta; documentação de uso.
 
 ---

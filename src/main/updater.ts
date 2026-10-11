@@ -23,7 +23,7 @@ export function updateMode(): UpdateMode {
   if (process.platform === 'linux' && process.env.APPIMAGE) return 'auto'
   // .deb: instala com o pkexec (janela do sistema pedindo a senha).
   if (process.platform === 'linux' && linuxPackageType() === 'deb' && existsSync('/usr/bin/pkexec')) return 'auto'
-  // macOS exige app assinado para instalar sozinho; o .exe portátil não tem como se trocar.
+  // O .exe portátil não tem como se trocar (e o macOS, sem suporte desde a 0.6.0, exigiria app assinado).
   return 'notify'
 }
 
