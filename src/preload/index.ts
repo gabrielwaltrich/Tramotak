@@ -115,7 +115,32 @@ const api: TramotakApi = {
   files: {
     openLesson: (id) => ipcRenderer.invoke(IPC.filesOpenLesson, id),
     openAsset: (id) => ipcRenderer.invoke(IPC.filesOpenAsset, id),
-    showLesson: (id) => ipcRenderer.invoke(IPC.filesShowLesson, id)
+    showLesson: (id) => ipcRenderer.invoke(IPC.filesShowLesson, id),
+    save: (request) => ipcRenderer.invoke(IPC.filesSave, request)
+  },
+  notebooks: {
+    list: () => ipcRenderer.invoke(IPC.notebooksList),
+    get: (id) => ipcRenderer.invoke(IPC.notebooksGet, id),
+    create: (title) => ipcRenderer.invoke(IPC.notebooksCreate, title),
+    rename: (id, title) => ipcRenderer.invoke(IPC.notebooksRename, id, title),
+    delete: (id) => ipcRenderer.invoke(IPC.notebooksDelete, id),
+    pages: (id) => ipcRenderer.invoke(IPC.notebooksPages, id),
+    exportPdf: (id, html) => ipcRenderer.invoke(IPC.notebooksExportPdf, id, html)
+  },
+  pages: {
+    get: (id) => ipcRenderer.invoke(IPC.pagesGet, id),
+    create: (notebookId) => ipcRenderer.invoke(IPC.pagesCreate, notebookId),
+    save: (id, input) => ipcRenderer.invoke(IPC.pagesSave, id, input),
+    move: (id, index) => ipcRenderer.invoke(IPC.pagesMove, id, index),
+    delete: (id) => ipcRenderer.invoke(IPC.pagesDelete, id)
+  },
+  mindmaps: {
+    list: () => ipcRenderer.invoke(IPC.mindmapsList),
+    get: (id) => ipcRenderer.invoke(IPC.mindmapsGet, id),
+    create: (title) => ipcRenderer.invoke(IPC.mindmapsCreate, title),
+    save: (id, input) => ipcRenderer.invoke(IPC.mindmapsSave, id, input),
+    delete: (id) => ipcRenderer.invoke(IPC.mindmapsDelete, id),
+    importFile: () => ipcRenderer.invoke(IPC.mindmapsImport)
   },
   notes: {
     list: (lessonId) => ipcRenderer.invoke(IPC.notesList, lessonId),

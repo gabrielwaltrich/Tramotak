@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
-import { BookOpen, ClipboardList, Clock, CornerDownLeft, FileText, FolderTree, Layers, Loader2, PlayCircle, Search, StickyNote, X } from 'lucide-react'
+import { BookOpen, ClipboardList, GitFork, NotebookPen, Clock, CornerDownLeft, FileText, FolderTree, Layers, Loader2, PlayCircle, Search, StickyNote, X } from 'lucide-react'
 import type { SearchHit, SearchKind } from '@shared/course'
 import { formatClock } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -18,7 +18,9 @@ const GROUPS: { kind: SearchKind; label: string }[] = [
   { kind: 'lesson', label: 'Aulas' },
   { kind: 'note', label: 'Anotações' },
   { kind: 'card', label: 'Flashcards' },
-  { kind: 'question', label: 'Questões' }
+  { kind: 'question', label: 'Questões' },
+  { kind: 'page', label: 'Cadernos' },
+  { kind: 'mindmap', label: 'Mapas mentais' }
 ]
 
 function readRecent(): string[] {
@@ -51,6 +53,10 @@ export function hitRoute(hit: SearchHit): string {
       return `/flashcards/${hit.deckId}`
     case 'question':
       return `/questions/${hit.bankId}`
+    case 'page':
+      return `/notebooks/${hit.notebookId}`
+    case 'mindmap':
+      return `/mindmaps/${hit.id}`
   }
 }
 
@@ -61,6 +67,8 @@ function HitIcon({ hit }: { hit: SearchHit }) {
   if (hit.kind === 'note') return <StickyNote size={16} className={cls} />
   if (hit.kind === 'card') return <Layers size={16} className={cls} />
   if (hit.kind === 'question') return <ClipboardList size={16} className={cls} />
+  if (hit.kind === 'page') return <NotebookPen size={16} className={cls} />
+  if (hit.kind === 'mindmap') return <GitFork size={16} className={cls} />
   return hit.lessonKind === 'video' ? <PlayCircle size={16} className={cls} /> : <FileText size={16} className={cls} />
 }
 
@@ -68,6 +76,8 @@ function context(hit: SearchHit): string {
   if (hit.kind === 'course') return 'Curso'
   if (hit.kind === 'card') return `Baralho · ${hit.deckTitle}`
   if (hit.kind === 'question') return `Banco · ${hit.bankTitle}`
+  if (hit.kind === 'page') return `Caderno · ${hit.notebookTitle}`
+  if (hit.kind === 'mindmap') return 'Mapa mental'
   return [hit.courseTitle, hit.moduleTitle].filter(Boolean).join(' · ')
 }
 

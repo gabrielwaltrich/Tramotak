@@ -1,7 +1,7 @@
 import { HL_END, HL_START, type SearchHit, type SearchKind } from '@shared/course'
 import type { Database } from './database'
 
-const KINDS: Record<number, SearchKind> = { 1: 'course', 2: 'module', 3: 'lesson', 4: 'note', 5: 'card', 6: 'question' }
+const KINDS: Record<number, SearchKind> = { 0: 'mindmap', 1: 'course', 2: 'module', 3: 'lesson', 4: 'note', 5: 'card', 6: 'question', 7: 'page' }
 const MIN_QUERY_CHARS = 2
 const DEFAULT_LIMIT = 60
 
@@ -46,7 +46,7 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
     )
     .all(HL_START, HL_END, HL_START, HL_END, query, limit) as unknown as RawHit[]
 
-  const ids: Record<SearchKind, number[]> = { course: [], module: [], lesson: [], note: [], card: [], question: [] }
+  const ids: Record<SearchKind, number[]> = { course: [], module: [], lesson: [], note: [], card: [], question: [], page: [], mindmap: [] }
   for (const r of raw) ids[KINDS[r.rowid % 8]].push(Math.floor(r.rowid / 8))
 
   const byId = <T extends { id: number }>(rows: T[]) => new Map(rows.map((r) => [r.id, r]))
@@ -97,12 +97,18 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
     'SELECT q.id, q.bank_id AS bankId, b.title AS bankTitle FROM questions q JOIN question_banks b ON b.id = q.bank_id WHERE q.id IN ($IDS)'
   )
 
+  const pages = fetch<{ id: number; notebookId: number; notebookTitle: string }>(
+    ids.page,
+    'SELECT p.id, p.notebook_id AS notebookId, n.title AS notebookTitle FROM notebook_pages p JOIN notebooks n ON n.id = p.notebook_id WHERE p.id IN ($IDS)'
+  )
+  const mindmaps = fetch<{ id: number }>(ids.mindmap, 'SELECT id FROM mindmaps WHERE id IN ($IDS)')
+
   const hits: SearchHit[] = []
   for (const r of raw) {
     const kind = KINDS[r.rowid % 8]
     const id = Math.floor(r.rowid / 8)
     const body = r.body && r.body.includes(HL_START) ? r.body : null
-    const base = { kind, id, title: r.title, snippet: body, lessonId: null, lessonKind: null, timestampSec: null, moduleTitle: null, deckId: null, deckTitle: null, bankId: null, bankTitle: null }
+    const base = { kind, id, title: r.title, snippet: body, lessonId: null, lessonKind: null, timestampSec: null, moduleTitle: null, deckId: null, deckTitle: null, bankId: null, bankTitle: null, notebookId: null, notebookTitle: null }
 
     if (kind === 'course' && courses.has(id)) {
       hits.push({ ...base, courseId: id, courseTitle: r.title.replaceAll(HL_START, '').replaceAll(HL_END, '') })
@@ -131,6 +137,11 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
     } else if (kind === 'question' && questions.has(id)) {
       const q = questions.get(id)!
       hits.push({ ...base, courseId: 0, courseTitle: '', bankId: q.bankId, bankTitle: q.bankTitle })
+    } else if (kind === 'page' && pages.has(id)) {
+      const p = pages.get(id)!
+      hits.push({ ...base, courseId: 0, courseTitle: '', notebookId: p.notebookId, notebookTitle: p.notebookTitle })
+    } else if (kind === 'mindmap' && mindmaps.has(id)) {
+      hits.push({ ...base, courseId: 0, courseTitle: '' })
     }
   }
   return hits

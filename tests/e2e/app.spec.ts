@@ -259,3 +259,58 @@ test('questões: editor, simulado com correção imediata, envio e resultado', a
   await expect(page.getByText(/1 tentativa · média 50%/)).toBeVisible()
   await app.close()
 })
+
+test('cadernos e mapas: Markdown seguro com fórmula, salvamento automático e mapa pelo teclado', async () => {
+  const { app, page } = await launch()
+  await page.evaluate(() => {
+    ;(window as unknown as { __alerted: boolean }).__alerted = false
+    window.alert = () => {
+      ;(window as unknown as { __alerted: boolean }).__alerted = true
+    }
+  })
+
+  // Caderno
+  await page.getByRole('link', { name: 'Cadernos' }).click()
+  await page.getByRole('button', { name: 'Criar caderno' }).click()
+  await page.getByRole('dialog').getByLabel('Nome').fill('Caderno E2E')
+  await page.getByRole('dialog').getByRole('button', { name: 'Criar' }).click()
+  await page.getByRole('button', { name: 'Clique para escrever…' }).click()
+  await page.getByLabel('Texto do bloco').fill('# Resumo\n\nFórmula $x^2$ e <img src=x onerror="alert(1)">')
+  await page.getByLabel('Título da página').click() // sai da edição do bloco
+  await expect(page.getByRole('heading', { name: 'Resumo' })).toBeVisible()
+  await expect(page.locator('.prose-tk .katex')).toHaveCount(1)
+  await expect(page.locator('.prose-tk img[onerror]')).toHaveCount(0)
+  await expect(page.getByText('Salvo')).toBeVisible()
+  expect(await page.evaluate(() => (window as unknown as { __alerted: boolean }).__alerted)).toBe(false)
+
+  // Busca encontra o conteúdo do caderno
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+K' : 'Control+K')
+  await page.getByRole('combobox', { name: 'Buscar' }).fill('resumo')
+  await expect(page.getByRole('group', { name: 'Cadernos' }).getByRole('option')).toHaveCount(1)
+  await page.keyboard.press('Escape')
+
+  // Mapa mental
+  await page.getByRole('link', { name: 'Mapas Mentais' }).click()
+  await page.getByRole('button', { name: 'Criar mapa' }).click()
+  await page.getByRole('dialog').getByLabel('Tema central').fill('Biologia')
+  await page.getByRole('dialog').getByRole('button', { name: 'Criar' }).click()
+  await expect(page.locator('[data-node-id]')).toHaveCount(1)
+  await page.getByLabel('Mapa mental').focus()
+  await page.keyboard.press('Tab')
+  await page.getByLabel('Texto do tópico').fill('Célula')
+  await page.keyboard.press('Enter')
+  await page.keyboard.press('Enter')
+  await page.getByLabel('Texto do tópico').fill('Genética')
+  await page.keyboard.press('Enter')
+  await expect(page.locator('[data-node-id]')).toHaveCount(3)
+  await page.keyboard.press('Delete')
+  await expect(page.locator('[data-node-id]')).toHaveCount(2)
+  await page.keyboard.press('Control+z')
+  await expect(page.locator('[data-node-id]')).toHaveCount(3)
+  await expect(page.getByText('Salvo')).toBeVisible()
+
+  // O mapa salvo reaparece na lista
+  await page.getByLabel('Voltar para mapas mentais').click()
+  await expect(page.getByText('3 tópicos')).toBeVisible()
+  await app.close()
+})

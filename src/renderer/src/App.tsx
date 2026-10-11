@@ -16,6 +16,10 @@ import { ProgressPage } from './routes/ProgressPage'
 import { QuestionsPage } from './routes/QuestionsPage'
 import { BankPage } from './routes/BankPage'
 import { AttemptPage } from './routes/AttemptPage'
+import { NotebooksPage } from './routes/NotebooksPage'
+import { NotebookPage } from './routes/NotebookPage'
+import { MindmapsPage } from './routes/MindmapsPage'
+import { MindmapPage } from './routes/MindmapPage'
 import { SearchContext } from './lib/searchContext'
 
 export function App() {
@@ -55,6 +59,10 @@ export function App() {
             <Route path="/questions" element={<QuestionsPage />} />
             <Route path="/questions/:id" element={<BankPage />} />
             <Route path="/questions/attempt/:id" element={<AttemptPage />} />
+            <Route path="/notebooks" element={<NotebooksPage />} />
+            <Route path="/notebooks/:id" element={<NotebookPage />} />
+            <Route path="/mindmaps" element={<MindmapsPage />} />
+            <Route path="/mindmaps/:id" element={<MindmapPage />} />
             <Route path="/planner" element={<PlannerPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />

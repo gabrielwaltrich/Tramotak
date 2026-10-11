@@ -31,8 +31,8 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/questions', label: 'Questões', icon: 'clipboard' },
   { path: '/planner', label: 'Planner', icon: 'calendar' },
   { path: '/progress', label: 'Progresso', icon: 'activity' },
-  { path: '/notebooks', label: 'Cadernos', icon: 'notebook', soon: true },
-  { path: '/mindmaps', label: 'Mapas Mentais', icon: 'mindmap', soon: true },
+  { path: '/notebooks', label: 'Cadernos', icon: 'notebook' },
+  { path: '/mindmaps', label: 'Mapas Mentais', icon: 'mindmap' },
   { path: '/ai', label: 'IA', icon: 'sparkles', soon: true }
 ]
 

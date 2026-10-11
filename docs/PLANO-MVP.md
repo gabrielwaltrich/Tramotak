@@ -320,7 +320,19 @@ Tramotak/
      linha fora das fórmulas.
    - Fica para depois: correspondência, ordenação, lacunas, hotspot, imagens, histórico de versões, PDF,
      simulados dentro do curso (com bloqueio por nota) e crédito parcial.
-6. **Cadernos e mapas mentais**
+6. ✅ **Cadernos e mapas mentais**
+   - Migration 7: `notebooks`, `notebook_pages` (blocos em JSON + texto para busca) e `mindmaps`. Páginas e
+     mapas na busca global (tipos 7 e 0).
+   - Cadernos: páginas ordenadas; blocos de texto (Markdown + LaTeX; `marked` → DOMPurify → KaTeX), desenho à
+     mão (pressão da caneta, 6 cores, 3 espessuras, borracha, papel sempre claro) e recurso (curso, aula,
+     baralho, banco). Salvamento automático com indicador; modo leitura contínua; PDF via `printToPDF` numa
+     janela oculta sem JavaScript, com fórmulas em MathML.
+   - Mapas mentais: núcleo puro em `src/shared/mindmap.ts` (árvore imutável, layouts árvore/organograma/
+     radial sem sobreposição, validação contra ciclos). Editor SVG: Tab/Enter/F2/setas/Espaço/Delete, digitar
+     para renomear, arrastar ramos, pan e zoom no cursor, cores, anexos (aula, curso, link), desfazer/refazer,
+     reorganização automática a cada mudança de estrutura, PNG (2×) e JSON, importação de JSON.
+   - Fica para depois: texto livre, caneta e grupos no mapa, minimapa, mini-player de vídeo no nó, imagens
+     nos cadernos.
 7. **FFmpeg**: re-encode de vídeos incompatíveis + transcrição (Whisper)
 8. **IA BYOK** (Claude, Gemini, Ollama) gerando cards e questões
 9. **Exportar/Importar** pacotes e backup do banco

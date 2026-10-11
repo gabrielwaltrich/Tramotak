@@ -287,5 +287,53 @@ export const MIGRATIONS: string[] = [
   CREATE TRIGGER search_question_ad AFTER DELETE ON questions BEGIN
     DELETE FROM search_index WHERE rowid = old.id * 8 + 6;
   END;
+  `,
+  /* 7 — cadernos (páginas com blocos) e mapas mentais. Busca: páginas tipo 7, mapas tipo 0. */ `
+  CREATE TABLE notebooks (
+    id         INTEGER PRIMARY KEY,
+    title      TEXT    NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE notebook_pages (
+    id          INTEGER PRIMARY KEY,
+    notebook_id INTEGER NOT NULL REFERENCES notebooks(id) ON DELETE CASCADE,
+    title       TEXT    NOT NULL DEFAULT '',
+    position    INTEGER NOT NULL,
+    blocks_json TEXT    NOT NULL DEFAULT '[]',
+    plain_text  TEXT    NOT NULL DEFAULT '',   -- texto dos blocos, mantido pelo app para a busca
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE INDEX notebook_pages_order ON notebook_pages(notebook_id, position);
+
+  CREATE TABLE mindmaps (
+    id         INTEGER PRIMARY KEY,
+    title      TEXT    NOT NULL,
+    data_json  TEXT    NOT NULL,
+    plain_text TEXT    NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TRIGGER search_page_ai AFTER INSERT ON notebook_pages BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 7, new.title, new.plain_text);
+  END;
+  CREATE TRIGGER search_page_au AFTER UPDATE OF title, plain_text ON notebook_pages BEGIN
+    UPDATE search_index SET title = new.title, body = new.plain_text WHERE rowid = new.id * 8 + 7;
+  END;
+  CREATE TRIGGER search_page_ad AFTER DELETE ON notebook_pages BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 7;
+  END;
+
+  CREATE TRIGGER search_mindmap_ai AFTER INSERT ON mindmaps BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8, new.title, new.plain_text);
+  END;
+  CREATE TRIGGER search_mindmap_au AFTER UPDATE OF title, plain_text ON mindmaps BEGIN
+    UPDATE search_index SET title = new.title, body = new.plain_text WHERE rowid = new.id * 8;
+  END;
+  CREATE TRIGGER search_mindmap_ad AFTER DELETE ON mindmaps BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8;
+  END;
   `
 ]

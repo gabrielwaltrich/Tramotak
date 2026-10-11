@@ -5,6 +5,8 @@ import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
 import type { HistoryEntry, HistoryFilter, ProgressData } from './progress'
 import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam, ExamSelection, ExamSettings } from './exams'
 import type { Question, QuestionAnswer, QuestionInput } from './questions'
+import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
+import type { MindMapData } from './mindmap'
 import type {
   SearchHit,
   DashboardData,
@@ -112,8 +114,46 @@ export const IPC = {
   attemptsFocusLoss: 'attempts:focusLoss',
   attemptsSubmit: 'attempts:submit',
   attemptsGradeEssay: 'attempts:gradeEssay',
-  attemptsDelete: 'attempts:delete'
+  attemptsDelete: 'attempts:delete',
+  notebooksList: 'notebooks:list',
+  notebooksGet: 'notebooks:get',
+  notebooksCreate: 'notebooks:create',
+  notebooksRename: 'notebooks:rename',
+  notebooksDelete: 'notebooks:delete',
+  notebooksPages: 'notebooks:pages',
+  notebooksExportPdf: 'notebooks:exportPdf',
+  pagesGet: 'pages:get',
+  pagesCreate: 'pages:create',
+  pagesSave: 'pages:save',
+  pagesMove: 'pages:move',
+  pagesDelete: 'pages:delete',
+  mindmapsList: 'mindmaps:list',
+  mindmapsGet: 'mindmaps:get',
+  mindmapsCreate: 'mindmaps:create',
+  mindmapsSave: 'mindmaps:save',
+  mindmapsDelete: 'mindmaps:delete',
+  mindmapsImport: 'mindmaps:import',
+  filesSave: 'files:save'
 } as const
+
+export interface MindMapSummary {
+  id: number
+  title: string
+  nodeCount: number
+  updatedAt: number
+}
+
+export interface MindMapDoc extends MindMapSummary {
+  data: MindMapData
+}
+
+export interface SaveFileRequest {
+  title: string
+  defaultName: string
+  filters: { name: string; extensions: string[] }[]
+  content: string
+  encoding: 'utf8' | 'base64'
+}
 
 export interface QuestionImportResult {
   bankId: number
@@ -208,6 +248,41 @@ export interface TramotakApi {
     gradeEssay(id: number, questionId: number, correct: boolean): Promise<void>
     delete(id: number): Promise<void>
   }
+  notebooks: {
+    list(): Promise<NotebookSummary[]>
+    get(id: number): Promise<NotebookDetail>
+    create(title: string): Promise<number>
+    rename(id: number, title: string): Promise<void>
+    delete(id: number): Promise<void>
+    /** Todas as páginas com conteúdo (leitura contínua e PDF). */
+    pages(id: number): Promise<Page[]>
+    /** Recebe o HTML pronto do caderno, imprime em PDF e abre "Salvar como". Devolve o caminho ou `null`. */
+    exportPdf(id: number, html: string): Promise<string | null>
+  }
+  pages: {
+    get(id: number): Promise<Page>
+    create(notebookId: number): Promise<Page>
+    save(id: number, input: { title: string; blocks: unknown }): Promise<number>
+    move(id: number, index: number): Promise<void>
+    delete(id: number): Promise<void>
+  }
+  mindmaps: {
+    list(): Promise<MindMapSummary[]>
+    get(id: number): Promise<MindMapDoc>
+    create(title: string): Promise<number>
+    save(id: number, input: { title: string; data: MindMapData }): Promise<number>
+    delete(id: number): Promise<void>
+    /** Abre um .json exportado e cria um mapa novo. `null` se cancelar. */
+    importFile(): Promise<number | null>
+  }
+  files: {
+    /** Abre no aplicativo padrão do sistema. */
+    openLesson(id: number): Promise<void>
+    openAsset(id: number): Promise<void>
+    showLesson(id: number): Promise<void>
+    /** "Salvar como" genérico. Devolve o caminho escolhido ou `null`. */
+    save(request: SaveFileRequest): Promise<string | null>
+  }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {
     get(): Promise<ProgressData>
@@ -242,12 +317,6 @@ export interface TramotakApi {
   progress: {
     save(update: ProgressUpdate): Promise<void>
     setCompleted(id: number, value: boolean): Promise<void>
-  }
-  files: {
-    /** Abre no aplicativo padrão do sistema. */
-    openLesson(id: number): Promise<void>
-    openAsset(id: number): Promise<void>
-    showLesson(id: number): Promise<void>
   }
   notes: {
     list(lessonId: number): Promise<Note[]>
