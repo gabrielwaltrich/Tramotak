@@ -1,3 +1,5 @@
+import { execFileSync } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 import { cp, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,6 +8,24 @@ import { _electron as electron, expect, test, type ElectronApplication, type Pag
 const FIXTURE = join(__dirname, 'fixtures', 'Curso E2E')
 
 let workdir: string
+
+/**
+ * Encerra o app à força. No Windows, matar só o processo principal deixa os filhos do Chromium vivos, segurando
+ * arquivos do perfil: encerra a árvore inteira.
+ */
+async function killApp(proc: ChildProcess): Promise<void> {
+  const exited = proc.exitCode !== null || proc.signalCode !== null ? Promise.resolve() : new Promise((r) => proc.once('exit', r))
+  if (process.platform === 'win32' && proc.pid) {
+    try {
+      execFileSync('taskkill', ['/pid', String(proc.pid), '/T', '/F'], { stdio: 'ignore' })
+    } catch {
+      proc.kill()
+    }
+  } else {
+    proc.kill('SIGKILL')
+  }
+  await exited
+}
 let coursePath: string
 let userData: string
 
@@ -48,8 +68,7 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
     clearTimeout(timer)
     if (result === 'timeout') {
       console.log(`Electron não saiu em ${Date.now() - started} ms; encerrando o processo`)
-      proc.kill()
-      await exited
+      await killApp(proc)
     }
   }
   return { app, page }
@@ -63,7 +82,8 @@ test.beforeAll(async () => {
 })
 
 test.afterAll(async () => {
-  await rm(workdir, { recursive: true, force: true })
+  // No Windows, arquivos do perfil podem ficar presos por alguns instantes depois que o app sai.
+  await rm(workdir, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 })
 })
 
 test('importar → assistir → anotar → concluir, e os dados sobrevivem a um reinício', async () => {
@@ -618,8 +638,7 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
     expect(await root2.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
     // Encerrado à força (como quando o fechamento trava): a aparência vem do banco, não só do localStorage.
     await second.page.evaluate(() => localStorage.clear())
-    second.app.process().kill('SIGKILL')
-    await new Promise((resolve) => second.app.process().once('exit', resolve))
+    await killApp(second.app.process())
     const third = await launch()
     const root3 = third.page.locator('html')
     await expect(root3).toHaveAttribute('data-theme', 'paper')
