@@ -29,6 +29,8 @@ dmg:
   artifactName: ${productName}-${version}-${arch}.${ext}
 linux:
   target: [AppImage, deb]
+  # Vários tamanhos (gerados por scripts/prepare-icon.py) para menus e barras de tarefa.
+  icon: resources/icons
   category: Education
   maintainer: Gabriel Waltrich <64818081+gabrielwaltrich@users.noreply.github.com>
   synopsis: Central de estudos para os seus cursos

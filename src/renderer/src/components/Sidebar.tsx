@@ -6,6 +6,7 @@ import { NavIcon } from './NavIcon'
 import { readPref, writePref } from '../storage'
 import { useSearch } from '../lib/searchContext'
 import { JobsIndicator } from './media/JobsIndicator'
+import logo from '../assets/logo.png'
 
 const KEY = 'tramotak.sidebar.collapsed'
 
@@ -94,9 +95,7 @@ export function Sidebar() {
       }`}
     >
       <div className="flex h-14 items-center gap-2 px-4">
-        <div className="grid size-7 shrink-0 place-items-center rounded-md bg-accent text-sm font-bold text-white">
-          T
-        </div>
+        <img src={logo} alt="" className="size-8 shrink-0" draggable={false} />
         {!collapsed && <span className="font-semibold tracking-tight">Tramotak</span>}
       </div>
 
