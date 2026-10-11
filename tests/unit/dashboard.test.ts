@@ -6,6 +6,7 @@ import { getDashboard } from '../../src/main/db/dashboard'
 import { getSettings, updateSettings } from '../../src/main/db/settings'
 import { scanCourse } from '../../src/main/scanner/scan'
 import { makeCourse } from '../helpers/fixture'
+import { DEFAULT_APPEARANCE, type Appearance } from '@shared/appearance'
 
 let db: Database
 let cleanup: (() => Promise<void>) | undefined
@@ -80,6 +81,14 @@ describe('painel do Início', () => {
 })
 
 describe('configurações', () => {
+  it('aparência fica no banco, normalizada (null até a pessoa mudar)', () => {
+    expect(getSettings(db).appearance).toBeNull()
+    updateSettings(db, { appearance: { ...DEFAULT_APPEARANCE, theme: 'paper', accent: 'green', density: 'enorme' } as unknown as Appearance })
+    expect(getSettings(db).appearance).toMatchObject({ theme: 'paper', accent: 'green', density: 'normal' })
+    updateSettings(db, { appearance: null })
+    expect(getSettings(db).appearance).toBeNull()
+  })
+
   it('valida a faixa da meta e ignora valor guardado inválido', () => {
     expect(() => updateSettings(db, { dailyGoalMinutes: 2 })).toThrow('entre 5 e 480')
     expect(() => updateSettings(db, { dailyGoalMinutes: 30.5 })).toThrow()

@@ -27,6 +27,7 @@ import type {
   RevalidateResult,
   Structure
 } from './course'
+import type { Appearance } from './appearance'
 
 export interface AppInfo {
   name: string
@@ -67,6 +68,8 @@ export interface AppSettings {
   aiWebSearch: boolean
   /** Procurar atualizações sozinho (ao abrir e a cada 6 h). */
   autoUpdateCheck: boolean
+  /** Aparência (tema, cor, densidade…); null até a pessoa mudar algo. A janela guarda uma cópia no localStorage. */
+  appearance: Appearance | null
 }
 
 export const IPC = {

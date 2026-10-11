@@ -616,10 +616,17 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
     const root2 = second.page.locator('html')
     await expect(root2).toHaveAttribute('data-theme', 'paper')
     expect(await root2.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
-    await second.page.getByRole('link', { name: 'Configurações' }).click()
-    await second.page.getByRole('button', { name: 'Voltar ao visual padrão' }).click()
-    await expect(root2).toHaveAttribute('data-theme', 'dark')
-    await second.app.close()
+    // Encerrado à força (como quando o fechamento trava): a aparência vem do banco, não só do localStorage.
+    await second.page.evaluate(() => localStorage.clear())
+    second.app.process().kill('SIGKILL')
+    await new Promise((resolve) => second.app.process().once('exit', resolve))
+    const third = await launch()
+    const root3 = third.page.locator('html')
+    await expect(root3).toHaveAttribute('data-theme', 'paper')
+    await third.page.getByRole('link', { name: 'Configurações' }).click()
+    await third.page.getByRole('button', { name: 'Voltar ao visual padrão' }).click()
+    await expect(root3).toHaveAttribute('data-theme', 'dark')
+    await third.app.close()
   } catch (error) {
     await app.close().catch(() => undefined)
     throw error

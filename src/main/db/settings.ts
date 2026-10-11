@@ -1,6 +1,7 @@
 import type { AppSettings } from '@shared/ipc'
 import { AI_PROVIDER_IDS, DEFAULT_AI_MODELS, MODEL_NAME, type AiModels } from '@shared/ai'
 import { WHISPER_MODELS } from '@shared/media'
+import { normalizeAppearance } from '@shared/appearance'
 import type { Database } from './database'
 
 export type { AppSettings }
@@ -23,7 +24,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   openaiBaseUrl: 'https://api.openai.com/v1',
   autoBackup: true,
   aiWebSearch: false,
-  autoUpdateCheck: true
+  autoUpdateCheck: true,
+  appearance: null
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -99,6 +101,9 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
   if (patch.aiWebSearch !== undefined) {
     if (typeof patch.aiWebSearch !== 'boolean') throw new Error('Valor inválido para pesquisa na internet')
     out.aiWebSearch = patch.aiWebSearch
+  }
+  if (patch.appearance !== undefined) {
+    out.appearance = patch.appearance === null ? null : normalizeAppearance(patch.appearance)
   }
   if (patch.autoBackup !== undefined) {
     if (typeof patch.autoBackup !== 'boolean') throw new Error('Valor inválido para backup automático')
