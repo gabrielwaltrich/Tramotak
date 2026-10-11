@@ -103,7 +103,11 @@ export function SearchPalette({ open, initial = '', onClose }: { open: boolean; 
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
+      // O evento "close" chega depois de dialog.close(); se o diálogo já foi reaberto (ex.: Esc e Ctrl+K
+      // em seguida), é um evento atrasado e não pode fechá-lo de novo.
+      onClose={() => {
+        if (!ref.current?.open) onClose()
+      }}
       onCancel={(e) => {
         e.preventDefault()
         onClose()
