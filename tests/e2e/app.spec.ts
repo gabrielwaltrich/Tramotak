@@ -22,15 +22,35 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
   await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible()
   // No Windows do CI o Electron às vezes demora minutos para sair (e o teste estoura o tempo, levando o perfil
   // compartilhado junto). Dá 15 s para fechar normalmente; depois, encerra o processo.
+  // O close() do Playwright pode voltar antes de o processo terminar de sair. Abrir o app de novo nesse meio-tempo
+  // encontra o armazenamento da janela ainda travado pelo processo antigo, e o localStorage vem vazio.
+  const proc = app.process()
+  const exited = new Promise<void>((resolve) => {
+    if (proc.exitCode !== null || proc.signalCode !== null) resolve()
+    else proc.once('exit', () => resolve())
+  })
   const close = app.close.bind(app)
   app.close = async () => {
     // Grava o localStorage antes: se o fechamento estourar o prazo e o processo for encerrado, nada se perde.
     await app.evaluate(({ session }) => session.defaultSession.flushStorageData()).catch(() => undefined)
     let timer: NodeJS.Timeout | undefined
     const timeout = new Promise<'timeout'>((resolve) => (timer = setTimeout(() => resolve('timeout'), 15_000)))
-    const result = await Promise.race([close().then(() => 'closed' as const), timeout])
+    const started = Date.now()
+    const result = await Promise.race([
+      close().then(async () => {
+        const closedAt = Date.now()
+        await exited
+        if (Date.now() - closedAt > 200) console.log(`Electron saiu ${Date.now() - closedAt} ms depois do close()`)
+        return 'closed' as const
+      }),
+      timeout
+    ])
     clearTimeout(timer)
-    if (result === 'timeout') app.process().kill()
+    if (result === 'timeout') {
+      console.log(`Electron não saiu em ${Date.now() - started} ms; encerrando o processo`)
+      proc.kill()
+      await exited
+    }
   }
   return { app, page }
 }
