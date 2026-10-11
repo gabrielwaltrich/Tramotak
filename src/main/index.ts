@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
@@ -20,6 +21,7 @@ import { applyPendingRestore, autoBackup } from './backup/backup'
 import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
 import { DurationScanner } from './media/durations'
+import { Updater } from './updater'
 import { probe } from './media/ffmpeg'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
@@ -45,7 +47,11 @@ function createWindow(): void {
     }
   })
 
-  win.once('ready-to-show', () => win.show())
+  win.once('ready-to-show', () => {
+    win.show()
+    // Gancho de teste: confirma que a janela abriu (usado para validar a reabertura depois de atualizar).
+    if (process.env.TRAMOTAK_STARTED_FILE) writeFileSync(process.env.TRAMOTAK_STARTED_FILE, `${app.getVersion()} ${Date.now()}\n`, { flag: 'a' })
+  })
 
   // Links externos abrem no navegador do sistema, nunca dentro do app.
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -131,6 +137,18 @@ app.whenReady().then(() => {
   scheduleAutoBackup(backupsDir)
   createWindow()
   setTimeout(() => void durations.requestAll(), 3000)
+
+  const updater = new Updater({
+    enabled: () => (db ? getSettings(db).autoUpdateCheck : false),
+    onState: (info) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send(IPC.updatesState, info)
+    }
+  })
+  ipcMain.handle(IPC.updatesInfo, () => updater.info())
+  ipcMain.handle(IPC.updatesCheck, () => updater.check())
+  ipcMain.handle(IPC.updatesInstall, () => updater.install())
+  ipcMain.handle(IPC.updatesOpenRelease, () => updater.openRelease())
+  updater.start()
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 
   app.on('activate', () => {

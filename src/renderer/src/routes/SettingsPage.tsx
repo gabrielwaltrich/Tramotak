@@ -11,6 +11,7 @@ import { AiSettings } from '../components/ai/AiSettings'
 import { BackupSettings } from '../components/backup/BackupSettings'
 import { PackageSettings } from '../components/backup/PackageSettings'
 import { AppearanceSettings } from '../components/AppearanceSettings'
+import { UpdateSettings } from '../components/UpdateSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -194,6 +195,10 @@ export function SettingsPage() {
 
       <Section title="Pacotes de estudo" description="Exporte baralhos, bancos de questões, cadernos, mapas e as anotações dos cursos para outro computador ou para outra pessoa, e importe pacotes recebidos.">
         <PackageSettings />
+      </Section>
+
+      <Section title="Atualizações">
+        <UpdateSettings />
       </Section>
 
       <Section title="Sobre">

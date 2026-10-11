@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Play, PlayCircle, Type } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Mic, Play, PlayCircle, Type } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -9,6 +9,7 @@ import { useCourseDurations } from '../lib/useCourseDurations'
 import { Button } from '../components/Button'
 import { FormatCheckDialog } from '../components/media/FormatCheckDialog'
 import { TitleRulesDialog } from '../components/TitleRulesDialog'
+import { TranscribeCourseDialog } from '../components/media/TranscribeCourseDialog'
 
 function countLessons(m: CourseModuleNode): { total: number; done: number } {
   return m.children.reduce(
@@ -78,6 +79,7 @@ export function CourseDetailPage() {
   const navigate = useNavigate()
   const [checking, setChecking] = useState(false)
   const [naming, setNaming] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
   const course = useQuery({ queryKey: queryKeys.course(id), queryFn: () => window.api.courses.get(id) })
   const measuring = useCourseDurations(id)
 
@@ -103,6 +105,9 @@ export function CourseDetailPage() {
           <h1 className="flex-1 text-2xl font-semibold tracking-tight">{c.title}</h1>
           <Button variant="ghost" onClick={() => setNaming(true)} title="Regras para deixar os títulos das aulas legíveis">
             <Type size={16} /> Nomes das aulas
+          </Button>
+          <Button variant="ghost" onClick={() => setTranscribing(true)} title="Transcrever todas as aulas de vídeo que ainda não têm transcrição">
+            <Mic size={16} /> Transcrever curso
           </Button>
           <Button variant="ghost" onClick={() => setChecking(true)} title="Verificar se todos os vídeos tocam no player">
             <Film size={16} /> Verificar formatos
@@ -144,6 +149,7 @@ export function CourseDetailPage() {
       </ul>
       <FormatCheckDialog courseId={c.id} open={checking} onClose={() => setChecking(false)} />
       {naming && <TitleRulesDialog course={c} open onClose={() => setNaming(false)} />}
+      {transcribing && <TranscribeCourseDialog courseId={c.id} onClose={() => setTranscribing(false)} />}
     </div>
   )
 }

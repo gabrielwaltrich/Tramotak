@@ -81,7 +81,7 @@ export interface TranscriptSegment {
   text: string
 }
 
-export type TranscriptionProvider = 'groq' | 'local'
+export type TranscriptionProvider = 'groq' | 'local' | 'builtin'
 
 export interface Transcript {
   lessonId: number
@@ -131,4 +131,53 @@ export interface MediaJob {
   /** 0 a 1. */
   progress: number
   error: string | null
+}
+
+// ── Transcrição embutida (whisper.cpp) ──────────────────────────────────────
+
+export type WhisperModelId = 'base-q5_1' | 'small-q5_1' | 'large-v3-turbo-q5_0'
+
+/** Modelos do whisper.cpp (repositório oficial no Hugging Face), com tamanho e SHA-256 para conferir o download. */
+export const WHISPER_MODELS: { id: WhisperModelId; label: string; note: string; file: string; bytes: number; sha256: string }[] = [
+  {
+    id: 'base-q5_1',
+    label: 'Rápido',
+    note: 'Leve e veloz; erra mais em termos técnicos',
+    file: 'ggml-base-q5_1.bin',
+    bytes: 59_707_625,
+    sha256: '422f1ae452ade6f30a004d7e5c6a43195e4433bc370bf23fac9cc591f01a8898'
+  },
+  {
+    id: 'small-q5_1',
+    label: 'Equilibrado',
+    note: 'Bom em português na maioria dos computadores',
+    file: 'ggml-small-q5_1.bin',
+    bytes: 190_085_487,
+    sha256: 'ae85e4a935d7a567bd102fe55afc16bb595bdb618e11b2fc7591bc08120411bb'
+  },
+  {
+    id: 'large-v3-turbo-q5_0',
+    label: 'Preciso',
+    note: 'O mais fiel; mais lento sem placa de vídeo',
+    file: 'ggml-large-v3-turbo-q5_0.bin',
+    bytes: 574_041_195,
+    sha256: '394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2'
+  }
+]
+
+export const WHISPER_MODEL_URL = (file: string) => `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${file}`
+
+/** Trechos do JSON do whisper-cli (`-oj`): offsets em milissegundos. */
+export function parseWhisperJson(json: unknown): TranscriptSegment[] {
+  const list = (json as { transcription?: { offsets?: { from?: unknown; to?: unknown }; text?: unknown }[] })?.transcription
+  if (!Array.isArray(list)) throw new Error('Resultado da transcrição em formato inesperado')
+  return list
+    .map((s) => ({ start: Number(s.offsets?.from) / 1000, end: Number(s.offsets?.to) / 1000, text: String(s.text ?? '').trim() }))
+    .filter((s) => Number.isFinite(s.start) && Number.isFinite(s.end) && s.text && !/^\[(música|music|silêncio|silence|blank_audio)\]$/i.test(s.text))
+}
+
+/** Linha de progresso do whisper-cli com `-pp` ("... progress = 42%"), de 0 a 1. */
+export function whisperProgress(line: string): number | null {
+  const m = /progress\s*=\s*(\d{1,3})%/.exec(line)
+  return m ? Math.min(1, Number(m[1]) / 100) : null
 }

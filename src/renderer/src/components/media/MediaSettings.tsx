@@ -7,6 +7,7 @@ import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
 import { Label, Segmented, TextInput } from '../Field'
 import { useToast } from '../Toast'
+import { BuiltinWhisper } from './BuiltinWhisper'
 
 const MODELS = [
   { value: 'whisper-large-v3-turbo', label: 'whisper-large-v3-turbo (rápido)' },
@@ -82,10 +83,12 @@ export function MediaSettings({ settings }: { settings: AppSettings }) {
           onChange={(v) => save.mutate({ transcriptionProvider: v })}
           options={[
             { value: 'none', label: 'Desligada' },
+            { value: 'builtin', label: 'No computador (grátis)' },
             { value: 'groq', label: 'Groq (nuvem)' },
             { value: 'local', label: 'Whisper local' }
           ]}
         />
+        {provider === 'builtin' && <BuiltinWhisper settings={settings} />}
         {provider === 'groq' && (
           <div className="space-y-2">
             <p className="text-xs text-muted">O áudio de cada aula é enviado ao Groq para transcrever. A chave fica cifrada pelo cofre do sistema e não sai deste computador.</p>
@@ -125,8 +128,8 @@ export function MediaSettings({ settings }: { settings: AppSettings }) {
           </div>
         )}
         {provider !== 'none' && (
-          <div className="grid grid-cols-[1fr_8rem_auto] items-end gap-2">
-            <div>
+          <div className={`grid items-end gap-2 ${provider === 'builtin' ? 'grid-cols-[8rem_auto] justify-start' : 'grid-cols-[1fr_8rem_auto]'}`}>
+            <div className={provider === 'builtin' ? 'hidden' : ''}>
               <Label htmlFor="stt-model">Modelo</Label>
               {provider === 'groq' ? (
                 <select id="stt-model" value={model} onChange={(e) => setModel(e.target.value)} className="h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-text">

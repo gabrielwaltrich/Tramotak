@@ -21,7 +21,7 @@ Windows, macOS e Linux.
 
 Tudo fica no seu computador (exceto o que você mandar transcrever ou gerar com um provedor na nuvem): o Tramotak lê as pastas dos cursos sem alterá-las e guarda progresso e anotações num banco local.
 
-Plano e roadmap: [docs/PLANO-MVP.md](docs/PLANO-MVP.md).
+Plano original: [docs/PLANO-MVP.md](docs/PLANO-MVP.md). Caminho até a 1.0: [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md).
 
 ## Instalação
 
@@ -37,7 +37,9 @@ Baixe a versão mais recente em **[Releases](https://github.com/gabrielwaltrich/
 
 **Formatos de vídeo:** o player toca o que o Chromium suporta (H.264, VP8/VP9, AV1 em `.mp4`/`.webm`/`.mkv`). Vídeos em HEVC/H.265, `.avi`, `.wmv` e afins são detectados e podem ser convertidos pelo FFmpeg embutido, em uma cópia na pasta do app (os arquivos do curso não são alterados).
 
-**Transcrição:** opcional, em Configurações → Vídeo e transcrição. Use o Groq (nuvem, com a sua chave de API, guardada cifrada pelo sistema) ou um servidor Whisper local compatível com a API da OpenAI (ex.: faster-whisper, speaches). Sem configurar, nenhum áudio sai do computador.
+**Transcrição:** opcional, em Configurações → Vídeo e transcrição. **No computador (grátis):** o Whisper vem embutido; baixe um modelo pelo app (57 MB a 547 MB) e transcreva sem internet nem chave. Também dá para usar o Groq (nuvem, com a sua chave) ou um servidor Whisper compatível com a API da OpenAI. Dá para transcrever o curso inteiro de uma vez (botão "Transcrever curso").
+
+**Atualizações:** o Tramotak procura versões novas nas Releases do GitHub e, no instalador do Windows, no AppImage e no `.deb`, baixa e instala sozinho ao reiniciar (o `.deb` pede a senha do sistema). No macOS e no `.exe` portátil ele avisa e leva à página da versão. Dá para desligar em Configurações → Atualizações.
 
 **IA:** opcional, em Configurações → Inteligência artificial. O material só é enviado quando você clica em gerar, e tudo passa pela sua revisão antes de virar carta ou questão. Para gerar de um vídeo, transcreva a aula antes (ou use a legenda que veio com o curso).
 
@@ -53,7 +55,7 @@ As chaves ficam cifradas pelo cofre do sistema e nunca voltam para a interface.
 
 **Backup e outro computador:** em Configurações → Dados e backup. O backup é um arquivo `.db` com tudo, menos os vídeos e as chaves de API. Para migrar, restaure o backup no computador novo e use **Trocar pasta…** no menu dos cursos que estiverem em outro caminho; o progresso e as anotações são mantidos. Para compartilhar só parte do material, use **Exportar pacote…**.
 
-**Licença do FFmpeg:** o Tramotak inclui o FFmpeg (GPL) como programa separado; a licença está em Configurações → Sobre.
+**Licenças:** o Tramotak inclui o FFmpeg (GPL) e o whisper.cpp (MIT) como programas separados; a licença do FFmpeg está em Configurações → Sobre e a do whisper.cpp junto do programa (`resources/whisper`).
 
 ## Desenvolvimento
 

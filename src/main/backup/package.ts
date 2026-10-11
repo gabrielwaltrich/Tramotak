@@ -594,7 +594,7 @@ export function importPackage(db: Database, pkg: TramotakPackage, courseMap: Rec
       for (const t of c.transcripts) {
         const l = lesson(t.relPath)
         if (!l || getTranscript(db, l.id)) continue
-        saveTranscript(db, l.id, { provider: t.provider === 'local' ? 'local' : 'groq', model: t.model, language: t.language, segments: t.segments })
+        saveTranscript(db, l.id, { provider: t.provider === 'local' || t.provider === 'builtin' ? t.provider : 'groq', model: t.model, language: t.language, segments: t.segments })
         result.transcripts++
       }
     }

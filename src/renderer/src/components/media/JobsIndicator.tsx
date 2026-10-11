@@ -47,6 +47,14 @@ export function JobsIndicator({ collapsed }: { collapsed: boolean }) {
   const active = jobs.find((j) => j.status === 'running') ?? jobs.find((j) => j.status === 'queued')
   const pending = jobs.filter((j) => j.status === 'running' || j.status === 'queued').length
   const failed = jobs.some((j) => j.status === 'error')
+  const failedCount = jobs.filter((j) => j.status === 'error').length
+  const doneCount = jobs.filter((j) => j.status === 'done').length
+  // Com centenas de tarefas, mostra a atual, as próximas e as últimas terminadas.
+  const running = jobs.filter((j) => j.status === 'running')
+  const queued = jobs.filter((j) => j.status === 'queued')
+  const finished = jobs.filter((j) => j.status !== 'running' && j.status !== 'queued').reverse()
+  const visible = [...running, ...queued.slice(0, 10), ...finished.slice(0, 20)]
+  const hidden = Math.max(0, queued.length - 10)
 
   return (
     <div className="relative">
@@ -66,17 +74,35 @@ export function JobsIndicator({ collapsed }: { collapsed: boolean }) {
       </button>
       {open && (
         <div className="absolute bottom-11 left-2 z-30 w-72 rounded-lg border border-border bg-surface-2 p-3 shadow-xl">
-          <div className="mb-1 flex items-center justify-between">
+          <div className="mb-1 flex items-center justify-between gap-2">
             <p className="text-xs font-medium tracking-wider text-muted uppercase">Processamento</p>
-            <button type="button" onClick={() => window.api.media.clearFinished()} className="text-xs text-muted hover:text-text">
-              Limpar concluídas
-            </button>
+            <div className="flex gap-2 text-xs text-muted">
+              {failedCount > 0 && (
+                <button type="button" onClick={() => window.api.media.retryFailed()} className="hover:text-text">
+                  Repetir com erro
+                </button>
+              )}
+              {pending > 1 && (
+                <button type="button" onClick={() => window.api.media.cancelAll()} className="hover:text-red-400">
+                  Cancelar fila
+                </button>
+              )}
+              <button type="button" onClick={() => window.api.media.clearFinished()} className="hover:text-text">
+                Limpar
+              </button>
+            </div>
           </div>
+          {jobs.length > 8 && (
+            <p className="pb-1 text-[11px] text-muted">
+              {doneCount} concluídas · {pending} na fila{failedCount ? ` · ${failedCount} com erro` : ''}
+            </p>
+          )}
           <ul className="max-h-72 divide-y divide-border overflow-y-auto">
-            {[...jobs].reverse().map((j) => (
+            {visible.map((j) => (
               <Row key={j.id} job={j} />
             ))}
           </ul>
+          {hidden > 0 && <p className="pt-2 text-center text-[11px] text-muted">+{hidden} na fila</p>}
         </div>
       )}
     </div>

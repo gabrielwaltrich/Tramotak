@@ -127,6 +127,52 @@ describe('fila de mídia', () => {
   }, 60_000)
 })
 
+describe('fila em lote (curso inteiro)', () => {
+  it('enfileira várias aulas sem repetir, cancela tudo e repete as que falharam', async () => {
+    const dbq = openDatabase(':memory:')
+    dbq.prepare("INSERT INTO courses (id, title, root_path, structure, numbering) VALUES (1, 'C', ?, 'flat', 'dot')").run(courseDir)
+    const ins = dbq.prepare("INSERT INTO lessons (id, course_id, title, rel_path, kind, position, file_size, mtime_ms) VALUES (?, 1, ?, ?, 'video', ?, 1, 1)")
+    // Arquivos que não existem: as tarefas falham rápido, sem depender de FFmpeg.
+    for (let i = 1; i <= 4; i++) ins.run(i, `Aula ${i}`, `nao-existe-${i}.mp4`, i)
+    updateSettings(dbq, { transcriptionProvider: 'local', localWhisperUrl: whisperUrl })
+    const queue = new MediaQueue({ db: dbq, convertedDir, getApiKey: () => null, onChange: () => {} })
+
+    const idle = () =>
+      new Promise<void>((resolve) => {
+        const check = () => (queue.list().every((j) => j.status !== 'queued' && j.status !== 'running') ? resolve() : setTimeout(check, 30))
+        check()
+      })
+    expect(queue.enqueueMany('transcribe', [1, 2, 3, 999])).toBe(3)
+    queue.cancelAll()
+    await idle()
+    expect(queue.list().filter((j) => j.status === 'canceled').length).toBeGreaterThanOrEqual(2)
+
+    queue.clearFinished()
+    expect(queue.enqueueMany('transcribe', [1, 2])).toBe(2)
+    await idle()
+    expect(queue.list().map((j) => j.status)).toEqual(['error', 'error'])
+    expect(queue.retryFailed()).toBe(2)
+    await idle()
+    expect(queue.list().map((j) => j.status)).toEqual(['error', 'error'])
+    expect(queue.enqueueMany('transcribe', [1, 2, 4])).toBe(3) // as com erro não bloqueiam um novo pedido
+    queue.cancelAll()
+    await idle()
+    dbq.close()
+  })
+
+  it('transcrição embutida sem o programa avisa antes de entrar na fila', () => {
+    const dbq = openDatabase(':memory:')
+    dbq.prepare("INSERT INTO courses (id, title, root_path, structure, numbering) VALUES (1, 'C', '/x', 'flat', 'dot')").run()
+    dbq.prepare("INSERT INTO lessons (id, course_id, title, rel_path, kind, position, file_size, mtime_ms) VALUES (1, 1, 'A', 'a.mp4', 'video', 0, 1, 1)").run()
+    updateSettings(dbq, { transcriptionProvider: 'builtin' })
+    const semPrograma = new MediaQueue({ db: dbq, convertedDir, getApiKey: () => null, onChange: () => {}, whisper: { binary: () => null, modelsDir: dir } })
+    expect(() => semPrograma.enqueue('transcribe', 1)).toThrow(/não está disponível/)
+    const semModelo = new MediaQueue({ db: dbq, convertedDir, getApiKey: () => null, onChange: () => {}, whisper: { binary: () => '/bin/true', modelsDir: dir } })
+    expect(() => semModelo.enqueueMany('transcribe', [1])).toThrow(/Baixe o modelo/)
+    dbq.close()
+  })
+})
+
 describe('configurações de mídia', () => {
   it('validam parâmetros, provedor, idioma e URL', () => {
     const d = openDatabase(':memory:')

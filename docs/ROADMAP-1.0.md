@@ -1,0 +1,61 @@
+# Tramotak — Caminho até a 1.0.0
+
+O plano original (MVP e Objetivos 1–9, mais aparência e nomes das aulas) está em [PLANO-MVP.md](PLANO-MVP.md).
+Este documento é o roteiro seguinte: o que falta para a **1.0.0**. A 1.0 é sobre **confiança**: o app se atualiza
+sozinho, abre sem aviso de segurança, aguenta cursos grandes (1.000+ aulas) e entrega IA útil mesmo sem conta paga.
+
+Legenda: ✅ feito · 🚧 em andamento · ⬜ a fazer
+
+---
+
+## 0.5 — Atualizar, aguentar e transcrever ✅ (falta validar o empacotamento do whisper no Windows e no macOS pelo CI)
+Inclui o que seria a 0.4.3 (não publicada separadamente):
+- ✅ Durações medidas pelo FFmpeg no processo principal, em segundo plano (curso de 1.092 aulas em ~40 s).
+- ✅ Regras de nomes por curso com prévia e sugestão opcional da IA.
+- ✅ **Atualização automática** (`electron-updater` + Releases do GitHub): procura 15 s depois de abrir e a cada 6 h
+  (desligável), baixa em segundo plano e instala ao reiniciar, reabrindo o app — instalador do Windows, AppImage e
+  `.deb` (este pede a senha do sistema pelo `pkexec`). macOS sem assinatura e `.exe` portátil: avisa e leva à
+  página da versão (consulta a API de Releases). Aviso discreto na barra superior. Testado com AppImage 0.5.0 →
+  0.5.1 servido localmente (`TRAMOTAK_UPDATE_URL`): baixou, trocou o arquivo e reabriu na versão nova.
+- ✅ **Desempenho com cursos grandes** medido com 1.092 aulas: lista de cursos 8 ms, detalhe 11 ms, busca 15 ms,
+  página do curso 40 ms, player 134 ms (inclui carregar o vídeo), abertura ~2,3 s em desenvolvimento. Nada a corrigir.
+- ✅ **Transcrição local embutida** (whisper.cpp v1.9.5, `scripts/build-whisper.sh`, compilado no CI para cada
+  sistema; no macOS universal arm64+x64; portátil: sem `-march=native`, AVX2/FMA no x86, estático). Modelos baixados
+  pelo app do repositório oficial no Hugging Face, conferidos por tamanho e SHA-256: Rápido (base q5_1, 57 MB),
+  Equilibrado (small q5_1, 181 MB) e Preciso (large-v3-turbo q5_0, 547 MB). Áudio extraído pelo FFmpeg (16 kHz
+  mono), progresso pelo `-pp`, cancelável. Testado: 11 s de fala em 6 s com o modelo Rápido.
+- ✅ **Transcrever o curso inteiro**: botão no curso, fila com as aulas sem transcrição, indicador resumido
+  ("+N na fila"), cancelar tudo e repetir as que falharam (ex.: limite diário do Groq).
+
+## 0.6 — Plano de estudos ⬜
+- Plano automático: data-alvo do curso → aulas distribuídas no Planner conforme ritmo e meta diária, com previsão
+  de término e replanejamento quando atrasar.
+- FSRS no lugar do SM-2 (com migração do histórico de revisões) e opções por baralho.
+
+## 0.7 — PDFs e revisão pós-aula ⬜
+- PDFs como aula: leitura, grifo e anotações dentro do app; texto do PDF como material da IA.
+- Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto.
+- Pomodoro/modo foco integrado ao tempo de estudo.
+
+## 0.8 — IA no curso inteiro ⬜
+- Conversa sobre o curso todo (busca nas transcrições de todas as aulas, citando aula e minuto).
+- Gerar baralho/banco de questões do curso inteiro.
+- Tutor dos pontos fracos (a partir dos erros em simulados e flashcards) e "explique meu erro".
+- Custo estimado antes de gerar nos provedores pagos.
+
+## 0.9 — Polimento e beta ⬜
+- Primeira execução guiada e curso de exemplo.
+- "Relatar problema": arquivo de diagnóstico sem dados pessoais.
+- Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
+- Backup automático para uma pasta escolhida (Drive/Dropbox) como sincronização simples.
+- Beta com usuários em Windows e macOS reais.
+
+## 1.0.0 ⬜
+- Instaladores assinados (Apple Developer e certificado de código para Windows).
+- Correções do beta; documentação de uso.
+
+---
+
+## Fora da 1.0 (ideias para depois)
+Sincronização com servidor, app de celular, marcadores e capítulos no vídeo, mini-player, novos tipos de questão
+(lacunas, ordenação, correspondência), imagens em cartas e cadernos.

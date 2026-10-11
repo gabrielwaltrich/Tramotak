@@ -9,6 +9,11 @@ files:
   - out/**
   - package.json
 icon: resources/icon.png
+# Transcrição embutida: whisper-cli compilado por scripts/build-whisper.sh (fica em resources/whisper).
+extraResources:
+  - from: build/whisper
+    to: whisper
+    filter: ['whisper-cli', 'whisper-cli.exe', 'whisper.cpp-LICENSE.txt']
 # O FFmpeg embutido precisa ficar fora do asar para poder ser executado.
 asarUnpack:
   - node_modules/ffmpeg-static/**
@@ -35,4 +40,9 @@ linux:
   maintainer: Gabriel Waltrich <64818081+gabrielwaltrich@users.noreply.github.com>
   synopsis: Central de estudos para os seus cursos
   syncDesktopName: true
-publish: null
+# Releases do GitHub: gera latest*.yml e o app-update.yml usados pela atualização automática.
+publish:
+  provider: github
+  owner: gabrielwaltrich
+  repo: Tramotak
+  releaseType: release

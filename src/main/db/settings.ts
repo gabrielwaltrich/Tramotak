@@ -1,5 +1,6 @@
 import type { AppSettings } from '@shared/ipc'
 import { AI_PROVIDER_IDS, DEFAULT_AI_MODELS, MODEL_NAME, type AiModels } from '@shared/ai'
+import { WHISPER_MODELS } from '@shared/media'
 import type { Database } from './database'
 
 export type { AppSettings }
@@ -12,6 +13,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   notifyLeadMinutes: 5,
   conversionArgs: DEFAULT_CONVERSION_ARGS,
   transcriptionProvider: 'none',
+  builtinWhisperModel: 'small-q5_1',
   transcriptionModel: 'whisper-large-v3-turbo',
   transcriptionLanguage: 'pt',
   localWhisperUrl: 'http://localhost:8000/v1',
@@ -20,7 +22,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   ollamaUrl: 'http://localhost:11434',
   openaiBaseUrl: 'https://api.openai.com/v1',
   autoBackup: true,
-  aiWebSearch: false
+  aiWebSearch: false,
+  autoUpdateCheck: true
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -52,8 +55,12 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
     out.conversionArgs = args
   }
   if (patch.transcriptionProvider !== undefined) {
-    if (!['none', 'groq', 'local'].includes(patch.transcriptionProvider)) throw new Error('Provedor de transcrição inválido')
+    if (!['none', 'groq', 'local', 'builtin'].includes(patch.transcriptionProvider)) throw new Error('Provedor de transcrição inválido')
     out.transcriptionProvider = patch.transcriptionProvider
+  }
+  if (patch.builtinWhisperModel !== undefined) {
+    if (!WHISPER_MODELS.some((m) => m.id === patch.builtinWhisperModel)) throw new Error('Modelo de transcrição inválido')
+    out.builtinWhisperModel = patch.builtinWhisperModel
   }
   if (patch.transcriptionModel !== undefined) {
     const model = String(patch.transcriptionModel).trim()
@@ -84,6 +91,10 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
       models[id] = model
     }
     out.aiModels = models
+  }
+  if (patch.autoUpdateCheck !== undefined) {
+    if (typeof patch.autoUpdateCheck !== 'boolean') throw new Error('Valor inválido para atualizações')
+    out.autoUpdateCheck = patch.autoUpdateCheck
   }
   if (patch.aiWebSearch !== undefined) {
     if (typeof patch.aiWebSearch !== 'boolean') throw new Error('Valor inválido para pesquisa na internet')

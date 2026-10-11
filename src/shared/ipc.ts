@@ -7,8 +7,9 @@ import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam,
 import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
-import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
+import type { Compatibility, MediaJob, MediaJobKind, Transcript, WhisperModelId } from './media'
 import type { TitleRules } from './titleRules'
+import type { UpdateInfo } from './updates'
 import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
 import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest } from './ai'
 import type {
@@ -43,7 +44,9 @@ export interface AppSettings {
   notifyLeadMinutes: 0 | 5 | 10 | 15
   /** Parâmetros do FFmpeg para a conversão completa de vídeos. */
   conversionArgs: string
-  transcriptionProvider: 'none' | 'groq' | 'local'
+  transcriptionProvider: 'none' | 'groq' | 'local' | 'builtin'
+  /** Modelo do Whisper embutido. */
+  builtinWhisperModel: WhisperModelId
   transcriptionModel: string
   /** Código ISO ("pt") ou vazio para o provedor detectar. */
   transcriptionLanguage: string
@@ -61,6 +64,8 @@ export interface AppSettings {
   autoBackup: boolean
   /** Deixa a IA pesquisar na internet (gerar e conversar), nos provedores que permitem. */
   aiWebSearch: boolean
+  /** Procurar atualizações sozinho (ao abrir e a cada 6 h). */
+  autoUpdateCheck: boolean
 }
 
 export const IPC = {
@@ -204,6 +209,19 @@ export const IPC = {
   coursesFillDurations: 'courses:fillDurations',
   coursesDurationsUpdated: 'courses:durationsUpdated',
   coursesSetTitleRules: 'courses:setTitleRules',
+  mediaTranscribeCourse: 'media:transcribeCourse',
+  whisperStatus: 'whisper:status',
+  updatesInfo: 'updates:info',
+  updatesCheck: 'updates:check',
+  updatesInstall: 'updates:install',
+  updatesOpenRelease: 'updates:openRelease',
+  updatesState: 'updates:state',
+  whisperDownload: 'whisper:download',
+  whisperCancelDownload: 'whisper:cancelDownload',
+  whisperDelete: 'whisper:delete',
+  whisperProgress: 'whisper:progress',
+  mediaCancelAll: 'media:cancelAll',
+  mediaRetryFailed: 'media:retryFailed',
   aiSuggestTitleRules: 'ai:suggestTitleRules'
 } as const
 
@@ -373,6 +391,18 @@ export interface TramotakApi {
     probe(lessonId: number): Promise<Compatibility & { converted: boolean }>
     checkCourse(courseId: number): Promise<{ checked: number; incompatible: { lessonId: number; title: string; reason: string; plan: string }[] }>
     removeConversion(lessonId: number): Promise<void>
+    /** Aulas de vídeo do curso sem transcrição. */
+    untranscribed(courseId: number): Promise<number>
+    /** Põe na fila a transcrição de todas as aulas de vídeo do curso que ainda não têm. Devolve quantas entraram. */
+    transcribeCourse(courseId: number): Promise<number>
+    cancelAll(): Promise<void>
+    /** Transcrição embutida: se o programa veio nesta instalação e quais modelos estão baixados. */
+    whisperStatus(): Promise<{ available: boolean; installed: WhisperModelId[]; downloading: WhisperModelId | null }>
+    whisperDownload(model: WhisperModelId): Promise<void>
+    whisperCancelDownload(): Promise<void>
+    whisperDelete(model: WhisperModelId): Promise<void>
+    onWhisperProgress(callback: (p: { model: WhisperModelId; fraction: number; done: boolean; error: string | null }) => void): () => void
+    retryFailed(): Promise<number>
     /** Espaço das cópias convertidas; com `clean`, apaga as que nenhuma aula usa. */
     storage(clean: boolean): Promise<{ files: number; bytes: number; removed: number }>
   }
@@ -435,6 +465,15 @@ export interface TramotakApi {
     /** Abre um pacote e devolve o resumo para confirmar. `null` se cancelar. */
     open(): Promise<PackagePreview | null>
     import(request: PackageImportRequest): Promise<PackageImportResult>
+  }
+  updates: {
+    info(): Promise<UpdateInfo>
+    check(): Promise<UpdateInfo>
+    /** Reinicia instalando a versão já baixada. */
+    install(): Promise<void>
+    /** Abre a página da versão nova no navegador. */
+    openRelease(): Promise<void>
+    onState(callback: (info: UpdateInfo) => void): () => void
   }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {

@@ -6,7 +6,9 @@ import { lessonOriginalPath } from '../db/lessons'
 import { getConversion, saveTranscript, setConversion, usedConversions } from '../db/media'
 import { getSettings } from '../db/settings'
 import { conversionArgs, probe, runFfmpeg } from './ffmpeg'
+import { existsSync } from 'node:fs'
 import { GROQ_URL, transcribeMedia } from './transcribe'
+import { modelPath, transcribeLocal } from './whisperLocal'
 
 export interface QueueDeps {
   db: Database
@@ -14,6 +16,8 @@ export interface QueueDeps {
   convertedDir: string
   getApiKey: () => string | null
   onChange: (jobs: MediaJob[]) => void
+  /** Transcrição embutida: o programa (ou null, se não veio nesta instalação) e a pasta dos modelos. */
+  whisper?: { binary: () => string | null; modelsDir: string }
 }
 
 /**
@@ -49,6 +53,53 @@ export class MediaQueue {
     return job
   }
 
+  /** Várias aulas de uma vez (ex.: transcrever o curso inteiro). Devolve quantas entraram na fila. */
+  enqueueMany(kind: MediaJobKind, lessonIds: number[]): number {
+    if (kind === 'transcribe') this.transcriberConfig()
+    const active = new Set(this.jobs.filter((j) => j.kind === kind && (j.status === 'queued' || j.status === 'running')).map((j) => j.lessonId))
+    const title = this.deps.db.prepare("SELECT title FROM lessons WHERE id = ? AND kind = 'video'")
+    let added = 0
+    for (const lessonId of lessonIds) {
+      if (active.has(lessonId)) continue
+      const lesson = title.get(lessonId) as { title: string } | undefined
+      if (!lesson) continue
+      this.jobs.push({ id: this.nextId++, kind, lessonId, lessonTitle: lesson.title, status: 'queued', progress: 0, error: null })
+      active.add(lessonId)
+      added++
+    }
+    if (added) {
+      this.emit()
+      void this.pump()
+    }
+    return added
+  }
+
+  /** Cancela tudo o que está na fila e o que está rodando. */
+  cancelAll(): void {
+    for (const job of this.jobs) {
+      if (job.status === 'queued') job.status = 'canceled'
+      if (job.status === 'running') this.controllers.get(job.id)?.abort()
+    }
+    this.emit()
+  }
+
+  /** Põe de volta na fila as tarefas que falharam (ex.: limite de uso do provedor). */
+  retryFailed(): number {
+    let count = 0
+    for (const job of this.jobs) {
+      if (job.status !== 'error') continue
+      job.status = 'queued'
+      job.progress = 0
+      job.error = null
+      count++
+    }
+    if (count) {
+      this.emit()
+      void this.pump()
+    }
+    return count
+  }
+
   cancel(id: number): void {
     const job = this.jobs.find((j) => j.id === id)
     if (!job) return
@@ -70,6 +121,13 @@ export class MediaQueue {
   private transcriberConfig() {
     const s = getSettings(this.deps.db)
     if (s.transcriptionProvider === 'none') throw new Error('Configure um provedor de transcrição nas Configurações')
+    if (s.transcriptionProvider === 'builtin') {
+      const binary = this.deps.whisper?.binary() ?? null
+      if (!binary || !this.deps.whisper) throw new Error('A transcrição embutida não está disponível nesta instalação')
+      const model = modelPath(this.deps.whisper.modelsDir, s.builtinWhisperModel)
+      if (!existsSync(model)) throw new Error('Baixe o modelo de transcrição em Configurações → Vídeo e transcrição')
+      return { provider: 'builtin' as const, binary, model, modelId: s.builtinWhisperModel, language: s.transcriptionLanguage }
+    }
     if (s.transcriptionProvider === 'groq') {
       const apiKey = this.deps.getApiKey()
       if (!apiKey) throw new Error('Salve a chave de API do Groq nas Configurações')
@@ -136,12 +194,19 @@ export class MediaQueue {
   }
 
   private async transcribe(lessonId: number, onProgress: (p: number) => void, signal: AbortSignal) {
-    const { provider, config } = this.transcriberConfig()
+    const setup = this.transcriberConfig()
     // A cópia convertida, se houver, é mais leve de ler; o áudio é o mesmo.
     const conversion = getConversion(this.deps.db, lessonId)
     const input = conversion ? join(this.deps.convertedDir, conversion.file) : lessonOriginalPath(this.deps.db, lessonId)
     const info = await probe(input)
     if (!info.audioCodec) throw new Error('Este vídeo não tem áudio para transcrever')
+    if (setup.provider === 'builtin') {
+      const segments = await transcribeLocal(input, { binary: setup.binary, model: setup.model, language: setup.language, durationSec: info.durationSec, onProgress, signal })
+      if (segments.length === 0) throw new Error('Nenhuma fala reconhecida neste vídeo')
+      saveTranscript(this.deps.db, lessonId, { provider: 'builtin', model: setup.modelId, language: setup.language || 'auto', segments })
+      return
+    }
+    const { provider, config } = setup
     const segments = await transcribeMedia(input, info.durationSec ?? 0, config, { onProgress, signal })
     if (segments.length === 0) throw new Error('Nenhuma fala reconhecida neste vídeo')
     saveTranscript(this.deps.db, lessonId, { provider, model: config.model, language: config.language || 'auto', segments })

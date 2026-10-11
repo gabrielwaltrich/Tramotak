@@ -27,7 +27,20 @@ const api: TramotakApi = {
     probe: (lessonId) => ipcRenderer.invoke(IPC.mediaProbe, lessonId),
     checkCourse: (courseId) => ipcRenderer.invoke(IPC.mediaCheckCourse, courseId),
     removeConversion: (lessonId) => ipcRenderer.invoke(IPC.mediaRemoveConversion, lessonId),
-    storage: (clean) => ipcRenderer.invoke(IPC.mediaStorage, clean)
+    storage: (clean) => ipcRenderer.invoke(IPC.mediaStorage, clean),
+    untranscribed: (courseId) => ipcRenderer.invoke(IPC.mediaTranscribeCourse, courseId, true),
+    transcribeCourse: (courseId) => ipcRenderer.invoke(IPC.mediaTranscribeCourse, courseId, false),
+    cancelAll: () => ipcRenderer.invoke(IPC.mediaCancelAll),
+    whisperStatus: () => ipcRenderer.invoke(IPC.whisperStatus),
+    whisperDownload: (model) => ipcRenderer.invoke(IPC.whisperDownload, model),
+    whisperCancelDownload: () => ipcRenderer.invoke(IPC.whisperCancelDownload),
+    whisperDelete: (model) => ipcRenderer.invoke(IPC.whisperDelete, model),
+    onWhisperProgress: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, p: unknown) => p && typeof p === 'object' && callback(p as never)
+      ipcRenderer.on(IPC.whisperProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.whisperProgress, listener)
+    },
+    retryFailed: () => ipcRenderer.invoke(IPC.mediaRetryFailed)
   },
   transcripts: {
     get: (lessonId) => ipcRenderer.invoke(IPC.transcriptGet, lessonId),
@@ -161,6 +174,17 @@ const api: TramotakApi = {
       const listener = (_event: Electron.IpcRendererEvent, update: unknown) => update && typeof update === 'object' && callback(update as never)
       ipcRenderer.on(IPC.coursesDurationsUpdated, listener)
       return () => ipcRenderer.removeListener(IPC.coursesDurationsUpdated, listener)
+    }
+  },
+  updates: {
+    info: () => ipcRenderer.invoke(IPC.updatesInfo),
+    check: () => ipcRenderer.invoke(IPC.updatesCheck),
+    install: () => ipcRenderer.invoke(IPC.updatesInstall),
+    openRelease: () => ipcRenderer.invoke(IPC.updatesOpenRelease),
+    onState: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, info: unknown) => info && typeof info === 'object' && callback(info as never)
+      ipcRenderer.on(IPC.updatesState, listener)
+      return () => ipcRenderer.removeListener(IPC.updatesState, listener)
     }
   },
   backup: {

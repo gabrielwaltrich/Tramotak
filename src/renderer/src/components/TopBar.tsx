@@ -1,5 +1,6 @@
 import { Search } from 'lucide-react'
 import { useSearch } from '../lib/searchContext'
+import { UpdateBadge } from './UpdateSettings'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
 
@@ -27,6 +28,7 @@ export function TopBar() {
         <span className="truncate">Buscar cursos, aulas, anotações, flashcards…</span>
         <kbd className="ml-auto shrink-0 rounded border border-border bg-surface-2 px-1.5 text-[10px] tracking-wide">{isMac ? '⌘ K' : 'Ctrl K'}</kbd>
       </button>
+      <UpdateBadge />
     </header>
   )
 }
