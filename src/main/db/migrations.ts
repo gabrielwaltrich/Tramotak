@@ -366,5 +366,8 @@ export const MIGRATIONS: string[] = [
     messages_json TEXT    NOT NULL DEFAULT '[]',
     updated_at    INTEGER NOT NULL DEFAULT (unixepoch())
   );
+  `,
+  /* 10 — regras de nomes por curso (JSON; NULL = títulos como antes) */ `
+  ALTER TABLE courses ADD COLUMN title_rules TEXT;
   `
 ]

@@ -11,6 +11,9 @@ import type {
   ScanResult,
   Structure
 } from '@shared/course'
+import { extname } from 'node:path'
+import { applyTitleRules, normalizeTitleRules, OFF_RULES, type TitleRules } from '@shared/titleRules'
+import { cleanTitle } from '../scanner/titles'
 import { transaction, type Database } from './database'
 
 export interface NewCourse {
@@ -31,6 +34,7 @@ export interface CourseRow {
   numbering: Numbering
   createdAt: number
   lastOpenedAt: number | null
+  titleRules: string | null
 }
 
 interface LessonRow {
@@ -52,7 +56,7 @@ interface ModuleRow {
 type CourseTree = { lessons: CourseLesson[]; modules: CourseModuleNode[] }
 
 const COURSE_COLUMNS = `id, title, description, root_path AS rootPath, structure,
-  scan_structure AS scanStructure, numbering, created_at AS createdAt, last_opened_at AS lastOpenedAt`
+  scan_structure AS scanStructure, numbering, created_at AS createdAt, last_opened_at AS lastOpenedAt, title_rules AS titleRules`
 
 function prepareWriters(db: Database) {
   const insertAsset = db.prepare('INSERT INTO lesson_assets (lesson_id, kind, rel_path, lang) VALUES (?, ?, ?, ?)')
@@ -195,7 +199,64 @@ export function listCourseSummaries(db: Database): CourseSummary[] {
 export function getCourseDetail(db: Database, courseId: number): CourseDetail {
   const row = getCourseRow(db, courseId)
   const tree = loadTree(db, courseId)
-  return { ...summarize(db, row, tree), structure: row.structure, ...tree }
+  return { ...summarize(db, row, tree), structure: row.structure, titleRules: readRules(row.titleRules), ...tree }
+}
+
+function readRules(json: string | null): TitleRules {
+  if (!json) return OFF_RULES
+  try {
+    return normalizeTitleRules(JSON.parse(json))
+  } catch {
+    return OFF_RULES
+  }
+}
+
+/**
+ * Recalcula os títulos de aulas (e, se pedido, módulos) a partir dos nomes dos arquivos e das regras do curso.
+ * Sem regras ligadas, volta ao título padrão (só o prefixo numérico do import). Devolve quantos mudaram.
+ */
+export function retitleCourse(db: Database, courseId: number): number {
+  const course = getCourseRow(db, courseId)
+  const rules = readRules(course.titleRules)
+  const lastSegment = (rel: string) => rel.split('/').pop() ?? rel
+  const fileTitle = (rel: string) => {
+    const name = lastSegment(rel)
+    return rules.enabled ? applyTitleRules(name.slice(0, name.length - extname(name).length), rules) : cleanTitle(name, course.numbering)
+  }
+  const dirTitle = (rel: string) => {
+    const name = lastSegment(rel)
+    return rules.enabled && rules.applyToModules ? applyTitleRules(name, rules) : cleanTitle(name, course.numbering, false)
+  }
+  let changed = 0
+  transaction(db, () => {
+    const lessons = db.prepare('SELECT id, rel_path AS relPath, title FROM lessons WHERE course_id = ?').all(courseId) as { id: number; relPath: string; title: string }[]
+    const setLesson = db.prepare('UPDATE lessons SET title = ? WHERE id = ?')
+    for (const l of lessons) {
+      const title = fileTitle(l.relPath)
+      if (title !== l.title) {
+        setLesson.run(title, l.id)
+        changed++
+      }
+    }
+    const modules = db.prepare('SELECT id, rel_path AS relPath, title FROM modules WHERE course_id = ?').all(courseId) as { id: number; relPath: string; title: string }[]
+    const setModule = db.prepare('UPDATE modules SET title = ? WHERE id = ?')
+    for (const m of modules) {
+      const title = dirTitle(m.relPath)
+      if (title !== m.title) {
+        setModule.run(title, m.id)
+        changed++
+      }
+    }
+  })
+  return changed
+}
+
+/** Guarda as regras de nomes do curso e já recalcula os títulos. */
+export function setTitleRules(db: Database, courseId: number, input: unknown): number {
+  getCourseRow(db, courseId)
+  const rules = normalizeTitleRules(input)
+  db.prepare('UPDATE courses SET title_rules = ?, updated_at = unixepoch() WHERE id = ?').run(JSON.stringify(rules), courseId)
+  return retitleCourse(db, courseId)
 }
 
 export function updateCourse(db: Database, courseId: number, patch: { title: string; description: string }): void {
@@ -292,6 +353,8 @@ export function revalidateCourse(db: Database, courseId: number, scan: ScanResul
     for (const id of existingModules.values()) if (!keptModules.has(id)) deleteModule.run(id)
 
     db.prepare('UPDATE courses SET structure = ?, updated_at = unixepoch() WHERE id = ?').run(scan.structure, courseId)
+    // O scan traz títulos no padrão; as regras do curso, se houver, valem por cima.
+    if (getCourseRow(db, courseId).titleRules) retitleCourse(db, courseId)
   })
 
   return result

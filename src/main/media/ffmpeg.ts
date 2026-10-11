@@ -54,13 +54,19 @@ export function runFfmpeg(args: string[], options: RunOptions = {}): Promise<voi
 }
 
 /** Lê duração, contêiner e codecs com `ffmpeg -i` (que termina com erro de propósito: não há saída). */
-export function probe(file: string): Promise<ProbeResult & { compatibility: Compatibility }> {
+export function probe(file: string, timeoutMs = 20_000): Promise<ProbeResult & { compatibility: Compatibility }> {
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpegPath(), ['-hide_banner', '-i', file], { windowsHide: true })
     let stderr = ''
+    // Arquivo em disco lento ou travado não pode segurar a fila para sempre.
+    const timer = setTimeout(() => child.kill(), timeoutMs)
     child.stderr.on('data', (chunk: Buffer) => (stderr += chunk.toString()))
-    child.on('error', reject)
+    child.on('error', (error) => {
+      clearTimeout(timer)
+      reject(error)
+    })
     child.on('close', () => {
+      clearTimeout(timer)
       if (/No such file|Invalid data found|could not find codec/i.test(stderr) && !/Stream #/.test(stderr)) {
         return reject(new Error('Arquivo de vídeo ilegível ou corrompido'))
       }

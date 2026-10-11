@@ -19,6 +19,8 @@ import { registerBackupIpc } from './ipc/backup'
 import { applyPendingRestore, autoBackup } from './backup/backup'
 import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
+import { DurationScanner } from './media/durations'
+import { probe } from './media/ffmpeg'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
 registerMediaScheme()
@@ -89,7 +91,18 @@ app.whenReady().then(() => {
   if (applyPendingRestore(userData, dbPath, backupsDir)) console.log('Backup restaurado')
   db = openDatabase(dbPath)
   registerIpc(db)
-  registerCourseIpc(db)
+  // Durações dos vídeos medidas pelo FFmpeg, em segundo plano (importação, revalidação e ao abrir o app).
+  const durations = new DurationScanner({
+    db,
+    readDuration: async (file) => (await probe(file)).durationSec,
+    onUpdate: (update) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send(IPC.coursesDurationsUpdated, update)
+    }
+  })
+  registerCourseIpc(db, (courseId) => void durations.request(courseId))
+  ipcMain.handle(IPC.coursesFillDurations, (_e, id: unknown) => {
+    if (Number.isInteger(id)) void durations.request(id as number)
+  })
   registerLessonIpc(db)
   registerNoteIpc(db)
   registerFlashcardIpc(db)
@@ -117,6 +130,7 @@ app.whenReady().then(() => {
   })
   scheduleAutoBackup(backupsDir)
   createWindow()
+  setTimeout(() => void durations.requestAll(), 3000)
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 
   app.on('activate', () => {

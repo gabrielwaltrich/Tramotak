@@ -5,6 +5,7 @@ import {
   AI_PROVIDERS,
   MODEL_NAME,
   MAX_CHAT_QUESTION,
+  extractJson,
   buildChatSystem,
   chatHistory,
   buildPrompt,
@@ -21,6 +22,7 @@ import {
   type ChatSendRequest
 } from '@shared/ai'
 import { IPC, type OllamaPullState } from '@shared/ipc'
+import { buildTitleRulesPrompt, normalizeTitleRules, sampleNames, type TitleRules } from '@shared/titleRules'
 import type { Database } from '../db/database'
 import { getSettings } from '../db/settings'
 import { getSecret, hasSecret, setSecret } from '../secrets'
@@ -90,6 +92,24 @@ export function registerAiIpc(db: Database): void {
   })
 
   ipcMain.handle(IPC.aiCancel, () => running?.abort())
+
+  // Regras de nomes: a IA vê exemplos dos nomes de arquivo e escolhe valores para as regras fixas.
+  ipcMain.handle(IPC.aiSuggestTitleRules, async (_e, courseId: unknown, request: unknown): Promise<TitleRules> => {
+    const provider = getSettings(db).aiProvider
+    if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    const names = (db.prepare('SELECT rel_path AS p FROM lessons WHERE course_id = ? ORDER BY id').all(assertId(courseId)) as { p: string }[]).map((r) => {
+      const name = r.p.split('/').pop() ?? r.p
+      return name.replace(/\.[^.]+$/, '')
+    })
+    if (!names.length) throw new Error('Este curso não tem aulas')
+    const prompt = buildTitleRulesPrompt(sampleNames(names, 20), String(request ?? '').slice(0, 1000))
+    const answer = await chat(
+      clientConfig(db, provider),
+      { system: prompt.system, messages: [{ role: 'user', content: prompt.user }], maxTokens: 1500, json: true },
+      AbortSignal.timeout(120_000)
+    )
+    return normalizeTitleRules({ ...(extractJson(answer.text) as object), enabled: true })
+  })
 
   // ── Conversa sobre a aula ──
   let chatting: AbortController | null = null

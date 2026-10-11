@@ -8,6 +8,7 @@ import type { Question, QuestionAnswer, QuestionInput } from './questions'
 import type { NotebookDetail, NotebookSummary, Page } from './notebooks'
 import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript } from './media'
+import type { TitleRules } from './titleRules'
 import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
 import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest } from './ai'
 import type {
@@ -199,7 +200,11 @@ export const IPC = {
   aiChatSend: 'ai:chatSend',
   aiChatCancel: 'ai:chatCancel',
   aiChatClear: 'ai:chatClear',
-  aiChatDelta: 'ai:chatDelta'
+  aiChatDelta: 'ai:chatDelta',
+  coursesFillDurations: 'courses:fillDurations',
+  coursesDurationsUpdated: 'courses:durationsUpdated',
+  coursesSetTitleRules: 'courses:setTitleRules',
+  aiSuggestTitleRules: 'ai:suggestTitleRules'
 } as const
 
 export interface OllamaPullState {
@@ -409,6 +414,8 @@ export interface TramotakApi {
     chatCancel(): Promise<void>
     chatClear(lessonId: number): Promise<void>
     onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
+    /** Sugestão de regras de nomes para um curso, a partir de exemplos dos nomes e de um pedido opcional. */
+    suggestTitleRules(courseId: number, request: string): Promise<TitleRules>
   }
   backup: {
     /** "Salvar como" e cria um backup completo (sem as chaves de API). `null` se cancelar. */
@@ -452,6 +459,12 @@ export interface TramotakApi {
     update(id: number, patch: { title: string; description: string }): Promise<void>
     delete(id: number): Promise<void>
     revalidate(id: number): Promise<RevalidateResult>
+    /** Guarda as regras de nomes do curso e recalcula os títulos. Devolve quantos mudaram. */
+    setTitleRules(id: number, rules: TitleRules): Promise<number>
+    /** Pede para medir agora as durações que faltam no curso (o processo principal já faz isso sozinho). */
+    fillDurations(id: number): Promise<void>
+    /** Avisa quando novas durações foram medidas. Devolve o "desinscrever". */
+    onDurations(callback: (update: { courseId: number; filled: number; remaining: number; done: boolean }) => void): () => void
     /** Aponta o curso para outra pasta (ex.: depois de restaurar em outro computador). `null` se cancelar. */
     relocate(id: number): Promise<(RevalidateResult & { kept: number }) | null>
   }

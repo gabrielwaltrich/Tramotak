@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Play, PlayCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Play, PlayCircle, Type } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
-import { useDurationProbe } from '../lib/useDurationProbe'
+import { useCourseDurations } from '../lib/useCourseDurations'
 import { Button } from '../components/Button'
 import { FormatCheckDialog } from '../components/media/FormatCheckDialog'
+import { TitleRulesDialog } from '../components/TitleRulesDialog'
 
 function countLessons(m: CourseModuleNode): { total: number; done: number } {
   return m.children.reduce(
@@ -76,8 +77,9 @@ export function CourseDetailPage() {
   const id = Number(useParams().id)
   const navigate = useNavigate()
   const [checking, setChecking] = useState(false)
+  const [naming, setNaming] = useState(false)
   const course = useQuery({ queryKey: queryKeys.course(id), queryFn: () => window.api.courses.get(id) })
-  useDurationProbe(course.data)
+  const measuring = useCourseDurations(id)
 
   if (course.isPending) {
     return (
@@ -99,6 +101,9 @@ export function CourseDetailPage() {
       <header className="mb-6">
         <div className="flex items-start gap-4">
           <h1 className="flex-1 text-2xl font-semibold tracking-tight">{c.title}</h1>
+          <Button variant="ghost" onClick={() => setNaming(true)} title="Regras para deixar os títulos das aulas legíveis">
+            <Type size={16} /> Nomes das aulas
+          </Button>
           <Button variant="ghost" onClick={() => setChecking(true)} title="Verificar se todos os vídeos tocam no player">
             <Film size={16} /> Verificar formatos
           </Button>
@@ -114,7 +119,8 @@ export function CourseDetailPage() {
             c.modules.length > 0 && plural(c.modules.length, 'módulo'),
             plural(c.lessonCount, 'aula'),
             c.durationSec > 0 && formatDuration(c.durationSec),
-            `${progress}% concluído`
+            `${progress}% concluído`,
+            measuring !== null && measuring > 0 && `medindo a duração dos vídeos (faltam ${measuring})`
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -137,6 +143,7 @@ export function CourseDetailPage() {
         ))}
       </ul>
       <FormatCheckDialog courseId={c.id} open={checking} onClose={() => setChecking(false)} />
+      {naming && <TitleRulesDialog course={c} open onClose={() => setNaming(false)} />}
     </div>
   )
 }

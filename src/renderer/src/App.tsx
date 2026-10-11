@@ -23,6 +23,8 @@ import { MindmapsPage } from './routes/MindmapsPage'
 import { MindmapPage } from './routes/MindmapPage'
 import { AiPage } from './routes/AiPage'
 import { SearchContext } from './lib/searchContext'
+import { useQueryClient } from '@tanstack/react-query'
+import { queryKeys } from './lib/api'
 
 export function App() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -33,6 +35,16 @@ export function App() {
   }, [])
   const search = useMemo(() => ({ open: openSearch }), [openSearch])
   const navigate = useNavigate()
+
+  // Durações medidas em segundo plano: atualiza listas e detalhes de cursos aos poucos.
+  const queryClient = useQueryClient()
+  useEffect(
+    () =>
+      window.api.courses.onDurations((u) => {
+        if (u.filled > 0 || u.done) void queryClient.invalidateQueries({ queryKey: queryKeys.courses })
+      }),
+    [queryClient]
+  )
 
   // Clique numa notificação do sistema abre a tela pedida pelo processo principal.
   useEffect(() => window.api.app.onNavigate((path) => navigate(path)), [navigate])

@@ -1,3 +1,4 @@
+import type { TitleRules } from './titleRules'
 /** Tipos do domínio de cursos, compartilhados entre main e renderer. */
 
 /** Como o scanner interpreta a hierarquia de pastas. */
@@ -125,6 +126,8 @@ export interface CourseModuleNode {
 
 export interface CourseDetail extends CourseSummary {
   structure: Exclude<Structure, 'auto'>
+  /** Regras de nomes das aulas deste curso. */
+  titleRules: TitleRules
   lessons: CourseLesson[]
   modules: CourseModuleNode[]
 }

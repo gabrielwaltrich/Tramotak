@@ -120,7 +120,10 @@ settings       (key PK, value_json)
 4. No modo `auto`, a profundidade é deduzida pelo nível em que aparecem os vídeos: 0 é flat, 1 é módulos e 2 é submódulos.
 4b. **Pastas-aula** (só no `auto`): se uma pasta tem 2 ou mais subpastas e todas têm exatamente um vídeo e nenhuma subpasta, cada subpasta vira uma aula (título = nome da pasta, demais arquivos = anexos). Submódulos de uma aula só ficam idênticos a isso; nesse caso o usuário escolhe "Módulos > Submódulos" na prévia.
 4c. Subpastas além da profundidade escolhida são achatadas no nível acima, com aviso.
-5. A duração vem dos metadados do vídeo, lidos no renderer com um `<video>` oculto em lote após o import, sem precisar de FFmpeg no MVP.
+5. A duração vem dos metadados do vídeo. No MVP era lida no renderer com um `<video>` oculto, um por vez; com
+   cursos grandes (1.000+ vídeos) isso não terminava (parava ao sair da página). Desde a 0.4.3 o processo principal
+   mede com o FFmpeg (`DurationScanner`): 4 arquivos em paralelo (~0,1 s cada), ao abrir o app, ao importar,
+   revalidar e trocar a pasta, avisando a interface a cada segundo.
 6. Arquivos ocultos e lixo do sistema (`.DS_Store`, `Thumbs.db`, `desktop.ini`) são ignorados.
 7. **Avisos da prévia:** pasta vazia, vídeo em formato possivelmente incompatível (HEVC/H.265) e caminhos muito longos no Windows.
 
@@ -435,6 +438,17 @@ Tramotak/
    - Estilos prontos (Tramotak, Foco, Noturno azul, Leitura, Claro) com miniaturas desenhadas nas próprias cores;
      ajuste fino depois e "voltar ao padrão". Guardado por computador (localStorage), migrando a preferência
      antiga de claro/escuro. Mapa mental (nó central e PNG) segue a cor escolhida.
+
+11. ✅ **Nomes das aulas** (depois do roadmap)
+   - Núcleo puro em `src/shared/titleRules.ts`: código inicial (`#F0009` → `9`, tirar ou não mexer; sem confundir
+     com uma data), formato do número, datas, numeração interna, autor e tudo depois do `@` (com o "By/Por"),
+     emojis, `_` → espaço, sufixos de cópia, maiúscula inicial, textos para tirar e trocas literais; resultado
+     vazio vira "Aula N". Testado com os 1.092 nomes reais de um curso: nenhum resultado estranho.
+   - Migration 10: `courses.title_rules` (JSON). `retitleCourse` recalcula títulos de aulas (e módulos, se pedido)
+     a partir dos nomes dos arquivos; revalidar e trocar a pasta reaplicam as regras; a busca acompanha.
+   - Janela "Nomes das aulas" no curso, com prévia (exemplos variados ou todas as aulas). Ajuda opcional da IA: vê
+     até 20 nomes de exemplo e um pedido livre e só escolhe valores das regras fixas (sem código/expressões),
+     validados antes de aparecer na prévia; nada é salvo sem confirmar.
 
 ---
 

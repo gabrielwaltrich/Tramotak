@@ -54,6 +54,7 @@ const api: TramotakApi = {
     chatSend: (request) => ipcRenderer.invoke(IPC.aiChatSend, request),
     chatCancel: () => ipcRenderer.invoke(IPC.aiChatCancel),
     chatClear: (lessonId) => ipcRenderer.invoke(IPC.aiChatClear, lessonId),
+    suggestTitleRules: (courseId, request) => ipcRenderer.invoke(IPC.aiSuggestTitleRules, courseId, request),
     onChatDelta: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, delta: unknown) => delta && typeof delta === 'object' && callback(delta as never)
       ipcRenderer.on(IPC.aiChatDelta, listener)
@@ -153,7 +154,14 @@ const api: TramotakApi = {
     update: (id, patch) => ipcRenderer.invoke(IPC.coursesUpdate, id, patch),
     delete: (id) => ipcRenderer.invoke(IPC.coursesDelete, id),
     revalidate: (id) => ipcRenderer.invoke(IPC.coursesRevalidate, id),
-    relocate: (id) => ipcRenderer.invoke(IPC.coursesRelocate, id)
+    relocate: (id) => ipcRenderer.invoke(IPC.coursesRelocate, id),
+    fillDurations: (id) => ipcRenderer.invoke(IPC.coursesFillDurations, id),
+    setTitleRules: (id, rules) => ipcRenderer.invoke(IPC.coursesSetTitleRules, id, rules),
+    onDurations: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, update: unknown) => update && typeof update === 'object' && callback(update as never)
+      ipcRenderer.on(IPC.coursesDurationsUpdated, listener)
+      return () => ipcRenderer.removeListener(IPC.coursesDurationsUpdated, listener)
+    }
   },
   backup: {
     create: () => ipcRenderer.invoke(IPC.backupCreate),

@@ -12,6 +12,7 @@ import {
   insertScannedCourse,
   listCourseSummaries,
   revalidateCourse,
+  setTitleRules,
   updateCourse
 } from '../db/courses'
 import { scanCourse } from '../scanner/scan'
@@ -49,7 +50,8 @@ function assertId(id: unknown): number {
   return id as number
 }
 
-export function registerCourseIpc(db: Database): void {
+/** `onScanned`: curso importado ou com arquivos relidos (para medir as durações que faltam). */
+export function registerCourseIpc(db: Database, onScanned: (courseId: number) => void = () => {}): void {
   ipcMain.handle(IPC.pickFolder, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     const options = { title: 'Escolha a pasta do curso', properties: ['openDirectory' as const] }
@@ -74,10 +76,13 @@ export function registerCourseIpc(db: Database): void {
     if (findCourseByRoot(db, root) !== null) throw new Error('Esta pasta já foi importada')
     const scan = await scanCourse(root, input)
     if (scan.stats.lessons === 0) throw new Error('Nenhuma aula encontrada nesta pasta')
-    return insertScannedCourse(db, { title, rootPath: root, numbering: input.numbering, scanStructure: input.structure }, scan)
+    const courseId = insertScannedCourse(db, { title, rootPath: root, numbering: input.numbering, scanStructure: input.structure }, scan)
+    onScanned(courseId)
+    return courseId
   })
 
   ipcMain.handle(IPC.coursesList, () => listCourseSummaries(db))
+  ipcMain.handle(IPC.coursesSetTitleRules, (_e, id: number, rules: unknown) => setTitleRules(db, assertId(id), rules))
   ipcMain.handle(IPC.coursesGet, (_e, id: number) => getCourseDetail(db, assertId(id)))
 
   ipcMain.handle(IPC.coursesUpdate, (_e, id: number, patch: { title: string; description: string }) =>
@@ -92,7 +97,9 @@ export function registerCourseIpc(db: Database): void {
       throw new Error('A pasta do curso não existe mais neste caminho. Se ela mudou de lugar, use “Trocar pasta…” no menu do curso.')
     })
     const scan = await scanCourse(root, { structure: course.scanStructure, numbering: course.numbering })
-    return revalidateCourse(db, course.id, scan)
+    const result = revalidateCourse(db, course.id, scan)
+    onScanned(course.id)
+    return result
   })
 
   /** Nova pasta para o curso: casa as aulas pelo caminho relativo, mantendo progresso e anotações. */
@@ -119,6 +126,7 @@ export function registerCourseIpc(db: Database): void {
     return transaction(db, () => {
       db.prepare('UPDATE courses SET root_path = ? WHERE id = ?').run(root, course.id)
       const result = revalidateCourse(db, course.id, scan)
+      onScanned(course.id)
       const kept = (db.prepare('SELECT COUNT(*) AS n FROM lessons WHERE course_id = ?').get(course.id) as { n: number }).n - result.added
       return { ...result, kept }
     })
