@@ -117,7 +117,7 @@ app.whenReady().then(() => {
   registerNotebookIpc(db)
   const convertedDir = join(app.getPath('userData'), 'converted')
   handleMediaProtocol(db, convertedDir)
-  registerMediaIpc(db, convertedDir)
+  const mediaQueue = registerMediaIpc(db, convertedDir)
   registerAiIpc(db)
   registerBackupIpc({
     db,
@@ -149,6 +149,12 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.updatesInstall, () => updater.install())
   ipcMain.handle(IPC.updatesOpenRelease, () => updater.openRelease())
   updater.start()
+
+  // Ao sair, encerra o trabalho em segundo plano (FFmpeg, whisper) para nenhum processo filho segurar o app.
+  app.on('before-quit', () => {
+    durations.stop()
+    mediaQueue.cancelAll()
+  })
   startNotifier(db, () => BrowserWindow.getAllWindows()[0])
 
   app.on('activate', () => {

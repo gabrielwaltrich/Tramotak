@@ -20,6 +20,16 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
   }, coursePath)
   const page = await app.firstWindow()
   await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible()
+  // No Windows do CI o Electron às vezes demora minutos para sair (e o teste estoura o tempo, levando o perfil
+  // compartilhado junto). Dá 15 s para fechar normalmente; depois, encerra o processo.
+  const close = app.close.bind(app)
+  app.close = async () => {
+    let timer: NodeJS.Timeout | undefined
+    const timeout = new Promise<'timeout'>((resolve) => (timer = setTimeout(() => resolve('timeout'), 15_000)))
+    const result = await Promise.race([close().then(() => 'closed' as const), timeout])
+    clearTimeout(timer)
+    if (result === 'timeout') app.process().kill()
+  }
   return { app, page }
 }
 

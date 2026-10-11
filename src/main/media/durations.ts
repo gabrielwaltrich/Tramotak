@@ -29,11 +29,19 @@ export class DurationScanner {
   private readonly pending = new Set<number>()
   private readonly failed = new Set<number>()
   private running: Promise<void> | null = null
+  private stopped = false
 
   constructor(private readonly options: DurationScannerOptions) {}
 
+  /** Para de agendar e de ler arquivos (ao fechar o app). */
+  stop(): void {
+    this.stopped = true
+    this.pending.clear()
+  }
+
   /** Agenda um curso (repetir o pedido não duplica o trabalho). */
   request(courseId: number): Promise<void> {
+    if (this.stopped) return Promise.resolve()
     this.pending.add(courseId)
     return this.start()
   }
@@ -86,10 +94,11 @@ export class DurationScanner {
     }
 
     const worker = async () => {
-      for (let id = queue.shift(); id !== undefined; id = queue.shift()) {
+      for (let id = queue.shift(); id !== undefined && !this.stopped; id = queue.shift()) {
         const duration = await Promise.resolve()
           .then(() => readDuration(lessonOriginalPath(db, id)))
           .catch(() => null)
+        if (this.stopped) return
         // A aula pode ter sido removida enquanto o arquivo era lido.
         if (duration && duration > 0 && db.prepare('SELECT 1 FROM lessons WHERE id = ?').get(id)) {
           setDuration(db, id, duration)
