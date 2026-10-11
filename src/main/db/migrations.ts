@@ -139,5 +139,60 @@ export const MIGRATIONS: string[] = [
   INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 2, title, '' FROM modules;
   INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 3, title, '' FROM lessons;
   INSERT INTO search_index (rowid, title, body) SELECT id * 8 + 4, '', body_md FROM notes;
+  `,
+  /* 4 — flashcards com repetição espaçada (SM-2). Cards entram na busca com tipo 5. */ `
+  CREATE TABLE decks (
+    id          INTEGER PRIMARY KEY,
+    title       TEXT    NOT NULL,
+    description TEXT    NOT NULL DEFAULT '',
+    course_id   INTEGER REFERENCES courses(id) ON DELETE SET NULL,
+    created_at  INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at  INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+
+  CREATE TABLE cards (
+    id             INTEGER PRIMARY KEY,
+    deck_id        INTEGER NOT NULL REFERENCES decks(id) ON DELETE CASCADE,
+    front          TEXT    NOT NULL,
+    back           TEXT    NOT NULL DEFAULT '',
+    lesson_id      INTEGER REFERENCES lessons(id) ON DELETE SET NULL,
+    timestamp_sec  REAL,
+    state          TEXT    NOT NULL DEFAULT 'new' CHECK (state IN ('new', 'learning', 'review', 'relearning')),
+    step           INTEGER NOT NULL DEFAULT 0,
+    interval_days  REAL    NOT NULL DEFAULT 0,
+    ease           REAL    NOT NULL DEFAULT 2.5,
+    due            INTEGER NOT NULL DEFAULT 0,
+    reps           INTEGER NOT NULL DEFAULT 0,
+    lapses         INTEGER NOT NULL DEFAULT 0,
+    last_review_at INTEGER,
+    created_at     INTEGER NOT NULL DEFAULT (unixepoch()),
+    updated_at     INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE INDEX cards_queue ON cards(deck_id, state, due);
+  CREATE INDEX cards_lesson ON cards(lesson_id);
+
+  CREATE TABLE reviews (
+    id              INTEGER PRIMARY KEY,
+    card_id         INTEGER NOT NULL REFERENCES cards(id) ON DELETE CASCADE,
+    reviewed_at     INTEGER NOT NULL,
+    rating          INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 4),
+    state_before    TEXT    NOT NULL,
+    interval_before REAL    NOT NULL,
+    interval_after  REAL    NOT NULL,
+    ease_after      REAL    NOT NULL,
+    duration_ms     INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX reviews_card ON reviews(card_id, reviewed_at);
+  CREATE INDEX reviews_day ON reviews(reviewed_at);
+
+  CREATE TRIGGER search_card_ai AFTER INSERT ON cards BEGIN
+    INSERT INTO search_index (rowid, title, body) VALUES (new.id * 8 + 5, new.front, new.back);
+  END;
+  CREATE TRIGGER search_card_au AFTER UPDATE OF front, back ON cards BEGIN
+    UPDATE search_index SET title = new.front, body = new.back WHERE rowid = new.id * 8 + 5;
+  END;
+  CREATE TRIGGER search_card_ad AFTER DELETE ON cards BEGIN
+    DELETE FROM search_index WHERE rowid = old.id * 8 + 5;
+  END;
   `
 ]

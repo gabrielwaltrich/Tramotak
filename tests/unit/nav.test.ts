@@ -9,9 +9,9 @@ describe('navegação', () => {
     expect(new Set(paths).size).toBe(paths.length)
   })
 
-  it('libera Início, Meus Cursos, Buscar e Configurações', () => {
+  it('libera Início, Meus Cursos, Buscar, Flashcards e Configurações', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
-    expect(enabled).toEqual(['/', '/courses', '/search', '/settings'])
+    expect(enabled).toEqual(['/', '/courses', '/search', '/flashcards', '/settings'])
   })
 
   it('Buscar abre a paleta em vez de navegar', () => {

@@ -8,6 +8,9 @@ import { PlayerPage } from './routes/PlayerPage'
 import { SettingsPage } from './routes/SettingsPage'
 import { ComingSoonPage } from './routes/ComingSoonPage'
 import { SearchPalette } from './components/SearchPalette'
+import { FlashcardsPage } from './routes/FlashcardsPage'
+import { DeckPage } from './routes/DeckPage'
+import { StudyPage } from './routes/StudyPage'
 import { SearchContext } from './lib/searchContext'
 
 export function App() {
@@ -37,6 +40,9 @@ export function App() {
             <Route path="/courses" element={<CoursesPage />} />
             <Route path="/courses/:id" element={<CourseDetailPage />} />
             <Route path="/lesson/:id" element={<PlayerPage />} />
+            <Route path="/flashcards" element={<FlashcardsPage />} />
+            <Route path="/flashcards/:id" element={<DeckPage />} />
+            <Route path="/flashcards/:id/study" element={<StudyPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="*" element={<ComingSoonPage />} />
           </Routes>

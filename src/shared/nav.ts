@@ -27,7 +27,7 @@ export const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Início', icon: 'home' },
   { path: '/courses', label: 'Meus Cursos', icon: 'book' },
   { path: '/search', label: 'Buscar', icon: 'search', action: 'search', shortcut: 'Ctrl K' },
-  { path: '/flashcards', label: 'Flashcards', icon: 'layers', soon: true },
+  { path: '/flashcards', label: 'Flashcards', icon: 'layers' },
   { path: '/questions', label: 'Questões', icon: 'clipboard', soon: true },
   { path: '/planner', label: 'Planner', icon: 'calendar', soon: true },
   { path: '/progress', label: 'Progresso', icon: 'activity', soon: true },

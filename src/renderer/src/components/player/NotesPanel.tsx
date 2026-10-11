@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Loader2, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
+import { Clock, Layers, Loader2, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
 import type { Note } from '@shared/course'
 import { formatClock } from '@shared/format'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
 import { TextArea } from '../Field'
 import { useToast } from '../Toast'
+import { CardFromNoteDialog } from '../flashcards/CardFromNoteDialog'
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
@@ -29,7 +30,7 @@ function TimeChip({ seconds, onClick }: { seconds: number; onClick?: () => void 
   )
 }
 
-function NoteItem({ note, onSeek, lessonId }: { note: Note; onSeek?: (sec: number) => void; lessonId: number }) {
+function NoteItem({ note, onSeek, lessonId, onMakeCard }: { note: Note; onSeek?: (sec: number) => void; lessonId: number; onMakeCard: (note: Note) => void }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.body)
   const [confirming, setConfirming] = useState(false)
@@ -107,6 +108,9 @@ function NoteItem({ note, onSeek, lessonId }: { note: Note; onSeek?: (sec: numbe
           </div>
         ) : (
           <div className="flex shrink-0 gap-0.5 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+            <button type="button" onClick={() => onMakeCard(note)} aria-label="Criar flashcard" title="Criar flashcard" className="grid size-7 place-items-center rounded text-muted hover:bg-surface hover:text-text">
+              <Layers size={14} />
+            </button>
             <button type="button" onClick={() => setEditing(true)} aria-label="Editar anotação" className="grid size-7 place-items-center rounded text-muted hover:bg-surface hover:text-text">
               <Pencil size={14} />
             </button>
@@ -123,8 +127,9 @@ function NoteItem({ note, onSeek, lessonId }: { note: Note; onSeek?: (sec: numbe
  * Anotações da aula. `N` (fora de campos de texto) abre o editor já com o horário atual do vídeo;
  * Ctrl/Cmd+Enter salva, Esc cancela.
  */
-export function NotesPanel({ lessonId, notes, loading, getTime, onSeek }: {
+export function NotesPanel({ lessonId, course, notes, loading, getTime, onSeek }: {
   lessonId: number
+  course: { id: number; title: string }
   notes: Note[]
   loading: boolean
   /** Horário atual do vídeo; `null` quando a aula não é vídeo. */
@@ -132,6 +137,7 @@ export function NotesPanel({ lessonId, notes, loading, getTime, onSeek }: {
   onSeek?: (sec: number) => void
 }) {
   const [composing, setComposing] = useState<{ timestampSec: number | null } | null>(null)
+  const [cardNote, setCardNote] = useState<Note | null>(null)
   const [draft, setDraft] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const queryClient = useQueryClient()
@@ -246,10 +252,11 @@ export function NotesPanel({ lessonId, notes, loading, getTime, onSeek }: {
       ) : (
         <ul className="divide-y divide-border">
           {notes.map((n) => (
-            <NoteItem key={n.id} note={n} onSeek={onSeek} lessonId={lessonId} />
+            <NoteItem key={n.id} note={n} onSeek={onSeek} lessonId={lessonId} onMakeCard={setCardNote} />
           ))}
         </ul>
       )}
+      <CardFromNoteDialog note={cardNote} lessonId={lessonId} course={course} onClose={() => setCardNote(null)} />
     </div>
   )
 }

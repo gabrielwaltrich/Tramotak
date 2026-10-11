@@ -196,9 +196,11 @@ export interface DashboardData {
   lessonsCompletedToday: number
   streak: { current: number; todayDone: boolean; best: number }
   continueLesson: ContinueLesson | null
+  /** Flashcards para estudar hoje, somando todos os baralhos. */
+  cardsDueToday: number
 }
 
-export type SearchKind = 'course' | 'module' | 'lesson' | 'note'
+export type SearchKind = 'course' | 'module' | 'lesson' | 'note' | 'card'
 
 /**
  * Resultado da busca global. `title` e `snippet` trazem os trechos encontrados entre
@@ -215,6 +217,9 @@ export interface SearchHit {
   lessonId: number | null
   lessonKind: LessonKind | null
   timestampSec: number | null
+  /** Só para cartas. Em cartas, `courseId`/`courseTitle` vêm da aula ligada (ou 0/vazio). */
+  deckId: number | null
+  deckTitle: string | null
 }
 
 export const HL_START = '\u0001'

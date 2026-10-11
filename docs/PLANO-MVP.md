@@ -275,7 +275,19 @@ Tramotak/
      pontuação são descartados. Ordenação por `bm25`, com peso 4 no título.
    - Paleta com resultados agrupados, trechos destacados, setas/Enter/Esc e buscas recentes.
      Anotações abrem a aula no horário delas (`/lesson/:id?t=segundos`).
-3. **Flashcards** com SRS (SM-2 e depois FSRS), cards criados a partir de anotações, import `.apkg`
+3. ✅ **Flashcards** com repetição espaçada (SM-2), cartas a partir de anotações, import `.apkg`/`.txt`
+   - Agendador puro em `src/shared/srs.ts`: etapas 1 e 10 min, graduação 1 dia, Fácil 4 dias, facilidade 2,5
+     (mín. 1,3), bônus Fácil 1,3, Difícil 1,2×, lapso → reaprendizado de 10 min e volta com 1 dia; variação
+     aleatória em intervalos longos; o atraso conta como no Anki. Vencimento à meia-noite local.
+   - Migration 4: `decks`, `cards` (estado SM-2 na própria carta), `reviews` (histórico). Cartas na busca (tipo 5).
+   - Fila na ordem do Anki: aprendizado vencido → revisões de hoje → novas → aprendizado adiantado (20 min).
+     Limites diários por baralho: 20 novas e 200 revisões.
+   - Carta criada de uma anotação guarda aula e horário; "Ver na aula" volta ao ponto do vídeo.
+   - Tempo de resposta (até 60 s por carta) soma na meta diária e na sequência.
+   - Importação: `.apkg` antigo (`collection.anki2`) e novo (`collection.anki21b`, zstd), com HTML convertido
+     em texto e cloze virando pergunta/resposta; `.txt`/`.tsv` (Anki) ou `frente;verso`. Entra como cartas
+     novas (o agendamento do Anki não é importado). Leitor de ZIP próprio, sem dependências.
+   - Fica para depois: FSRS, opções por baralho, mídia (imagem/áudio) nas cartas, desfazer resposta.
 4. **Planner + Progresso** (calendário, kanban, heatmap, metas)
 5. **Questões e simulados** (bancos, blueprints, cronômetro)
 6. **Cadernos e mapas mentais**

@@ -3,9 +3,7 @@ import type { LessonView, ProgressUpdate } from '@shared/course'
 import { mediaUrl } from '@shared/media'
 import { getCourseDetail, orderedLessons } from './courses'
 import { transaction, type Database } from './database'
-
-/** Sessões separadas por mais que isso viram registros diferentes. */
-const SESSION_GAP_SEC = 120
+import { recordStudyTime } from './study'
 
 /** Caminho absoluto dentro da raiz do curso; recusa qualquer coisa que escape dela. */
 export function resolveInside(root: string, relPath: string): string {
@@ -116,18 +114,7 @@ export function saveProgress(db: Database, update: ProgressUpdate, now = Math.fl
     }
     db.prepare('UPDATE courses SET last_opened_at = ? WHERE id = ?').run(now, courseId)
 
-    if (watched > 0) {
-      const last = db
-        .prepare('SELECT id, ended_at AS endedAt FROM study_sessions WHERE lesson_id = ? ORDER BY ended_at DESC LIMIT 1')
-        .get(update.lessonId) as { id: number; endedAt: number } | undefined
-      if (last && now - last.endedAt <= SESSION_GAP_SEC + watched) {
-        db.prepare('UPDATE study_sessions SET ended_at = ?, seconds = seconds + ? WHERE id = ?').run(now, watched, last.id)
-      } else {
-        db.prepare('INSERT INTO study_sessions (lesson_id, started_at, ended_at, seconds) VALUES (?, ?, ?, ?)').run(
-          update.lessonId, now - watched, now, watched
-        )
-      }
-    }
+    recordStudyTime(db, update.lessonId, watched, now)
   })
 }
 

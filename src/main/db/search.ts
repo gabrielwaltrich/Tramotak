@@ -1,7 +1,7 @@
 import { HL_END, HL_START, type SearchHit, type SearchKind } from '@shared/course'
 import type { Database } from './database'
 
-const KINDS: Record<number, SearchKind> = { 1: 'course', 2: 'module', 3: 'lesson', 4: 'note' }
+const KINDS: Record<number, SearchKind> = { 1: 'course', 2: 'module', 3: 'lesson', 4: 'note', 5: 'card' }
 const MIN_QUERY_CHARS = 2
 const DEFAULT_LIMIT = 60
 
@@ -46,7 +46,7 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
     )
     .all(HL_START, HL_END, HL_START, HL_END, query, limit) as unknown as RawHit[]
 
-  const ids: Record<SearchKind, number[]> = { course: [], module: [], lesson: [], note: [] }
+  const ids: Record<SearchKind, number[]> = { course: [], module: [], lesson: [], note: [], card: [] }
   for (const r of raw) ids[KINDS[r.rowid % 8]].push(Math.floor(r.rowid / 8))
 
   const byId = <T extends { id: number }>(rows: T[]) => new Map(rows.map((r) => [r.id, r]))
@@ -84,12 +84,20 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
       WHERE n.id IN ($IDS)`
   )
 
+  const cards = fetch<{ id: number; deckId: number; deckTitle: string; courseId: number | null; courseTitle: string | null }>(
+    ids.card,
+    `SELECT k.id, k.deck_id AS deckId, d.title AS deckTitle, l.course_id AS courseId, c.title AS courseTitle
+       FROM cards k JOIN decks d ON d.id = k.deck_id
+       LEFT JOIN lessons l ON l.id = k.lesson_id LEFT JOIN courses c ON c.id = l.course_id
+      WHERE k.id IN ($IDS)`
+  )
+
   const hits: SearchHit[] = []
   for (const r of raw) {
     const kind = KINDS[r.rowid % 8]
     const id = Math.floor(r.rowid / 8)
     const body = r.body && r.body.includes(HL_START) ? r.body : null
-    const base = { kind, id, title: r.title, snippet: body, lessonId: null, lessonKind: null, timestampSec: null, moduleTitle: null }
+    const base = { kind, id, title: r.title, snippet: body, lessonId: null, lessonKind: null, timestampSec: null, moduleTitle: null, deckId: null, deckTitle: null }
 
     if (kind === 'course' && courses.has(id)) {
       hits.push({ ...base, courseId: id, courseTitle: r.title.replaceAll(HL_START, '').replaceAll(HL_END, '') })
@@ -112,6 +120,9 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
         lessonKind: n.lessonKind,
         timestampSec: n.timestampSec
       })
+    } else if (kind === 'card' && cards.has(id)) {
+      const k = cards.get(id)!
+      hits.push({ ...base, courseId: k.courseId ?? 0, courseTitle: k.courseTitle ?? '', deckId: k.deckId, deckTitle: k.deckTitle })
     }
   }
   return hits

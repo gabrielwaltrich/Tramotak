@@ -6,7 +6,9 @@ Windows, macOS e Linux.
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele.
-- **Início:** continuar assistindo, meta diária de minutos e sequência de dias de estudo.
+- **Busca global:** `Ctrl+K` em qualquer tela encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
+- **Flashcards:** repetição espaçada no estilo do Anki (SM-2); transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
+- **Início:** continuar assistindo, flashcards do dia, meta diária de minutos e sequência de dias de estudo.
 
 Tudo fica só no seu computador: o Tramotak lê as pastas dos cursos sem alterá-las e guarda progresso e anotações num banco local.
 

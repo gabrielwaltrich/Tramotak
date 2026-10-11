@@ -9,6 +9,7 @@ import { search } from './db/search'
 import { registerCourseIpc } from './ipc/courses'
 import { registerLessonIpc } from './ipc/lessons'
 import { registerNoteIpc } from './ipc/notes'
+import { registerFlashcardIpc } from './ipc/flashcards'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
 
 registerMediaScheme()
@@ -78,6 +79,7 @@ app.whenReady().then(() => {
   registerCourseIpc(db)
   registerLessonIpc(db)
   registerNoteIpc(db)
+  registerFlashcardIpc(db)
   handleMediaProtocol(db)
   createWindow()
 

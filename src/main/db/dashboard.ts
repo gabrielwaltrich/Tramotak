@@ -3,6 +3,7 @@ import { computeStreak, dayKey, STREAK_MIN_SECONDS } from '@shared/streak'
 import { getCourseDetail, orderedLessons } from './courses'
 import type { Database } from './database'
 import { getSettings } from './settings'
+import { dueToday } from './flashcards'
 
 /** Janela de histórico considerada para a sequência e o recorde. */
 const HISTORY_DAYS = 400
@@ -74,6 +75,7 @@ export function getDashboard(db: Database, now = new Date()): DashboardData {
     goalMinutes: getSettings(db).dailyGoalMinutes,
     lessonsCompletedToday: completedToday.n,
     streak: computeStreak(activeDays, now),
-    continueLesson: suggestContinue(db)
+    continueLesson: suggestContinue(db),
+    cardsDueToday: dueToday(db, Math.floor(now.getTime() / 1000))
   }
 }

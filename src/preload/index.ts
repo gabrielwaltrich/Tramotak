@@ -12,6 +12,25 @@ const api: TramotakApi = {
   search: {
     query: (text) => ipcRenderer.invoke(IPC.searchQuery, text)
   },
+  decks: {
+    list: () => ipcRenderer.invoke(IPC.decksList),
+    get: (id) => ipcRenderer.invoke(IPC.decksGet, id),
+    create: (input) => ipcRenderer.invoke(IPC.decksCreate, input),
+    update: (id, patch) => ipcRenderer.invoke(IPC.decksUpdate, id, patch),
+    delete: (id) => ipcRenderer.invoke(IPC.decksDelete, id),
+    forCourse: (courseId) => ipcRenderer.invoke(IPC.decksForCourse, courseId),
+    importFile: () => ipcRenderer.invoke(IPC.decksImport)
+  },
+  cards: {
+    create: (input) => ipcRenderer.invoke(IPC.cardsCreate, input),
+    update: (id, patch) => ipcRenderer.invoke(IPC.cardsUpdate, id, patch),
+    delete: (id) => ipcRenderer.invoke(IPC.cardsDelete, id),
+    reset: (id) => ipcRenderer.invoke(IPC.cardsReset, id)
+  },
+  study: {
+    next: (deckId) => ipcRenderer.invoke(IPC.studyNext, deckId),
+    answer: (cardId, rating, durationMs) => ipcRenderer.invoke(IPC.studyAnswer, cardId, rating, durationMs)
+  },
   settings: {
     get: () => ipcRenderer.invoke(IPC.settingsGet),
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch)

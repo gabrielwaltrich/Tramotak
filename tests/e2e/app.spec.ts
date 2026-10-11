@@ -119,3 +119,38 @@ test('busca global: Ctrl+K encontra a anotação e abre o vídeo no horário del
   await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThanOrEqual(t)
   await app.close()
 })
+
+test('flashcards: anotação vira carta, estudo com teclado e link de volta para a aula', async () => {
+  const { app, page } = await launch()
+  await page.getByRole('link', { name: 'Meus Cursos' }).click()
+  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('link', { name: /Boas-vindas/ }).click()
+
+  // Criar a carta a partir da anotação do primeiro teste
+  await page.getByRole('tabpanel').getByText('Minha primeira anotação').hover()
+  await page.getByRole('button', { name: 'Criar flashcard' }).click()
+  const dialog = page.getByRole('dialog')
+  await expect(dialog.getByLabel('Frente (pergunta)')).toHaveValue('Minha primeira anotação')
+  await expect(dialog.getByLabel('Baralho')).toContainText('Novo baralho: Curso E2E')
+  await dialog.getByLabel('Verso (resposta)').fill('Resposta da carta')
+  await dialog.getByRole('button', { name: 'Criar carta' }).click()
+  await expect(page.getByText('Carta criada em “Curso E2E”')).toBeVisible()
+
+  // Estudar: Espaço revela, 4 = Fácil
+  await page.getByRole('link', { name: 'Flashcards' }).click()
+  await expect(page.getByText('1 novas')).toBeVisible()
+  await page.getByRole('button', { name: 'Estudar' }).click()
+  await expect(page.getByText('Minha primeira anotação')).toBeVisible()
+  await page.keyboard.press('Space')
+  await expect(page.getByText('Resposta da carta')).toBeVisible()
+  await expect(page.getByRole('button', { name: /Fácil\s*4 dias/ })).toBeVisible()
+  await expect(page.getByRole('link', { name: /Ver na aula: Boas-vindas/ })).toHaveAttribute('href', /#\/lesson\/\d+\?t=\d+/)
+  await page.keyboard.press('4')
+  await expect(page.getByText('Parabéns! Você terminou este baralho por hoje.')).toBeVisible()
+
+  // A carta passou a ser revisão, para daqui a 4 dias
+  await page.getByRole('link', { name: 'Ver baralho' }).click()
+  await expect(page.getByText('Revisão')).toBeVisible()
+  await expect(page.getByText('em 4 dias')).toBeVisible()
+  await app.close()
+})

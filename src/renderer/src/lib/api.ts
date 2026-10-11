@@ -11,5 +11,8 @@ export const queryKeys = {
   course: (id: number) => ['courses', id] as const,
   lesson: (id: number) => ['lessons', id] as const,
   notes: (lessonId: number) => ['notes', lessonId] as const,
-  search: (text: string) => ['search', text] as const
+  search: (text: string) => ['search', text] as const,
+  decks: ['decks'] as const,
+  deck: (id: number) => ['decks', id] as const,
+  study: (deckId: number) => ['study', deckId] as const
 }

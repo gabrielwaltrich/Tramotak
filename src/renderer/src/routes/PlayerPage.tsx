@@ -233,6 +233,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
             {tab === 'notes' || attachments.length === 0 ? (
               <NotesPanel
                 lessonId={l.id}
+                course={l.course}
                 notes={notes.data ?? []}
                 loading={notes.isPending}
                 getTime={getTime}

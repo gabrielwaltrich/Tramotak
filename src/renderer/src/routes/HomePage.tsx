@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Flame, FolderPlus, Play } from 'lucide-react'
+import { FileText, Flame, FolderPlus, Layers, Play } from 'lucide-react'
 import type { DashboardData } from '@shared/course'
 import { formatClock, percent, plural } from '@shared/format'
 import { formatLongDate, greeting } from '@shared/greeting'
@@ -93,6 +93,18 @@ export function HomePage() {
 
       <div className="mb-8 space-y-4">
         {d && <GoalCard todaySeconds={d.todaySeconds} goalMinutes={d.goalMinutes} lessonsCompletedToday={d.lessonsCompletedToday} />}
+        {d && d.cardsDueToday > 0 && (
+          <section className="flex items-center gap-4 rounded-xl border border-border bg-surface p-5">
+            <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-sky-400/10 text-sky-400">
+              <Layers size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">Flashcards para hoje</p>
+              <p className="text-sm text-muted">{plural(d.cardsDueToday, 'carta')} esperando revisão</p>
+            </div>
+            <Button onClick={() => navigate('/flashcards')}>Revisar</Button>
+          </section>
+        )}
         {d?.continueLesson ? (
           <ContinueCard lesson={d.continueLesson} />
         ) : (

@@ -36,7 +36,8 @@ describe('painel do Início', () => {
       goalMinutes: 60,
       lessonsCompletedToday: 0,
       streak: { current: 0, todayDone: false, best: 0 },
-      continueLesson: null
+      continueLesson: null,
+      cardsDueToday: 0
     })
   })
 
