@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Loader2, PlayCircle } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, ChevronRight, Circle, File, FileText, Loader2, Play, PlayCircle } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
+import { useDurationProbe } from '../lib/useDurationProbe'
+import { Button } from '../components/Button'
 
 function countLessons(m: CourseModuleNode): { total: number; done: number } {
   return m.children.reduce(
@@ -19,13 +21,15 @@ function countLessons(m: CourseModuleNode): { total: number; done: number } {
 function LessonItem({ lesson }: { lesson: CourseLesson }) {
   const Icon = lesson.kind === 'video' ? PlayCircle : lesson.kind === 'text' ? FileText : File
   return (
-    <li className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-surface-2">
-      {lesson.completed ? <CheckCircle2 size={16} className="shrink-0 text-success" /> : <Circle size={16} className="shrink-0 text-muted" />}
-      <Icon size={14} className="shrink-0 text-muted" />
-      <span className="truncate">{lesson.title}</span>
-      {lesson.durationSec !== null && (
-        <span className="ml-auto shrink-0 text-xs text-muted tabular-nums">{formatDuration(lesson.durationSec)}</span>
-      )}
+    <li>
+      <Link to={`/lesson/${lesson.id}`} className="flex items-center gap-3 rounded-md px-3 py-2 text-sm hover:bg-surface-2">
+        {lesson.completed ? <CheckCircle2 size={16} className="shrink-0 text-success" /> : <Circle size={16} className="shrink-0 text-muted" />}
+        <Icon size={14} className="shrink-0 text-muted" />
+        <span className="truncate">{lesson.title}</span>
+        {lesson.durationSec !== null && (
+          <span className="ml-auto shrink-0 text-xs text-muted tabular-nums">{formatDuration(lesson.durationSec)}</span>
+        )}
+      </Link>
     </li>
   )
 }
@@ -69,7 +73,9 @@ function ModuleSection({ module, defaultOpen }: { module: CourseModuleNode; defa
 
 export function CourseDetailPage() {
   const id = Number(useParams().id)
+  const navigate = useNavigate()
   const course = useQuery({ queryKey: queryKeys.course(id), queryFn: () => window.api.courses.get(id) })
+  useDurationProbe(course.data)
 
   if (course.isPending) {
     return (
@@ -89,7 +95,14 @@ export function CourseDetailPage() {
         <ArrowLeft size={16} /> Meus Cursos
       </Link>
       <header className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight">{c.title}</h1>
+        <div className="flex items-start gap-4">
+          <h1 className="flex-1 text-2xl font-semibold tracking-tight">{c.title}</h1>
+          {c.resumeLessonId !== null && (
+            <Button onClick={() => navigate(`/lesson/${c.resumeLessonId}`)}>
+              <Play size={16} fill="currentColor" /> {c.lastOpenedAt ? 'Continuar' : 'Começar'}
+            </Button>
+          )}
+        </div>
         {c.description && <p className="mt-1 text-sm text-muted">{c.description}</p>}
         <p className="mt-2 text-sm text-muted">
           {[

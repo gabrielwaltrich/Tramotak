@@ -4,6 +4,10 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { IPC, type AppInfo } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
 import { registerCourseIpc } from './ipc/courses'
+import { registerLessonIpc } from './ipc/lessons'
+import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
+
+registerMediaScheme()
 
 let db: Database | undefined
 
@@ -59,6 +63,8 @@ app.whenReady().then(() => {
   db = openDatabase(join(app.getPath('userData'), 'tramotak.db'))
   registerIpc()
   registerCourseIpc(db)
+  registerLessonIpc(db)
+  handleMediaProtocol(db)
   createWindow()
 
   app.on('activate', () => {

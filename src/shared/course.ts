@@ -128,3 +128,41 @@ export interface CourseDetail extends CourseSummary {
   lessons: CourseLesson[]
   modules: CourseModuleNode[]
 }
+
+export interface LessonAssetView {
+  id: number
+  kind: AssetKind
+  name: string
+  lang: string | null
+  /** URL no protocolo do app (legendas já chegam como WebVTT). */
+  url: string
+}
+
+export interface LessonNeighbor {
+  id: number
+  title: string
+}
+
+export interface LessonView {
+  id: number
+  title: string
+  kind: LessonKind
+  relPath: string
+  /** URL do arquivo da aula no protocolo do app. */
+  url: string
+  durationSec: number | null
+  course: { id: number; title: string }
+  moduleTitle: string | null
+  assets: LessonAssetView[]
+  progress: { positionSec: number; completed: boolean; favorite: boolean }
+  prev: LessonNeighbor | null
+  next: LessonNeighbor | null
+}
+
+export interface ProgressUpdate {
+  lessonId: number
+  positionSec: number
+  durationSec: number | null
+  /** Segundos efetivamente assistidos desde o último envio (alimenta o tempo de estudo). */
+  watchedSec: number
+}

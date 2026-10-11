@@ -37,6 +37,7 @@ export function CourseCard({ course, onEdit, onRevalidate, onDelete, revalidatin
   ].join(' · ')
 
   const open = () => navigate(`/courses/${course.id}`)
+  const resume = () => navigate(course.resumeLessonId !== null ? `/lesson/${course.resumeLessonId}` : `/courses/${course.id}`)
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition hover:border-accent/50">
@@ -78,7 +79,7 @@ export function CourseCard({ course, onEdit, onRevalidate, onDelete, revalidatin
 
         <button
           type="button"
-          onClick={open}
+          onClick={resume}
           className="mt-auto flex h-8 items-center justify-center gap-2 rounded-md bg-accent-soft text-sm font-medium text-accent hover:brightness-125"
         >
           {revalidating ? <RefreshCw size={14} className="animate-spin" /> : null}

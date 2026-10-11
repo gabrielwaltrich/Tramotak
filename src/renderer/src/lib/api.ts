@@ -6,5 +6,6 @@ export function errorMessage(error: unknown): string {
 
 export const queryKeys = {
   courses: ['courses'] as const,
-  course: (id: number) => ['courses', id] as const
+  course: (id: number) => ['courses', id] as const,
+  lesson: (id: number) => ['lessons', id] as const
 }

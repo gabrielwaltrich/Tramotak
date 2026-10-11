@@ -1,5 +1,7 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
 import type {
+  LessonView,
+  ProgressUpdate,
   CourseDetail,
   CourseSummary,
   ImportRequest,
@@ -25,8 +27,22 @@ export const IPC = {
   coursesGet: 'courses:get',
   coursesUpdate: 'courses:update',
   coursesDelete: 'courses:delete',
-  coursesRevalidate: 'courses:revalidate'
+  coursesRevalidate: 'courses:revalidate',
+  lessonsGet: 'lessons:get',
+  lessonsText: 'lessons:text',
+  lessonsSetFavorite: 'lessons:setFavorite',
+  lessonsSetDuration: 'lessons:setDuration',
+  progressSave: 'progress:save',
+  progressSetCompleted: 'progress:setCompleted',
+  filesOpenLesson: 'files:openLesson',
+  filesOpenAsset: 'files:openAsset',
+  filesShowLesson: 'files:showLesson'
 } as const
+
+export interface LessonText {
+  format: 'markdown' | 'html' | 'text'
+  content: string
+}
 
 export interface TramotakApi {
   app: {
@@ -46,5 +62,22 @@ export interface TramotakApi {
     update(id: number, patch: { title: string; description: string }): Promise<void>
     delete(id: number): Promise<void>
     revalidate(id: number): Promise<RevalidateResult>
+  }
+  lessons: {
+    get(id: number): Promise<LessonView>
+    /** Conteúdo de uma aula de texto (.md, .html, .txt). */
+    text(id: number): Promise<LessonText>
+    setFavorite(id: number, value: boolean): Promise<void>
+    setDuration(id: number, durationSec: number): Promise<void>
+  }
+  progress: {
+    save(update: ProgressUpdate): Promise<void>
+    setCompleted(id: number, value: boolean): Promise<void>
+  }
+  files: {
+    /** Abre no aplicativo padrão do sistema. */
+    openLesson(id: number): Promise<void>
+    openAsset(id: number): Promise<void>
+    showLesson(id: number): Promise<void>
   }
 }

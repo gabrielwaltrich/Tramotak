@@ -37,3 +37,16 @@ describe('matches', () => {
     expect(matches('   ', 'qualquer')).toBe(true)
   })
 })
+
+import { formatClock } from '@shared/format'
+
+describe('formatClock', () => {
+  it.each([
+    [0, '0:00'],
+    [5.9, '0:05'],
+    [245, '4:05'],
+    [724, '12:04'],
+    [3723, '1:02:03'],
+    [Number.NaN, '0:00']
+  ])('%s → %s', (sec, expected) => expect(formatClock(sec)).toBe(expected))
+})

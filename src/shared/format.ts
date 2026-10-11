@@ -27,3 +27,12 @@ export function percent(done: number, total: number): number {
 export function plural(n: number, singular: string, pluralForm = `${singular}s`): string {
   return `${n.toLocaleString('pt-BR')} ${n === 1 ? singular : pluralForm}`
 }
+
+/** Relógio do player: "4:05", "12:04", "1:02:03". */
+export function formatClock(totalSec: number): string {
+  const sec = Number.isFinite(totalSec) ? Math.max(0, Math.floor(totalSec)) : 0
+  const h = Math.floor(sec / 3600)
+  const m = Math.floor((sec % 3600) / 60)
+  const s = String(sec % 60).padStart(2, '0')
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${s}` : `${m}:${s}`
+}

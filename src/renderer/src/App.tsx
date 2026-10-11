@@ -3,6 +3,7 @@ import { Sidebar } from './components/Sidebar'
 import { HomePage } from './routes/HomePage'
 import { CoursesPage } from './routes/CoursesPage'
 import { CourseDetailPage } from './routes/CourseDetailPage'
+import { PlayerPage } from './routes/PlayerPage'
 import { SettingsPage } from './routes/SettingsPage'
 import { ComingSoonPage } from './routes/ComingSoonPage'
 
@@ -15,6 +16,7 @@ export function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
+          <Route path="/lesson/:id" element={<PlayerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<ComingSoonPage />} />
         </Routes>
