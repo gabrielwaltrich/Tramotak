@@ -30,11 +30,13 @@ export interface BackupIpcOptions {
   userData: string
   backupsDir: string
   appVersion: string
-  /** Fecha o banco e reinicia o app (a restauração acontece no início). */
-  restart: () => void
+  /** Se o app consegue se reabrir sozinho depois de fechar. */
+  canRelaunch: boolean
+  /** Fecha o banco e o app, reabrindo se `relaunch` (a restauração acontece no início). */
+  restart: (relaunch: boolean) => void
 }
 
-export function registerBackupIpc({ db, userData, backupsDir, appVersion, restart }: BackupIpcOptions): void {
+export function registerBackupIpc({ db, userData, backupsDir, appVersion, canRelaunch, restart }: BackupIpcOptions): void {
   // O caminho escolhido no seletor fica no processo principal; a interface só confirma.
   let inspectedFile: string | null = null
   const packages = new Map<string, TramotakPackage>()
@@ -74,7 +76,9 @@ export function registerBackupIpc({ db, userData, backupsDir, appVersion, restar
     const source = name === null ? inspectedFile : backupPath(backupsDir, name)
     if (!source) throw new Error('Escolha um backup primeiro')
     stageRestore(userData, source)
-    setTimeout(restart, 300)
+    // Sem reabrir sozinho, dá tempo de a interface avisar para abrir o app de novo.
+    setTimeout(() => restart(canRelaunch), canRelaunch ? 300 : 4000)
+    return { relaunch: canRelaunch }
   })
 
   ipcMain.handle(IPC.packageCatalog, () => exportCatalog(db))

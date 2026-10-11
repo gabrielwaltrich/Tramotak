@@ -391,7 +391,9 @@ Tramotak/
    - Restaurar: confere cabeçalho SQLite, tabelas do Tramotak, `quick_check` e versão do esquema (recusa backup de
      versão mais nova), mostra o conteúdo e reinicia o app. A troca acontece no início, antes de abrir o banco:
      o atual vira `antes-de-restaurar-…`, o backup entra no lugar (migrations sobem a versão) e as chaves deste
-     computador são mantidas. Pendência inválida é descartada.
+     computador são mantidas. Pendência inválida é descartada. AppImage e `.exe` portátil rodam de uma cópia
+     temporária e não se relançam com confiança (testado: o processo novo trava): nesses o app avisa e fecha, e a
+     restauração acontece na próxima abertura.
    - "Trocar pasta…" no curso: aponta para a nova pasta e revalida casando as aulas pelo caminho relativo
      (progresso e anotações ficam). Recusa se menos da metade das aulas corresponder (pasta errada apagaria dados)
      ou se a pasta for de outro curso.

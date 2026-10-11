@@ -105,10 +105,13 @@ app.whenReady().then(() => {
     userData,
     backupsDir,
     appVersion: app.getVersion(),
-    restart: () => {
+    // AppImage e .exe portátil rodam de uma cópia temporária que some ao sair, e relançar dali não é confiável:
+    // nesses casos o app fecha e a restauração acontece quando a pessoa abrir de novo.
+    canRelaunch: !process.env.APPIMAGE && !process.env.PORTABLE_EXECUTABLE_FILE,
+    restart: (relaunch) => {
       db?.close()
       db = undefined
-      app.relaunch()
+      if (relaunch) app.relaunch()
       app.exit(0)
     }
   })

@@ -34,6 +34,7 @@ function RestoreDialog({ target, onClose }: { target: { info: BackupInfo; name: 
     mutationFn: () => window.api.backup.restore(target!.name),
     onError: (error) => toast(errorMessage(error), 'error')
   })
+  const manualReopen = restore.data?.relaunch === false
   return (
     <Modal
       open={target !== null}
@@ -44,13 +45,17 @@ function RestoreDialog({ target, onClose }: { target: { info: BackupInfo; name: 
           <Button variant="ghost" onClick={onClose} disabled={restore.isPending} data-autofocus>
             Cancelar
           </Button>
-          <Button variant="danger" onClick={() => restore.mutate()} disabled={restore.isPending}>
-            {restore.isPending ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Restaurar e reiniciar
+          <Button variant="danger" onClick={() => restore.mutate()} disabled={restore.isPending || restore.isSuccess}>
+            {restore.isPending || restore.isSuccess ? <Loader2 size={16} className="animate-spin" /> : <RotateCcw size={16} />} Restaurar e reiniciar
           </Button>
         </>
       }
     >
-      {target && (
+      {target && manualReopen ? (
+        <p className="text-sm">
+          <b>Backup pronto para restaurar.</b> O Tramotak vai fechar em instantes; <b>abra o app de novo</b> para concluir a restauração.
+        </p>
+      ) : target && (
         <div className="space-y-3 text-sm">
           <p>
             <b>{target.info.name}</b> <span className="text-muted">· {dateTime(target.info.modifiedAt)} · {formatBytes(target.info.bytes)}</span>

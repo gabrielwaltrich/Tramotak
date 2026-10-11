@@ -1,7 +1,7 @@
 {
   "name": "tramotak",
   "productName": "Tramotak",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Central de estudos desktop: importe seus cursos e estude com eles.",
   "main": "./out/main/index.js",
   "author": "Gabriel Waltrich",

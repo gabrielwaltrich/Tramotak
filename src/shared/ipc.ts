@@ -405,7 +405,7 @@ export interface TramotakApi {
     inspectFile(): Promise<BackupInfo | null>
     inspect(name: string): Promise<BackupInfo>
     /** Restaura (backup da pasta do app pelo nome, ou o arquivo inspecionado com `null`) e reinicia o app. */
-    restore(name: string | null): Promise<void>
+    restore(name: string | null): Promise<{ relaunch: boolean }>
   }
   packages: {
     catalog(): Promise<ExportCatalog>
