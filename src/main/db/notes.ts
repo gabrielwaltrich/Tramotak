@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { Note } from '@shared/course'
 import type { Block, Page } from '@shared/notebooks'
 import { groupByLesson, noteMarkdown, suggestedPageTitle, type NoteEntry, type SendNotesRequest, type SendNotesResult } from '@shared/notes'
@@ -149,7 +150,8 @@ export function sendNotesToNotebook(db: Database, request: SendNotesRequest): Se
 
     // Página nova (só com o bloco vazio inicial) é substituída; numa existente, as notas entram no fim.
     const existing = page.blocks.filter((b) => !(b.type === 'text' && !b.text.trim()))
-    const stamp = Date.now().toString(36)
+    // Único mesmo em envios seguidos no mesmo milissegundo (os blocos da página precisam de ids diferentes).
+    const stamp = randomUUID().slice(0, 8)
     const blocks: Block[] = [...existing]
     const groups = groupByLesson(entries)
     const courses = new Set(groups.map((g) => g.courseId))
