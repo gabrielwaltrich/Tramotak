@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Layers, Loader2, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
+import { Clock, Layers, Loader2, NotebookPen, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
 import type { Note } from '@shared/course'
 import { formatClock } from '@shared/format'
+import type { NoteEntry } from '@shared/notes'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
 import { TextArea } from '../Field'
 import { useToast } from '../Toast'
 import { CardFromNoteDialog } from '../flashcards/CardFromNoteDialog'
+import { SendToNotebookDialog } from '../notes/SendToNotebookDialog'
+import { RichText } from '../RichText'
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
@@ -30,7 +34,13 @@ function TimeChip({ seconds, onClick }: { seconds: number; onClick?: () => void 
   )
 }
 
-function NoteItem({ note, onSeek, lessonId, onMakeCard }: { note: Note; onSeek?: (sec: number) => void; lessonId: number; onMakeCard: (note: Note) => void }) {
+function NoteItem({ note, onSeek, lessonId, onMakeCard, onSend }: {
+  note: Note
+  onSeek?: (sec: number) => void
+  lessonId: number
+  onMakeCard: (note: Note) => void
+  onSend: (note: Note) => void
+}) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(note.body)
   const [confirming, setConfirming] = useState(false)
@@ -89,7 +99,7 @@ function NoteItem({ note, onSeek, lessonId, onMakeCard }: { note: Note; onSeek?:
           </div>
         ) : (
           <>
-            <p className="text-sm break-words whitespace-pre-wrap select-text">{note.body}</p>
+            <RichText text={note.body} className="block text-sm break-words select-text" />
             {note.updatedAt > note.createdAt && <p className="mt-0.5 text-xs text-muted">editada</p>}
           </>
         )}
@@ -111,6 +121,9 @@ function NoteItem({ note, onSeek, lessonId, onMakeCard }: { note: Note; onSeek?:
             <button type="button" onClick={() => onMakeCard(note)} aria-label="Criar flashcard" title="Criar flashcard" className="grid size-7 place-items-center rounded text-muted hover:bg-surface hover:text-text">
               <Layers size={14} />
             </button>
+            <button type="button" onClick={() => onSend(note)} aria-label="Enviar para caderno" title="Enviar para caderno" className="grid size-7 place-items-center rounded text-muted hover:bg-surface hover:text-text">
+              <NotebookPen size={14} />
+            </button>
             <button type="button" onClick={() => setEditing(true)} aria-label="Editar anotação" className="grid size-7 place-items-center rounded text-muted hover:bg-surface hover:text-text">
               <Pencil size={14} />
             </button>
@@ -127,8 +140,9 @@ function NoteItem({ note, onSeek, lessonId, onMakeCard }: { note: Note; onSeek?:
  * Anotações da aula. `N` (fora de campos de texto) abre o editor já com o horário atual do vídeo;
  * Ctrl/Cmd+Enter salva, Esc cancela.
  */
-export function NotesPanel({ lessonId, course, notes, loading, getTime, onSeek }: {
+export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getTime, onSeek }: {
   lessonId: number
+  lessonTitle: string
   course: { id: number; title: string }
   notes: Note[]
   loading: boolean
@@ -138,6 +152,10 @@ export function NotesPanel({ lessonId, course, notes, loading, getTime, onSeek }
 }) {
   const [composing, setComposing] = useState<{ timestampSec: number | null } | null>(null)
   const [cardNote, setCardNote] = useState<Note | null>(null)
+  const [sending, setSending] = useState<Note[] | null>(null)
+  // O diálogo de envio trabalha com anotações que conhecem a aula e o curso.
+  const asEntries = (list: Note[]): NoteEntry[] =>
+    list.map((n) => ({ ...n, lessonTitle, lessonKind: 'video', courseId: course.id, courseTitle: course.title, modulePath: [], lessonOrder: 0 }))
   const [draft, setDraft] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const queryClient = useQueryClient()
@@ -252,11 +270,22 @@ export function NotesPanel({ lessonId, course, notes, loading, getTime, onSeek }
       ) : (
         <ul className="divide-y divide-border">
           {notes.map((n) => (
-            <NoteItem key={n.id} note={n} onSeek={onSeek} lessonId={lessonId} onMakeCard={setCardNote} />
+            <NoteItem key={n.id} note={n} onSeek={onSeek} lessonId={lessonId} onMakeCard={setCardNote} onSend={(note) => setSending([note])} />
           ))}
         </ul>
       )}
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-xs">
+        <Link to={`/notes?course=${course.id}`} className="text-accent hover:underline">
+          Todas as anotações do curso
+        </Link>
+        {notes.length > 0 && (
+          <button type="button" onClick={() => setSending(notes)} className="inline-flex items-center gap-1 text-muted hover:text-text">
+            <NotebookPen size={12} /> Enviar as desta aula para um caderno
+          </button>
+        )}
+      </div>
       <CardFromNoteDialog note={cardNote} lessonId={lessonId} course={course} onClose={() => setCardNote(null)} />
+      {sending && <SendToNotebookDialog entries={asEntries(sending)} onClose={() => setSending(null)} />}
     </div>
   )
 }

@@ -6,7 +6,7 @@ Windows e Linux.
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Nomes das aulas:** regras por curso para limpar títulos vindos de nomes de arquivo (código como `#F0009` vira `9`, datas, numeração interna, autor depois do `@`, emojis, `_`, sufixos de cópia, textos e trocas personalizados), com prévia de todas as aulas e sugestão opcional da IA. Os arquivos não são renomeados.
 - **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
-- **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele.
+- **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele. A página **Anotações** reúne as de todos os cursos (busca, filtro, exportar em Markdown) e envia as escolhidas para um caderno, com os horários clicáveis.
 - **Busca global:** barra de pesquisa no topo (ou `Ctrl+K` em qualquer tela) encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
 - **Flashcards:** repetição espaçada com o FSRS (o algoritmo do Anki atual), retenção desejada e limites por baralho; transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
 - **Questões e simulados:** bancos com 5 tipos de questão e fórmulas LaTeX, simulados cronometrados com anti-cola, correção e desempenho por tópico; importa e exporta JSON, CSV e GIFT (Moodle).

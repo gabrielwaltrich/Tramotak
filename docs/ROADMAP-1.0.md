@@ -50,6 +50,15 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - Fica para depois: otimizar os parâmetros do FSRS com o histórico da pessoa e reagendar as cartas ao mudar a
   retenção (hoje a mudança vale a partir da próxima resposta).
 
+## 0.6.1 — Anotações reunidas ✅ (publicada: v0.6.1)
+- ✅ **Página "Anotações"** (barra lateral): todas as anotações dos cursos num lugar só, agrupadas por curso,
+  módulo e aula (ou as mais recentes primeiro), com busca, filtro por curso, horário que abre o vídeo no ponto,
+  edição, exclusão e flashcard. Exportar em Markdown (`.md`).
+- ✅ **Enviar anotações para um caderno** (da página ou do player, uma nota ou a aula inteira): caderno novo ou
+  existente, página nova ou no fim de uma página. Cada aula vira um atalho para o vídeo, seguido das notas com
+  os horários como links que abrem o vídeo no ponto certo (links internos `#/lesson/…` passam a funcionar nos
+  cadernos). O texto continua editável.
+
 ## 0.7 — PDFs e revisão pós-aula ⬜
 - PDFs como aula: leitura, grifo e anotações dentro do app; texto do PDF como material da IA.
 - Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto.

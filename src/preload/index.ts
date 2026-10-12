@@ -258,7 +258,10 @@ const api: TramotakApi = {
     list: (lessonId) => ipcRenderer.invoke(IPC.notesList, lessonId),
     create: (input) => ipcRenderer.invoke(IPC.notesCreate, input),
     update: (id, body) => ipcRenderer.invoke(IPC.notesUpdate, id, body),
-    delete: (id) => ipcRenderer.invoke(IPC.notesDelete, id)
+    delete: (id) => ipcRenderer.invoke(IPC.notesDelete, id),
+    all: (courseId) => ipcRenderer.invoke(IPC.notesAll, courseId ?? null),
+    toNotebook: (request) => ipcRenderer.invoke(IPC.notesToNotebook, request),
+    exportMarkdown: (markdown, suggestedName) => ipcRenderer.invoke(IPC.notesExport, markdown, suggestedName)
   }
 }
 

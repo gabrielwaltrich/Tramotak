@@ -11,7 +11,7 @@ describe('navegação', () => {
 
   it('libera as abas já construídas', () => {
     const enabled = all.filter((i) => !i.soon).map((i) => i.path)
-    expect(enabled).toEqual(['/', '/courses', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/ai', '/settings'])
+    expect(enabled).toEqual(['/', '/courses', '/notes', '/flashcards', '/questions', '/planner', '/progress', '/notebooks', '/mindmaps', '/ai', '/settings'])
   })
 
   it('a busca fica na barra superior, não no menu lateral', () => {

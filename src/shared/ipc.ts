@@ -3,6 +3,7 @@ import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNex
 import type { DeckOptions, Rating } from './srs'
 import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
 import type { PlanPreview, PlanSettings, StudyPlanView } from './studyPlan'
+import type { NoteEntry, SendNotesRequest, SendNotesResult } from './notes'
 import type { HistoryEntry, HistoryFilter, ProgressData } from './progress'
 import type { AttemptAnswerState, AttemptView, BankAnalytics, BankSummary, Exam, ExamSelection, ExamSettings } from './exams'
 import type { Question, QuestionAnswer, QuestionInput } from './questions'
@@ -95,6 +96,9 @@ export const IPC = {
   notesCreate: 'notes:create',
   notesUpdate: 'notes:update',
   notesDelete: 'notes:delete',
+  notesAll: 'notes:all',
+  notesToNotebook: 'notes:toNotebook',
+  notesExport: 'notes:export',
   dashboardGet: 'dashboard:get',
   settingsGet: 'settings:get',
   settingsUpdate: 'settings:update',
@@ -548,5 +552,11 @@ export interface TramotakApi {
     create(input: { lessonId: number; timestampSec: number | null; body: string }): Promise<Note>
     update(id: number, body: string): Promise<Note>
     delete(id: number): Promise<void>
+    /** Todas as anotações (ou só as de um curso), com aula, módulos e curso. */
+    all(courseId?: number | null): Promise<NoteEntry[]>
+    /** Leva anotações para um caderno (novo ou existente, página nova ou no fim de uma existente). */
+    toNotebook(request: SendNotesRequest): Promise<SendNotesResult>
+    /** Salva Markdown num arquivo escolhido pela pessoa; devolve o caminho ou null se cancelar. */
+    exportMarkdown(markdown: string, suggestedName: string): Promise<string | null>
   }
 }

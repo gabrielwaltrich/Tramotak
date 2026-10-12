@@ -155,7 +155,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
         <div className="mt-4 flex items-start gap-3">
           <div className="min-w-0 flex-1">
             {l.moduleTitle && <p className="text-xs text-muted">{l.moduleTitle}</p>}
-            <h1 className="text-xl font-semibold tracking-tight">{l.title}</h1>
+            <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere]">{l.title}</h1>
           </div>
           <Link
             to={`/ai?lesson=${lessonId}`}
@@ -248,6 +248,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
             ) : tab === 'notes' || attachments.length === 0 ? (
               <NotesPanel
                 lessonId={l.id}
+                lessonTitle={l.title}
                 course={l.course}
                 notes={notes.data ?? []}
                 loading={notes.isPending}

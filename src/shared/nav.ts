@@ -8,6 +8,7 @@ export type NavIcon =
   | 'calendar'
   | 'activity'
   | 'notebook'
+  | 'notes'
   | 'mindmap'
   | 'sparkles'
   | 'settings'
@@ -22,6 +23,7 @@ export interface NavItem {
 export const NAV_ITEMS: NavItem[] = [
   { path: '/', label: 'Início', icon: 'home' },
   { path: '/courses', label: 'Meus Cursos', icon: 'book' },
+  { path: '/notes', label: 'Anotações', icon: 'notes' },
   { path: '/flashcards', label: 'Flashcards', icon: 'layers' },
   { path: '/questions', label: 'Questões', icon: 'clipboard' },
   { path: '/planner', label: 'Planner', icon: 'calendar' },

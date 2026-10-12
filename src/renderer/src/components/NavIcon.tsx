@@ -10,6 +10,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  StickyNote,
   type LucideIcon
 } from 'lucide-react'
 import type { NavIcon as NavIconName } from '@shared/nav'
@@ -23,6 +24,7 @@ const ICONS: Record<NavIconName, LucideIcon> = {
   calendar: CalendarClock,
   activity: Activity,
   notebook: NotebookPen,
+  notes: StickyNote,
   mindmap: GitFork,
   sparkles: Sparkles,
   settings: Settings

@@ -415,6 +415,38 @@ test('cadernos e mapas: Markdown seguro com fórmula, salvamento automático e m
   await app.close()
 })
 
+test('anotações: todas num lugar só, busca e envio para um caderno com horário clicável', async () => {
+  const { app, page } = await launch()
+  await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Anotações' }).click()
+  await expect(page.getByRole('heading', { name: 'Anotações', exact: true })).toBeVisible()
+  const lesson = page.getByRole('region', { name: /Boas-vindas/ })
+  await expect(lesson.getByText('Minha primeira anotação')).toBeVisible()
+  await expect(page.getByText(/1 anotação em 1 aula/)).toBeVisible()
+
+  await page.getByLabel('Buscar nas anotações').fill('nada disso')
+  await expect(page.getByText('Nenhuma anotação encontrada.')).toBeVisible()
+  await page.getByLabel('Buscar nas anotações').fill('primeira')
+  await lesson.getByRole('checkbox', { name: 'Selecionar anotação' }).check()
+  await expect(page.getByText('1 selecionada')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Enviar para caderno' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByLabel('Caderno', { exact: true }).selectOption({ label: 'Novo caderno…' })
+  await dialog.getByLabel('Nome do caderno novo').fill('Resumo do Curso E2E')
+  await dialog.getByRole('button', { name: 'Enviar' }).click()
+  await expect(dialog.getByText(/1 anotação enviada para Resumo do Curso E2E/)).toBeVisible()
+  await dialog.getByRole('button', { name: 'Abrir caderno' }).click()
+
+  // No caderno: atalho para a aula e o horário como link que abre o vídeo naquele ponto
+  await expect(page.getByRole('button', { name: /Aula\s*Boas-vindas/ })).toBeVisible()
+  const time = page.getByRole('link', { name: /^\d+:\d\d$/ })
+  await expect(time).toHaveAttribute('href', /^#\/lesson\/\d+\?t=\d+$/)
+  await time.click()
+  await expect(page.getByRole('heading', { name: /Boas-vindas/ })).toBeVisible()
+  await expect(page).toHaveURL(/#\/lesson\/\d+\?t=\d+/)
+  await app.close()
+})
+
 test('vídeo HEVC: o player detecta, oferece conversão e passa a mostrar a imagem', async () => {
   // Vídeo HEVC gerado na hora com o FFmpeg embutido
   const { execFileSync } = await import('node:child_process')

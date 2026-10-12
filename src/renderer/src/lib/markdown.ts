@@ -28,10 +28,17 @@ export function renderMarkdown(text: string, math: 'html' | 'mathml' = 'html'): 
   })
 }
 
-// Links do conteúdo abrem no navegador do sistema (o processo principal bloqueia navegação interna).
+/** Links para telas do próprio app (ex.: horário de uma anotação: `#/lesson/12?t=205`). */
+const INTERNAL_LINK = /^#\/(lesson|courses|flashcards|questions|notebooks|mindmaps|notes)(\/[\w-]+)*(\?[\w=&-]*)?$/
+
+// Links externos abrem no navegador do sistema (o processo principal bloqueia navegação interna); links para
+// telas do app navegam dentro dele.
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A') {
-    node.setAttribute('target', '_blank')
-    node.setAttribute('rel', 'noopener noreferrer')
+  if (node.tagName !== 'A') return
+  if (INTERNAL_LINK.test(node.getAttribute('href') ?? '')) {
+    node.removeAttribute('target')
+    return
   }
+  node.setAttribute('target', '_blank')
+  node.setAttribute('rel', 'noopener noreferrer')
 })

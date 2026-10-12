@@ -18,6 +18,7 @@ import { QuestionsPage } from './routes/QuestionsPage'
 import { BankPage } from './routes/BankPage'
 import { AttemptPage } from './routes/AttemptPage'
 import { NotebooksPage } from './routes/NotebooksPage'
+import { NotesPage } from './routes/NotesPage'
 import { NotebookPage } from './routes/NotebookPage'
 import { MindmapsPage } from './routes/MindmapsPage'
 import { MindmapPage } from './routes/MindmapPage'
@@ -89,6 +90,7 @@ export function App() {
             <Route path="/questions" element={<QuestionsPage />} />
             <Route path="/questions/:id" element={<BankPage />} />
             <Route path="/questions/attempt/:id" element={<AttemptPage />} />
+            <Route path="/notes" element={<NotesPage />} />
             <Route path="/notebooks" element={<NotebooksPage />} />
             <Route path="/notebooks/:id" element={<NotebookPage />} />
             <Route path="/mindmaps" element={<MindmapsPage />} />
