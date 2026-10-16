@@ -164,3 +164,9 @@ body {
   cursor: pointer;
 }
 .tk-time:hover { text-decoration: underline; }
+
+/* Janela flutuante do player: só o vídeo, sem rolagem. */
+body.pip {
+  background: #000;
+  overflow: hidden;
+}

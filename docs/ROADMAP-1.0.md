@@ -59,6 +59,15 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
   os horários como links que abrem o vídeo no ponto certo (links internos `#/lesson/…` passam a funcionar nos
   cadernos). O texto continua editável.
 
+## 0.6.2 — Janela flutuante ✅ (publicada: v0.6.2)
+- ✅ **Janela flutuante (picture-in-picture)** do player: sempre por cima, transparência ajustável (opaca com o
+  mouse em cima), tocar/pausar, voltar/avançar (5–30 s), volume, legenda, velocidade, aula anterior/próxima,
+  voltar ao app e fechar; arrastar para mover, cantos para redimensionar em 16:9, posição lembrada; atalhos de
+  teclado. Progresso, tempo de estudo, conclusão e próxima aula gravados pelo processo principal
+  (`src/main/pip/host.ts`), com o player do app sincronizado. Opções em Configurações → Janela flutuante.
+- ✅ **Linux com Wayland**: a janela roda num processo separado em X11 (XWayland), porque o GNOME não deixa
+  janelas de apps ficarem por cima; o app continua em Wayland. Sem XWayland, cai para janela comum com aviso.
+
 ## 0.7 — PDFs e revisão pós-aula ⬜
 - PDFs como aula: leitura, grifo e anotações dentro do app; texto do PDF como material da IA.
 - Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto.

@@ -2,6 +2,7 @@ import type { AppSettings } from '@shared/ipc'
 import { AI_PROVIDER_IDS, DEFAULT_AI_MODELS, MODEL_NAME, type AiModels } from '@shared/ai'
 import { WHISPER_MODELS } from '@shared/media'
 import { normalizeAppearance } from '@shared/appearance'
+import { DEFAULT_PIP_SETTINGS, normalizePipSettings } from '@shared/pip'
 import type { Database } from './database'
 
 export type { AppSettings }
@@ -25,7 +26,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoBackup: true,
   aiWebSearch: false,
   autoUpdateCheck: true,
-  appearance: null
+  appearance: null,
+  pip: DEFAULT_PIP_SETTINGS
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -105,6 +107,7 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
   if (patch.appearance !== undefined) {
     out.appearance = patch.appearance === null ? null : normalizeAppearance(patch.appearance)
   }
+  if (patch.pip !== undefined) out.pip = normalizePipSettings(patch.pip)
   if (patch.autoBackup !== undefined) {
     if (typeof patch.autoBackup !== 'boolean') throw new Error('Valor inválido para backup automático')
     out.autoBackup = patch.autoBackup

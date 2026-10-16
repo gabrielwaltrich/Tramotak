@@ -33,7 +33,8 @@ async function launch(): Promise<{ app: ElectronApplication; page: Page }> {
   const args = ['.', `--user-data-dir=${userData}`]
   // Runners Linux de CI não têm o helper SUID do sandbox do Chromium.
   if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox')
-  const app = await electron.launch({ args, env: { ...process.env, NODE_ENV: 'production' } })
+  // Janela flutuante como janela do próprio app (no Wayland seria um processo separado, fora do alcance do Playwright).
+  const app = await electron.launch({ args, env: { ...process.env, NODE_ENV: 'production', TRAMOTAK_PIP_MODE: 'window' } })
   // O seletor de pasta é nativo: no teste ele devolve direto a pasta do curso.
   await app.evaluate(({ dialog }, path) => {
     dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
@@ -682,4 +683,66 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
     await app.close().catch(() => undefined)
     throw error
   }
+})
+
+test('janela flutuante: abre pelo P, comanda o vídeo, passa para a próxima aula e volta ao app', async () => {
+  const { app, page } = await launch()
+  const lessons = await page.evaluate(async () => {
+    const course = (await window.api.courses.list()).find((c) => c.title === 'Curso E2E')!
+    return (await window.api.courses.get(course.id)).modules.flatMap((m) => m.lessons).map((l) => ({ id: l.id, title: l.title }))
+  })
+  const welcome = lessons.find((l) => l.title === 'Boas-vindas')!
+  await page.evaluate((id) => (location.hash = `#/lesson/${id}`), welcome.id)
+  const video = page.locator('video')
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState), { timeout: 20_000 }).toBeGreaterThan(0)
+  await video.evaluate((v: HTMLVideoElement) => {
+    v.pause()
+    v.currentTime = 1
+  })
+
+  const opened = app.waitForEvent('window')
+  await page.keyboard.press('p')
+  const pip = await opened
+  await expect(page.getByText('Tocando na janela flutuante')).toBeVisible()
+  const pipVideo = pip.locator('video')
+  await expect.poll(() => pipVideo.evaluate((v: HTMLVideoElement) => v.readyState), { timeout: 20_000 }).toBeGreaterThan(0)
+  expect(await pipVideo.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeCloseTo(1, 0)
+  expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.isAlwaysOnTop()))).toBe(true)
+  // A aula anterior é texto: não aparece como "aula anterior" na janela
+  await expect(pip.getByRole('button', { name: /Aula anterior/ })).toHaveCount(0)
+
+  // Tocar e avançar até o fim: aula concluída, contagem e a janela (e o app) passam para a próxima
+  await pip.getByRole('button', { name: /Reproduzir/ }).click()
+  await expect.poll(() => pipVideo.evaluate((v: HTMLVideoElement) => v.currentTime)).toBeGreaterThan(1.2)
+  await pip.mouse.move(100, 60)
+  await pip.getByRole('button', { name: /Avançar 10 s/ }).click()
+  await expect(pip.getByText(/Próxima aula em/)).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Segunda aula' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByText('Tocando na janela flutuante')).toBeVisible()
+  await expect.poll(() => pipVideo.evaluate((v: HTMLVideoElement) => v.currentTime), { timeout: 10_000 }).toBeGreaterThan(0.5)
+
+  // Voltar ao app: a janela fecha e o player daqui continua tocando
+  await pip.mouse.move(120, 70)
+  const closed = pip.waitForEvent('close')
+  await pip.getByRole('button', { name: 'Voltar ao Tramotak' }).click()
+  await closed
+  await expect(page.getByText('Tocando na janela flutuante')).toHaveCount(0)
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused && v.currentTime > 0.5)).toBe(true)
+
+  // Pelo botão do player e de volta pelo app ("Trazer de volta para cá")
+  await video.hover({ force: true })
+  const reopened = app.waitForEvent('window')
+  await page.getByRole('button', { name: 'Janela flutuante' }).click()
+  const pip2 = await reopened
+  await expect(page.getByText('Tocando na janela flutuante')).toBeVisible()
+  const closed2 = pip2.waitForEvent('close')
+  await page.getByRole('button', { name: 'Trazer de volta para cá' }).click()
+  await closed2
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => !v.paused)).toBe(true)
+
+  // Preferências da janela nas configurações
+  await page.getByRole('link', { name: 'Configurações' }).click()
+  await page.getByRole('radiogroup', { name: 'Voltar/avançar' }).getByRole('radio', { name: '30 s' }).click()
+  await expect.poll(() => page.evaluate(() => window.api.settings.get().then((s) => s.pip.seekStep))).toBe(30)
+  await app.close()
 })

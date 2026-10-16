@@ -25,10 +25,18 @@ import { ensureMemoryStates } from './db/flashcards'
 import { Updater } from './updater'
 import { probe } from './media/ffmpeg'
 import { handleMediaProtocol, registerMediaScheme } from './protocol/media'
+import { PIP_CHILD_FLAG } from './pip/messages'
+import { runPipChild } from './pip/child'
+import { PipHost } from './pip/host'
+import { processTransport, windowTransport } from './pip/transport'
+import { choosePipMode } from './pip/mode'
+import type { PipCommand, PipOpenRequest } from '@shared/pip'
 
 registerMediaScheme()
 
 let db: Database | undefined
+let mainWindow: BrowserWindow | undefined
+let pip: PipHost | undefined
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -46,6 +54,12 @@ function createWindow(): void {
       nodeIntegration: false,
       sandbox: true
     }
+  })
+  mainWindow = win
+  // Fechar o app fecha também a janela flutuante.
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = undefined
+    pip?.close()
   })
 
   win.once('ready-to-show', () => {
@@ -85,10 +99,51 @@ function registerIpc(db: Database): void {
   ipcMain.handle(IPC.dashboardGet, () => getDashboard(db))
   ipcMain.handle(IPC.searchQuery, (_e, text: unknown) => search(db, String(text ?? '').slice(0, 200)))
   ipcMain.handle(IPC.settingsGet, () => getSettings(db))
-  ipcMain.handle(IPC.settingsUpdate, (_e, patch) => updateSettings(db, patch ?? {}))
+  ipcMain.handle(IPC.settingsUpdate, (_e, patch) => {
+    const settings = updateSettings(db, patch ?? {})
+    pip?.settingsChanged(settings)
+    return settings
+  })
 }
 
+/** Janela flutuante do player: janela do app ou processo separado em X11 (ver `choosePipMode`). */
+function registerPip(db: Database, convertedDir: string): PipHost {
+  const { mode, onTop } = choosePipMode(process.platform, process.env, app.commandLine.getSwitchValue('ozone-platform'))
+  const host = new PipHost({
+    db,
+    convertedDir,
+    createTransport: (options, handlers, fallback) =>
+      mode === 'process' && !fallback ? processTransport(options, handlers) : windowTransport(options, handlers, onTop && !fallback),
+    broadcast: (event) => mainWindow?.webContents.send(IPC.pipEvent, event),
+    focusApp: () => {
+      if (!mainWindow) return
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+  ipcMain.handle(IPC.pipOpen, (_e, request: PipOpenRequest) => {
+    if (!request || !Number.isInteger(request.lessonId)) throw new Error('Aula inválida')
+    return host.open({
+      lessonId: request.lessonId,
+      time: Number.isFinite(request.time) ? request.time : 0,
+      playing: request.playing === true,
+      playback: request.playback,
+      autoplayNext: request.autoplayNext !== false
+    })
+  })
+  ipcMain.handle(IPC.pipClose, () => host.close())
+  ipcMain.handle(IPC.pipCommand, (_e, command: PipCommand) => command && typeof command === 'object' && host.command(command))
+  ipcMain.handle(IPC.pipStatus, () => host.status())
+  return host
+}
+
+// O mesmo executável abre só a janela flutuante quando chamado pelo app com PIP_CHILD_FLAG.
+const pipChild = process.argv.includes(PIP_CHILD_FLAG)
+if (pipChild) runPipChild()
+
 app.whenReady().then(() => {
+  if (pipChild) return
   electronApp.setAppUserModelId('com.tramotak.app')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
@@ -121,6 +176,7 @@ app.whenReady().then(() => {
   registerNotebookIpc(db)
   const convertedDir = join(app.getPath('userData'), 'converted')
   handleMediaProtocol(db, convertedDir)
+  pip = registerPip(db, convertedDir)
   const mediaQueue = registerMediaIpc(db, convertedDir)
   registerAiIpc(db)
   registerBackupIpc({
@@ -158,11 +214,12 @@ app.whenReady().then(() => {
   app.on('before-quit', () => {
     durations.stop()
     mediaQueue.cancelAll()
+    pip?.close()
     // Preferências guardadas pela janela (aparência etc.) vão para o disco já, mesmo que o fechamento demore e o
     // processo acabe encerrado à força (ex.: instalador de atualização).
     session.defaultSession.flushStorageData()
   })
-  startNotifier(db, () => BrowserWindow.getAllWindows()[0])
+  startNotifier(db, () => mainWindow)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

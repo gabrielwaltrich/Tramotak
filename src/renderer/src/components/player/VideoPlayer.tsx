@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Captions,
@@ -6,6 +6,7 @@ import {
   Maximize,
   Minimize,
   Pause,
+  PictureInPicture2,
   Play,
   SkipForward,
   Volume1,
@@ -14,27 +15,24 @@ import {
 } from 'lucide-react'
 import type { LessonView } from '@shared/course'
 import { formatClock } from '@shared/format'
+import { startPosition, type PipOpenRequest, type PipPlayback } from '@shared/pip'
+import { errorMessage, queryKeys } from '../../lib/api'
+import { onPipEvent, pipStatus, setPipReturnTarget, usePipStatus } from '../../lib/pip'
+import { useToast } from '../Toast'
 import { playerPrefs, SPEEDS } from './prefs'
 import { useProgressTracker } from './useProgressTracker'
 import { ConvertOffer } from './ConvertOffer'
+import { preferredTrack, subtitleLabel } from './subtitles'
 
 const HIDE_CONTROLS_MS = 2500
 const SEEK_STEP = 10
-const RESUME_MIN_SEC = 5
+
+/** Horário para acompanhar a janela flutuante sem chegar ao fim do vídeo daqui (que dispararia "terminou"). */
+const syncTarget = (time: number, duration: number) => (Number.isFinite(duration) && duration > 1 ? Math.min(time, duration - 0.5) : time)
 
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null
   return !!el && (el.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName))
-}
-
-function subtitleLabel(lang: string | null, name: string): string {
-  if (!lang) return name.replace(/\.(srt|vtt)$/i, '')
-  try {
-    const display = new Intl.DisplayNames(['pt-BR'], { type: 'language' }).of(lang)
-    return display ? display.charAt(0).toUpperCase() + display.slice(1) : lang
-  } catch {
-    return lang
-  }
 }
 
 /** Menu suspenso que abre para cima, dentro da barra de controles. */
@@ -91,13 +89,15 @@ function PopMenu<T extends string | number>({ label, icon, value, options, onCha
   )
 }
 
-export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext }: {
+export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext, onPipFollow }: {
   lesson: LessonView
   videoRef: RefObject<HTMLVideoElement | null>
   /** Segundo inicial pedido explicitamente (tem prioridade sobre a posição salva). */
   startAt?: number | null
   onEnded: () => void
   onNext?: () => void
+  /** A janela flutuante passou para outra aula (próxima/anterior): o app acompanha. */
+  onPipFollow?: (lessonId: number) => void
 }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -135,10 +135,23 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
     ...lesson.assets.filter((a) => a.kind === 'subtitle'),
     ...(lesson.transcriptUrl ? [{ id: -1, kind: 'subtitle' as const, name: 'Transcrição automática', lang: null, url: lesson.transcriptUrl }] : [])
   ]
-  const preferred = playerPrefs.subtitle()
-  const initialTrack =
-    preferred === 'off' ? -1 : Math.max(subtitles.findIndex((s) => (s.lang ?? '') === preferred), subtitles.length ? 0 : -1)
-  const [track, setTrack] = useState(initialTrack)
+  const [track, setTrack] = useState(() => preferredTrack(subtitles, playerPrefs.subtitle()))
+
+  // Janela flutuante: com ela aberta nesta aula, o vídeo daqui fica pausado e acompanha o horário de lá (anotações,
+  // transcrição e IA continuam usando o horário certo).
+  const toast = useToast()
+  const pip = usePipStatus()
+  const pipHere = pip.open && pip.lessonId === lesson.id
+  const pipHereRef = useRef(pipHere)
+  const settings = useQuery({ queryKey: queryKeys.settings, queryFn: () => window.api.settings.get() })
+  const autoOpenRef = useRef(false)
+  const playbackRef = useRef<PipPlayback>({ rate, volume, muted, subtitle: 'off' })
+  const subtitle = track < 0 ? 'off' : (subtitles[track]?.lang ?? '')
+  useEffect(() => {
+    pipHereRef.current = pipHere
+    autoOpenRef.current = settings.data?.pip.autoOpen ?? false
+    playbackRef.current = { rate, volume, muted, subtitle }
+  })
 
   // Aplica a legenda escolhida nas text tracks do elemento de vídeo.
   useEffect(() => {
@@ -227,6 +240,110 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
     playerPrefs.setSubtitle(index < 0 ? 'off' : (subtitles[index].lang ?? ''))
   }
 
+  /** Velocidade, volume e legenda mudados na janela flutuante passam a valer aqui. */
+  const applyPlayback = useCallback(
+    (p: PipPlayback) => {
+      changeRate(p.rate)
+      setVolume(p.volume)
+      setMuted(p.muted)
+      playerPrefs.setVolume(p.volume)
+      playerPrefs.setMuted(p.muted)
+      setTrack(preferredTrack(subtitles, p.subtitle))
+      playerPrefs.setSubtitle(p.subtitle)
+    },
+    // `subtitles` é recriado a cada render, mas só muda com a aula (e o player é recriado a cada aula).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [changeRate, lesson.id]
+  )
+
+  const pipRequest = useCallback(
+    (video: HTMLVideoElement): PipOpenRequest => ({
+      lessonId: lesson.id,
+      time: video.currentTime,
+      playing: !video.paused,
+      playback: playbackRef.current,
+      autoplayNext: playerPrefs.autoplay()
+    }),
+    [lesson.id]
+  )
+
+  const openPip = useCallback(() => {
+    const video = videoRef.current
+    if (!video || error || pipHereRef.current) return
+    if (document.fullscreenElement) void document.exitFullscreen()
+    const request = pipRequest(video)
+    video.pause()
+    window.api.pip
+      .open(request)
+      .then((status) => {
+        if (!status.onTop) toast('Neste sistema a janela flutuante não fica por cima sozinha: use Alt+Espaço → "Sempre visível".')
+      })
+      .catch((e) => toast(errorMessage(e), 'error'))
+  }, [videoRef, error, pipRequest, toast])
+
+  /** Fecha a janela flutuante e continua aqui, do ponto em que ela estava. */
+  const bringBack = useCallback(() => {
+    const { time, paused } = pipStatus()
+    pipHereRef.current = false
+    void window.api.pip.close().then(() => {
+      const video = videoRef.current
+      if (!video) return
+      video.currentTime = time
+      if (!paused) video.play().catch(() => {})
+    })
+  }, [videoRef])
+
+  // Eventos da janela flutuante: fechou (fica pausado onde ela parou), trocou de aula (o app acompanha) e
+  // "voltar ao app" (continua tocando aqui).
+  useEffect(() => {
+    let wasHere = pipStatus().open && pipStatus().lessonId === lesson.id
+    const offEvents = onPipEvent((event) => {
+      const video = videoRef.current
+      if (event.type !== 'status') return
+      const s = event.status
+      const here = s.open && s.lessonId === lesson.id
+      if (wasHere && !here) {
+        if (s.open && s.lessonId !== null) onPipFollow?.(s.lessonId)
+        else {
+          if (video) video.currentTime = syncTarget(s.time, video.duration)
+          if (s.playback) applyPlayback(s.playback)
+        }
+      } else if (here && video) {
+        video.pause()
+        // Tocando lá, meio segundo de diferença não importa; pausado, fica no ponto exato. Nunca encosta no fim:
+        // o vídeo daqui "terminaria" e o player começaria a própria contagem para a próxima aula.
+        const target = syncTarget(s.time, video.duration)
+        if (Math.abs(video.currentTime - target) > (s.paused ? 0.05 : 0.5)) video.currentTime = target
+      }
+      wasHere = here
+    })
+    setPipReturnTarget((event) => {
+      const video = videoRef.current
+      if (event.lessonId !== lesson.id || !video) return false
+      applyPlayback(event.playback)
+      video.currentTime = event.time
+      if (event.playing) video.play().catch(() => {})
+      return true
+    })
+    return () => {
+      offEvents()
+      setPipReturnTarget(null)
+    }
+  }, [lesson.id, videoRef, applyPlayback, onPipFollow])
+
+  // Abrir sozinha ao sair do player com o vídeo tocando (preferência). Roda antes de o vídeo sair da tela, quando
+  // ainda dá para ler se ele estava tocando; a troca de aula (continua no player) não conta.
+  useLayoutEffect(() => {
+    const video = videoRef.current
+    return () => {
+      if (!video || video.paused || video.ended || pipHereRef.current || !autoOpenRef.current) return
+      const request = { ...pipRequest(video), playing: true }
+      setTimeout(() => {
+        if (!window.location.hash.startsWith('#/lesson/')) void window.api.pip.open(request).catch(() => {})
+      }, 0)
+    }
+  }, [videoRef, pipRequest])
+
   useEffect(() => {
     const onChange = () => setFullscreen(document.fullscreenElement === containerRef.current)
     document.addEventListener('fullscreenchange', onChange)
@@ -260,6 +377,9 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
         case 'f':
           toggleFullscreen()
           break
+        case 'p':
+          openPip()
+          break
         case '[':
           stepRate(-1)
           break
@@ -278,7 +398,7 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [togglePlay, seekBy, changeVolume, toggleMute, toggleFullscreen, stepRate, onNext, showControls])
+  }, [togglePlay, seekBy, changeVolume, toggleMute, toggleFullscreen, stepRate, onNext, showControls, openPip])
 
   useEffect(() => () => clearTimeout(hideTimer.current), [])
 
@@ -293,14 +413,15 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
     if (Number.isFinite(video.duration) && video.duration > 0 && lesson.durationSec === null) {
       window.api.lessons.setDuration(lesson.id, video.duration).catch(() => {})
     }
-    const saved = lesson.progress.positionSec
-    if (startAt !== null && startAt < video.duration) {
-      video.currentTime = startAt
-      setJump({ sec: startAt, label: 'Indo para' })
-      setTimeout(() => setJump(null), 3000)
-    } else if (saved > RESUME_MIN_SEC && saved < video.duration - SEEK_STEP) {
-      video.currentTime = saved
-      setJump({ sec: saved, label: 'Retomando de' })
+    // Aula tocando na janela flutuante: aqui só acompanha.
+    if (pipHereRef.current) {
+      video.currentTime = syncTarget(pipStatus().time, video.duration)
+      return
+    }
+    const start = startPosition(startAt, lesson.progress.positionSec, video.duration)
+    if (start) {
+      video.currentTime = start.sec
+      setJump({ sec: start.sec, label: start.resumed ? 'Retomando de' : 'Indo para' })
       setTimeout(() => setJump(null), 3000)
     }
     video.play().catch(() => {})
@@ -330,7 +451,17 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
         onLoadedMetadata={onLoadedMetadata}
         onTimeUpdate={(e) => setTime(e.currentTarget.currentTime)}
         onDurationChange={(e) => setDuration(e.currentTarget.duration)}
-        onPlay={() => {
+        onPlay={(e) => {
+          const video = e.currentTarget
+          // Com a janela flutuante aberta nesta aula, "tocar" aqui (ex.: clique num horário da transcrição) toca lá.
+          if (pipHereRef.current) {
+            video.pause()
+            void window.api.pip.command({ type: 'seek', time: video.currentTime, play: true })
+            return
+          }
+          // Um vídeo por vez: tocar aqui pausa a janela flutuante que estiver em outra aula.
+          const s = pipStatus()
+          if (s.open && !s.paused) void window.api.pip.command({ type: 'pause' })
           setPlaying(true)
           showControls()
         }}
@@ -338,7 +469,8 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
           setPlaying(false)
           setControlsVisible(true)
         }}
-        onEnded={onEnded}
+        // Com a janela flutuante nesta aula, quem conclui e passa para a próxima é ela.
+        onEnded={() => !pipHereRef.current && onEnded()}
         onError={() => setError(true)}
       >
         {subtitles.map((s) => (
@@ -359,7 +491,20 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
         </div>
       )}
 
-      {!playing && !error && (
+      {pipHere && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/90 p-6 text-center text-white">
+          <PictureInPicture2 size={36} className="text-accent" />
+          <p className="font-medium">Tocando na janela flutuante</p>
+          <p className="text-sm text-white/60">
+            {formatClock(pip.time)} / {formatClock(pip.duration || duration)}
+          </p>
+          <button type="button" onClick={bringBack} className="rounded-md bg-white/15 px-4 py-2 text-sm hover:bg-white/25">
+            Trazer de volta para cá
+          </button>
+        </div>
+      )}
+
+      {!playing && !error && !pipHere && (
         <button
           type="button"
           onClick={togglePlay}
@@ -370,7 +515,7 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
         </button>
       )}
 
-      {!error && (
+      {!error && !pipHere && (
         <div
           className={`absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-4 pt-10 pb-3 transition-opacity ${
             controlsVisible || !playing ? 'opacity-100' : 'opacity-0'
@@ -433,6 +578,9 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext 
                   onChange={chooseTrack}
                 />
               )}
+              <button type="button" onClick={openPip} aria-label="Janela flutuante" title="Janela flutuante (P)" className="grid size-8 place-items-center rounded hover:bg-white/15">
+                <PictureInPicture2 size={18} />
+              </button>
               <button type="button" onClick={toggleFullscreen} aria-label={fullscreen ? 'Sair da tela cheia' : 'Tela cheia'} className="grid size-8 place-items-center rounded hover:bg-white/15">
                 {fullscreen ? <Minimize size={18} /> : <Maximize size={18} />}
               </button>

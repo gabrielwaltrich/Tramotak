@@ -93,6 +93,9 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
   const next = lesson.data?.next
   const goNext = useCallback(() => next && navigate(`/lesson/${next.id}`), [next, navigate])
 
+  // A janela flutuante passou para outra aula: a página vai junto (anotações e transcrição da aula certa).
+  const followPip = useCallback((id: number) => navigate(`/lesson/${id}`), [navigate])
+
   const onEnded = () => {
     if (!lesson.data?.progress.completed) setCompleted.mutate(true)
     if (autoplay && next) setCountdown(NEXT_COUNTDOWN_SEC)
@@ -129,7 +132,15 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
         <div ref={playerRef} className="relative">
           {l.kind === 'video' ? (
-            <VideoPlayer key={`${l.id}:${l.url}`} lesson={l} videoRef={videoRef} startAt={startAt} onEnded={onEnded} onNext={next ? goNext : undefined} />
+            <VideoPlayer
+              key={`${l.id}:${l.url}`}
+              lesson={l}
+              videoRef={videoRef}
+              startAt={startAt}
+              onEnded={onEnded}
+              onNext={next ? goNext : undefined}
+              onPipFollow={followPip}
+            />
           ) : l.kind === 'text' ? (
             <TextLesson lessonId={l.id} />
           ) : (

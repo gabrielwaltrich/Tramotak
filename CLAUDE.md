@@ -41,7 +41,9 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
 - `src/main/` — processo principal: `db/` (SQLite via `node:sqlite`, SQL direto; migrations em `db/migrations.ts`,
   hoje até a **11**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
   valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/`, `scanner/`,
-  `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário).
+  `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário), `pip/` (janela flutuante:
+  `host.ts` grava progresso e troca de aula; `window.ts` cria a janela; `child.ts` é o processo separado em X11
+  usado no Wayland; `mode.ts` escolhe entre os dois).
 - `src/preload/index.ts` — ponte `window.api` (tipos em `src/shared/ipc.ts`, interface `TramotakApi`).
 - `src/renderer/src/` — React 19 + TanStack Query + Tailwind 4 (cores por tokens CSS; temas em
   `src/shared/appearance.ts`). Uma rota por tela em `routes/`.
@@ -84,3 +86,10 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
 - `pkill -f` com um padrão que aparece no próprio comando mata o shell: montar o padrão com variável.
 - No AppImage e no `.exe` portátil, `app.relaunch()` não funciona (a restauração de backup avisa e fecha).
 - Ids gerados para blocos/itens devem ser aleatórios (`randomUUID`), nunca só `Date.now()`.
+- **Janela flutuante no Linux**: o app roda em Wayland nativo (Electron 44), onde nenhuma janela fica "sempre por
+  cima" e `setPosition` não funciona; por isso a janela flutuante é um processo separado com
+  `--ozone-platform=x11` (o mesmo executável com `--tramotak-pip`). `app.commandLine.appendSwitch('ozone-platform')`
+  no main **não** adianta (chega tarde). No X11, `setAspectRatio` conta a sombra invisível e achata o vídeo, e o
+  `screenX`/`outerWidth` da página incluem essa sombra: a posição exata vem de `win.getBounds()`.
+- Para testar a janela flutuante: `TRAMOTAK_PIP_MODE=window|process` força o modo (o E2E usa `window`) e
+  `TRAMOTAK_PIP_DEBUG_PORT=9339` abre a porta de depuração do processo separado (Playwright `connectOverCDP`).

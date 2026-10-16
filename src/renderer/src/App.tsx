@@ -26,6 +26,7 @@ import { AiPage } from './routes/AiPage'
 import { SearchContext } from './lib/searchContext'
 import { useQueryClient } from '@tanstack/react-query'
 import { queryKeys } from './lib/api'
+import { deliverPipReturn, onPipEvent } from './lib/pip'
 
 export function App() {
   const [searchOpen, setSearchOpen] = useState(false)
@@ -55,6 +56,22 @@ export function App() {
         void queryClient.invalidateQueries({ queryKey: queryKeys.plans })
       }),
     [queryClient]
+  )
+
+  // Janela flutuante: aula concluída lá atualiza as telas; "voltar ao app" abre a aula no ponto em que estava
+  // (se o player já não estiver nela).
+  useEffect(
+    () =>
+      onPipEvent((event) => {
+        if (event.type === 'completed') {
+          void queryClient.invalidateQueries({ queryKey: queryKeys.lesson(event.lessonId) })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.courses })
+          void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+        } else if (event.type === 'return' && !deliverPipReturn(event)) {
+          navigate(`/lesson/${event.lessonId}?t=${Math.floor(event.time)}`)
+        }
+      }),
+    [queryClient, navigate]
   )
 
   // Clique numa notificação do sistema abre a tela pedida pelo processo principal.

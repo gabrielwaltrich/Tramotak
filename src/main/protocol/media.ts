@@ -24,7 +24,7 @@ function text(status: number, body: string): Response {
   return new Response(body, { status, headers: { 'Content-Type': 'text/plain; charset=utf-8', ...CORS } })
 }
 
-async function serveFile(path: string, rangeHeader: string | null): Promise<Response> {
+export async function serveFile(path: string, rangeHeader: string | null): Promise<Response> {
   const info = await stat(path).catch(() => null)
   if (!info?.isFile()) return text(404, 'Arquivo não encontrado no disco')
 

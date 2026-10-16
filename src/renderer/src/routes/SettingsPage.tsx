@@ -12,6 +12,7 @@ import { BackupSettings } from '../components/backup/BackupSettings'
 import { PackageSettings } from '../components/backup/PackageSettings'
 import { AppearanceSettings } from '../components/AppearanceSettings'
 import { UpdateSettings } from '../components/UpdateSettings'
+import { PipSettings } from '../components/player/PipSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -165,6 +166,10 @@ export function SettingsPage() {
 
       <Section title="Notificações" description="Avisos do sistema para blocos de estudo com horário e um resumo do dia (a partir das 8h).">
         {settings.data && <NotificationSettings enabled={settings.data.notificationsEnabled} lead={settings.data.notifyLeadMinutes} />}
+      </Section>
+
+      <Section title="Janela flutuante" description="O vídeo da aula numa janela pequena que fica por cima das outras, para estudar enquanto usa outros programas.">
+        {settings.data && <PipSettings key={JSON.stringify(settings.data.pip)} settings={settings.data.pip} />}
       </Section>
 
       <Section title="Vídeo e transcrição" description="Conversão de vídeos incompatíveis e transcrição automática das aulas.">

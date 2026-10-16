@@ -1,12 +1,14 @@
-# Onde paramos (atualizado em 11/10/2026)
+# Onde paramos (atualizado em 16/10/2026)
 
 ## Estado atual
 
-- **Última versão publicada: v0.6.1** (tag em `ad95daf`), só para **Windows e Linux**.
-  Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.1
-- Testes no momento da publicação: 423 unitários (Vitest) e 14 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão publicada: v0.6.2** (janela flutuante), só para **Windows e Linux**.
+  Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.2
+- Testes no momento da publicação: 448 unitários (Vitest) e 15 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.6.1; não há trabalho pela metade.
+- `main` está igual à v0.6.2; não há trabalho pela metade.
+- Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
+  `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
   (1.092 aulas, nomes de arquivo como `#F0009_2026-02-20_01_Título_By_@autor`).
 
@@ -17,6 +19,7 @@
 | 0.5.0 | Atualização automática (electron-updater), Whisper embutido (whisper.cpp), transcrever o curso inteiro, regras de nomes das aulas, durações medidas pelo FFmpeg |
 | 0.6.0 | Plano de estudos por curso (data-alvo ou minutos por dia, tarefas no Planner, replanejamento), **FSRS-6** no lugar do SM-2 com opções por baralho, aparência salva no banco, macOS descontinuado |
 | 0.6.1 | Aba **Anotações** (todas as notas, busca, filtro, exportar `.md`) e envio de notas para os **cadernos** com horários clicáveis |
+| 0.6.2 | **Janela flutuante** do player (sempre por cima, transparência, ±10 s, próxima aula, opções); no Wayland, processo separado em X11 |
 
 Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 
@@ -56,6 +59,10 @@ Perguntar ao terminar cada parte.
   (é irreversível).
 
 ## A validar com o dono
+
+- Janela flutuante no dia a dia: arrastar com o mouse real e uso em dois monitores. A transparência sobre outras
+  janelas foi conferida numa captura da tela real (sessão X11, 16/10); o modo processo separado (Wayland) só foi
+  testado na sessão Wayland de 14/10.
 
 - A primeira atualização automática real pelo `.deb` (0.6.0 → 0.6.1): deve aparecer "Atualizar para 0.6.1" na barra
   superior, pedir a senha do sistema e reabrir na versão nova.

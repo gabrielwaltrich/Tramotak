@@ -29,6 +29,7 @@ import type {
   Structure
 } from './course'
 import type { Appearance } from './appearance'
+import type { PipAppEvent, PipCommand, PipOpenRequest, PipSettings, PipStatus } from './pip'
 
 export interface AppInfo {
   name: string
@@ -71,6 +72,8 @@ export interface AppSettings {
   autoUpdateCheck: boolean
   /** Aparência (tema, cor, densidade…); null até a pessoa mudar algo. A janela guarda uma cópia no localStorage. */
   appearance: Appearance | null
+  /** Janela flutuante do player (opacidade, botões, posição…). */
+  pip: PipSettings
 }
 
 export const IPC = {
@@ -232,6 +235,11 @@ export const IPC = {
   updatesInstall: 'updates:install',
   updatesOpenRelease: 'updates:openRelease',
   updatesState: 'updates:state',
+  pipOpen: 'pip:open',
+  pipClose: 'pip:close',
+  pipCommand: 'pip:command',
+  pipStatus: 'pip:status',
+  pipEvent: 'pip:event',
   whisperDownload: 'whisper:download',
   whisperCancelDownload: 'whisper:cancelDownload',
   whisperDelete: 'whisper:delete',
@@ -503,6 +511,15 @@ export interface TramotakApi {
     /** Abre a página da versão nova no navegador. */
     openRelease(): Promise<void>
     onState(callback: (info: UpdateInfo) => void): () => void
+  }
+  /** Janela flutuante do player (fica por cima das outras janelas). */
+  pip: {
+    open(request: PipOpenRequest): Promise<PipStatus>
+    close(): Promise<void>
+    /** Tocar, pausar ou ir a um horário na janela aberta. */
+    command(command: PipCommand): Promise<void>
+    status(): Promise<PipStatus>
+    onEvent(callback: (event: PipAppEvent) => void): () => void
   }
   /** Tela Progresso: estatísticas acumuladas e histórico. */
   stats: {

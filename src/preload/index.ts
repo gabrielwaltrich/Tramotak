@@ -200,6 +200,17 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.updatesState, listener)
     }
   },
+  pip: {
+    open: (request) => ipcRenderer.invoke(IPC.pipOpen, request),
+    close: () => ipcRenderer.invoke(IPC.pipClose),
+    command: (command) => ipcRenderer.invoke(IPC.pipCommand, command),
+    status: () => ipcRenderer.invoke(IPC.pipStatus),
+    onEvent: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, e: unknown) => e && typeof e === 'object' && callback(e as never)
+      ipcRenderer.on(IPC.pipEvent, listener)
+      return () => ipcRenderer.removeListener(IPC.pipEvent, listener)
+    }
+  },
   backup: {
     create: () => ipcRenderer.invoke(IPC.backupCreate),
     list: () => ipcRenderer.invoke(IPC.backupList),
