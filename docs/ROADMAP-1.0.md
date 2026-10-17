@@ -68,9 +68,13 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ✅ **Linux com Wayland**: a janela roda num processo separado em X11 (XWayland), porque o GNOME não deixa
   janelas de apps ficarem por cima; o app continua em Wayland. Sem XWayland, cai para janela comum com aviso.
 
+## 0.6.3 — Revisão pós-aula ✅ (publicada: v0.6.3)
+- ✅ Primeira parte da 0.7, publicada antes: perguntas rápidas ao concluir a aula (detalhes no item da 0.7).
+
 ## 0.7 — PDFs e revisão pós-aula ⬜
 - PDFs como aula: leitura, grifo e anotações dentro do app; texto do PDF como material da IA.
-- Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto.
+- ✅ Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto (múltipla escolha e V/F, correção na
+  hora, erradas viram flashcard; sem transcrição, transcreve antes). Perguntas salvas por aula.
 - Pomodoro/modo foco integrado ao tempo de estudo.
 
 ## 0.8 — IA no curso inteiro ⬜

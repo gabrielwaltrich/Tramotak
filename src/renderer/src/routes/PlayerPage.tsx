@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Sparkles, Star } from 'lucide-react'
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, ListChecks, Loader2, Sparkles, Star } from 'lucide-react'
 import type { LessonView } from '@shared/course'
 import { errorMessage, queryKeys } from '../lib/api'
 import { VideoPlayer } from '../components/player/VideoPlayer'
@@ -11,10 +11,13 @@ import { LessonSidebar } from '../components/player/LessonSidebar'
 import { NotesPanel } from '../components/player/NotesPanel'
 import { TranscriptPanel } from '../components/player/TranscriptPanel'
 import { LessonChat } from '../components/ai/LessonChat'
+import { ReviewDialog } from '../components/review/ReviewDialog'
 import { playerPrefs } from '../components/player/prefs'
 import { useToast } from '../components/Toast'
 
 const NEXT_COUNTDOWN_SEC = 3
+/** Com a revisão pós-aula oferecida, dá tempo de ler e escolher antes de passar para a próxima. */
+const NEXT_COUNTDOWN_WITH_REVIEW_SEC = 10
 
 /** Remonta a página a cada aula: estado local (contagem, foco, player) começa do zero. */
 export function PlayerPage() {
@@ -34,6 +37,9 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
   const [autoplay, setAutoplay] = useState(playerPrefs.autoplay)
   const [countdown, setCountdown] = useState<number | null>(null)
   const [tab, setTab] = useState<'notes' | 'transcript' | 'ai' | 'attachments'>('notes')
+  // Revisão pós-aula: oferta depois de concluir e a janela das perguntas.
+  const [offer, setOffer] = useState(false)
+  const [reviewOpen, setReviewOpen] = useState(false)
   const playerRef = useRef<HTMLDivElement>(null)
 
   const lesson = useQuery({ queryKey: queryKeys.lesson(lessonId), queryFn: () => window.api.lessons.get(lessonId), staleTime: 0 })
@@ -55,6 +61,14 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
   const notes = useQuery({ queryKey: queryKeys.notes(lessonId), queryFn: () => window.api.notes.list(lessonId) })
   const isVideo = lesson.data?.kind === 'video'
+  const review = useQuery({
+    queryKey: ['review', lessonId],
+    queryFn: () => window.api.review.status(lessonId),
+    enabled: lesson.data !== undefined && lesson.data.kind !== 'document',
+    staleTime: 0
+  })
+  const canReview = review.data !== undefined && review.data.ai && review.data.material !== 'none'
+  const offerReview = canReview && review.data!.enabled
 
   const getTime = useCallback(() => (isVideo ? (videoRef.current?.currentTime ?? 0) : null), [isVideo])
 
@@ -73,7 +87,10 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
   const setCompleted = useMutation({
     mutationFn: (value: boolean) => window.api.progress.setCompleted(lessonId, value),
-    onMutate: (value) => patchLesson({ completed: value }),
+    onMutate: (value) => {
+      patchLesson({ completed: value })
+      setOffer(value && offerReview)
+    },
     onSuccess: () => courseId !== undefined && queryClient.invalidateQueries({ queryKey: queryKeys.course(courseId) }),
     onError: (error, value) => {
       patchLesson({ completed: !value })
@@ -98,8 +115,18 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
   const onEnded = () => {
     if (!lesson.data?.progress.completed) setCompleted.mutate(true)
-    if (autoplay && next) setCountdown(NEXT_COUNTDOWN_SEC)
+    setOffer(offerReview)
+    if (autoplay && next) setCountdown(offerReview ? NEXT_COUNTDOWN_WITH_REVIEW_SEC : NEXT_COUNTDOWN_SEC)
   }
+
+  const openReview = () => {
+    videoRef.current?.pause()
+    setCountdown(null)
+    setOffer(false)
+    setReviewOpen(true)
+  }
+  const reviewCount = review.data?.count ?? 4
+  const reviewLabel = review.data?.material === 'transcribe' ? 'Transcrever e revisar' : 'Revisar'
 
   useEffect(() => {
     if (countdown === null) return
@@ -152,6 +179,11 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
               <p className="text-sm text-white/70">Próxima aula em {countdown}…</p>
               <p className="max-w-md text-center text-lg font-medium">{next.title}</p>
               <div className="flex gap-2">
+                {offerReview && (
+                  <button type="button" onClick={openReview} className="inline-flex items-center gap-2 rounded-md bg-white/15 px-4 py-2 text-sm hover:bg-white/25">
+                    <ListChecks size={16} /> {reviewLabel} ({reviewCount} perguntas)
+                  </button>
+                )}
                 <button type="button" onClick={() => setCountdown(null)} className="rounded-md bg-white/15 px-4 py-2 text-sm hover:bg-white/25">
                   Cancelar
                 </button>
@@ -163,42 +195,75 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
           )}
         </div>
 
-        <div className="mt-4 flex items-start gap-3">
-          <div className="min-w-0 flex-1">
+        <div className="mt-4 flex flex-wrap items-start gap-3">
+          <div className="min-w-64 flex-1">
             {l.moduleTitle && <p className="text-xs text-muted">{l.moduleTitle}</p>}
             <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere]">{l.title}</h1>
           </div>
-          <Link
-            to={`/ai?lesson=${lessonId}`}
-            title="Gerar flashcards, questões, resumo ou mapa mental desta aula"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted hover:bg-surface-2 hover:text-text"
-          >
-            <Sparkles size={16} className="text-accent" /> Gerar com IA
-          </Link>
-          <button
-            type="button"
-            onClick={() => setFavorite.mutate(!l.progress.favorite)}
-            aria-pressed={l.progress.favorite}
-            aria-label={l.progress.favorite ? 'Remover dos favoritos' : 'Favoritar'}
-            className={`grid size-9 place-items-center rounded-md border border-border hover:bg-surface-2 ${
-              l.progress.favorite ? 'text-warning' : 'text-muted'
-            }`}
-          >
-            <Star size={18} fill={l.progress.favorite ? 'currentColor' : 'none'} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setCompleted.mutate(!l.progress.completed)}
-            aria-pressed={l.progress.completed}
-            className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium ${
-              l.progress.completed
-                ? 'border-success/40 bg-success/10 text-success'
-                : 'border-border text-text hover:bg-surface-2'
-            }`}
-          >
-            <Check size={16} /> {l.progress.completed ? 'Concluída' : 'Concluir'}
-          </button>
+          <div className="flex shrink-0 items-start gap-3">
+            {canReview && (
+              <button
+                type="button"
+                onClick={openReview}
+                title={`${reviewCount} perguntas rápidas sobre o assunto da aula`}
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted hover:bg-surface-2 hover:text-text"
+              >
+                <ListChecks size={16} className="text-accent" /> Revisão rápida
+                {review.data?.saved?.correct != null && (
+                  <span className="text-xs tabular-nums">
+                    {review.data.saved.correct}/{review.data.saved.total}
+                  </span>
+                )}
+              </button>
+            )}
+            <Link
+              to={`/ai?lesson=${lessonId}`}
+              title="Gerar flashcards, questões, resumo ou mapa mental desta aula"
+              className="inline-flex h-9 items-center gap-2 rounded-md border border-border px-3 text-sm text-muted hover:bg-surface-2 hover:text-text"
+            >
+              <Sparkles size={16} className="text-accent" /> Gerar com IA
+            </Link>
+            <button
+              type="button"
+              onClick={() => setFavorite.mutate(!l.progress.favorite)}
+              aria-pressed={l.progress.favorite}
+              aria-label={l.progress.favorite ? 'Remover dos favoritos' : 'Favoritar'}
+              className={`grid size-9 place-items-center rounded-md border border-border hover:bg-surface-2 ${
+                l.progress.favorite ? 'text-warning' : 'text-muted'
+              }`}
+            >
+              <Star size={18} fill={l.progress.favorite ? 'currentColor' : 'none'} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompleted.mutate(!l.progress.completed)}
+              aria-pressed={l.progress.completed}
+              className={`inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-medium ${
+                l.progress.completed
+                  ? 'border-success/40 bg-success/10 text-success'
+                  : 'border-border text-text hover:bg-surface-2'
+              }`}
+            >
+              <Check size={16} /> {l.progress.completed ? 'Concluída' : 'Concluir'}
+            </button>
+          </div>
         </div>
+
+        {offer && canReview && !reviewOpen && (
+          <div role="status" className="mt-3 flex flex-wrap items-center gap-3 rounded-xl border border-accent/40 bg-accent-soft px-4 py-3 text-sm">
+            <ListChecks size={18} className="shrink-0 text-accent" />
+            <p className="min-w-0 flex-1">
+              Aula concluída. Que tal {reviewCount} perguntas rápidas sobre o assunto?
+              {review.data?.material === 'transcribe' && <span className="text-muted"> A aula é transcrita antes.</span>}
+            </p>
+            <button type="button" onClick={() => setOffer(false)} className="rounded-md px-3 py-1.5 text-muted hover:text-text">
+              Agora não
+            </button>
+            <button type="button" onClick={openReview} className="rounded-md bg-accent px-3 py-1.5 font-medium text-on-accent hover:brightness-110">
+              {reviewLabel}
+            </button>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center gap-4 text-sm">
           {l.prev && (
@@ -285,6 +350,17 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
           </div>
         </section>
       </div>
+
+      {reviewOpen && (
+        <ReviewDialog
+          open
+          lessonId={l.id}
+          courseId={l.course.id}
+          onClose={() => setReviewOpen(false)}
+          nextTitle={next?.title}
+          onNext={next ? goNext : undefined}
+        />
+      )}
 
       {course.data ? (
         <LessonSidebar course={course.data} currentId={l.id} />

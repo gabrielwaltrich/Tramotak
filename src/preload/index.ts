@@ -79,6 +79,13 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.aiOllamaPullProgress, listener)
     }
   },
+  review: {
+    status: (lessonId) => ipcRenderer.invoke(IPC.reviewStatus, lessonId),
+    get: (lessonId) => ipcRenderer.invoke(IPC.reviewGet, lessonId),
+    generate: (lessonId) => ipcRenderer.invoke(IPC.reviewGenerate, lessonId),
+    answer: (lessonId, answers) => ipcRenderer.invoke(IPC.reviewAnswer, lessonId, answers),
+    cancel: () => ipcRenderer.invoke(IPC.reviewCancel)
+  },
   dashboard: {
     get: () => ipcRenderer.invoke(IPC.dashboardGet)
   },

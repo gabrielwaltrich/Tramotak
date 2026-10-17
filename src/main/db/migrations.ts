@@ -398,5 +398,16 @@ export const MIGRATIONS: string[] = [
     PRIMARY KEY (task_id, lesson_id)
   );
   CREATE INDEX plan_lessons_lesson ON plan_lessons(lesson_id);
+  `,
+  /* 12 — revisão pós-aula: as perguntas geradas e as respostas da última revisão de cada aula */ `
+  CREATE TABLE lesson_reviews (
+    lesson_id      INTEGER PRIMARY KEY REFERENCES lessons(id) ON DELETE CASCADE,
+    questions_json TEXT    NOT NULL,
+    answers_json   TEXT    NOT NULL DEFAULT '[]',
+    total          INTEGER NOT NULL,
+    correct        INTEGER,
+    created_at     INTEGER NOT NULL DEFAULT (unixepoch()),
+    finished_at    INTEGER
+  );
   `
 ]

@@ -29,7 +29,9 @@ import { getSecret, hasSecret, setSecret } from '../secrets'
 import { chat, chatStream, listModels, ollamaPull, ollamaVersion, type AiClientConfig } from '../ai/client'
 import { appendChat, clearChat, getChat } from '../db/chats'
 import { loginOpenRouter } from '../ai/openrouterAuth'
-import { chatMaterial, resolveSource } from '../ai/source'
+import { chatMaterial, resolveSource, reviewMaterial } from '../ai/source'
+import { getReview, reviewSummary, saveReviewAnswers, saveReviewQuestions } from '../db/reviews'
+import { REVIEW_MIN_CHARS, reviewRequest, type LessonReview, type ReviewStatus } from '@shared/review'
 
 function assertId(id: unknown): number {
   if (!Number.isInteger(id)) throw new Error('Identificador inválido')
@@ -110,6 +112,59 @@ export function registerAiIpc(db: Database): void {
     )
     return normalizeTitleRules({ ...(extractJson(answer.text) as object), enabled: true })
   })
+
+  // ── Revisão pós-aula ──
+  let reviewing: AbortController | null = null
+
+  ipcMain.handle(IPC.reviewStatus, async (_e, lessonId: unknown): Promise<ReviewStatus> => {
+    const id = assertId(lessonId)
+    const settings = getSettings(db)
+    const material = await reviewMaterial(db, id)
+    const enough = material.text.trim().length >= REVIEW_MIN_CHARS
+    return {
+      enabled: settings.review.enabled,
+      count: settings.review.count,
+      ai: settings.aiProvider !== 'none',
+      material: enough ? 'ready' : material.kind === 'video' && settings.transcriptionProvider !== 'none' ? 'transcribe' : 'none',
+      saved: reviewSummary(db, id)
+    }
+  })
+
+  ipcMain.handle(IPC.reviewGet, (_e, lessonId: unknown) => getReview(db, assertId(lessonId)))
+
+  // Perguntas novas para a aula (substituem as anteriores). Só a fala/legenda/texto da aula vai para a IA.
+  ipcMain.handle(IPC.reviewGenerate, async (_e, lessonId: unknown): Promise<LessonReview> => {
+    const id = assertId(lessonId)
+    const settings = getSettings(db)
+    const provider = settings.aiProvider
+    if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    if (reviewing) throw new Error('A revisão já está sendo preparada')
+    const material = await reviewMaterial(db, id)
+    if (material.text.trim().length < REVIEW_MIN_CHARS) throw new Error('Esta aula ainda não tem transcrição, legenda ou texto suficiente para a revisão.')
+    const config = clientConfig(db, provider)
+    const { text } = fitSource(material.text, AI_PROVIDERS[provider].maxSourceChars)
+    const req = reviewRequest(text, settings.review.count)
+    const prompt = buildPrompt(req, text)
+
+    const controller = new AbortController()
+    reviewing = controller
+    try {
+      const answer = await chat(
+        config,
+        { system: prompt.system, messages: [{ role: 'user', content: prompt.user }], maxTokens: maxOutputTokens(req), json: true },
+        controller.signal
+      )
+      if (!answer.text.trim()) throw new Error('A IA devolveu uma resposta vazia')
+      const result = parseResult(req, answer.text)
+      if (result.task !== 'questions') throw new Error('A IA não devolveu perguntas')
+      return saveReviewQuestions(db, id, result.questions.slice(0, req.count))
+    } finally {
+      reviewing = null
+    }
+  })
+
+  ipcMain.handle(IPC.reviewAnswer, (_e, lessonId: unknown, answers: unknown) => saveReviewAnswers(db, assertId(lessonId), answers))
+  ipcMain.handle(IPC.reviewCancel, () => reviewing?.abort())
 
   // ── Conversa sobre a aula ──
   let chatting: AbortController | null = null

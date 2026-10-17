@@ -30,6 +30,7 @@ import type {
 } from './course'
 import type { Appearance } from './appearance'
 import type { PipAppEvent, PipCommand, PipOpenRequest, PipSettings, PipStatus } from './pip'
+import type { LessonReview, ReviewSettings, ReviewStatus } from './review'
 
 export interface AppInfo {
   name: string
@@ -74,6 +75,8 @@ export interface AppSettings {
   appearance: Appearance | null
   /** Janela flutuante do player (opacidade, botões, posição…). */
   pip: PipSettings
+  /** Revisão pós-aula: oferecer ao concluir e quantas perguntas. */
+  review: ReviewSettings
 }
 
 export const IPC = {
@@ -220,6 +223,11 @@ export const IPC = {
   packageExport: 'package:export',
   packageOpen: 'package:open',
   packageImport: 'package:import',
+  reviewStatus: 'review:status',
+  reviewGet: 'review:get',
+  reviewGenerate: 'review:generate',
+  reviewAnswer: 'review:answer',
+  reviewCancel: 'review:cancel',
   aiChatGet: 'ai:chatGet',
   aiChatSend: 'ai:chatSend',
   aiChatCancel: 'ai:chatCancel',
@@ -483,6 +491,16 @@ export interface TramotakApi {
     onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
     /** Sugestão de regras de nomes para um curso, a partir de exemplos dos nomes e de um pedido opcional. */
     suggestTitleRules(courseId: number, request: string): Promise<TitleRules>
+  }
+  review: {
+    /** O que dá para oferecer nesta aula (IA, material, revisão salva). */
+    status(lessonId: number): Promise<ReviewStatus>
+    get(lessonId: number): Promise<LessonReview | null>
+    /** Gera perguntas novas pela IA (substituem as anteriores). */
+    generate(lessonId: number): Promise<LessonReview>
+    /** Grava as respostas; com todas respondidas, a revisão termina com o acerto calculado. */
+    answer(lessonId: number, answers: (QuestionAnswer | null)[]): Promise<LessonReview>
+    cancel(): Promise<void>
   }
   backup: {
     /** "Salvar como" e cria um backup completo (sem as chaves de API). `null` se cancelar. */

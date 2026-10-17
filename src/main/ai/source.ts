@@ -1,6 +1,6 @@
 import { readFile, stat } from 'node:fs/promises'
 import { extname } from 'node:path'
-import { timestampedTranscript, type AiSource, type AiSourceRef, type AiSourceSection, type ChatMaterialInfo } from '@shared/ai'
+import { composeMaterial, timestampedTranscript, type AiSource, type AiSourceRef, type AiSourceSection, type ChatMaterialInfo } from '@shared/ai'
 import { pagePlainText } from '@shared/notebooks'
 import { transcriptText } from '@shared/media'
 import { formatClock } from '@shared/format'
@@ -116,6 +116,14 @@ async function lessonSource(db: Database, lessonId: number): Promise<AiSource> {
   if (notes.count) sections.push({ kind: 'notes', label: 'Minhas anotações', text: notes.text, defaultOn: false })
 
   return { title: lesson.title, sections, lessonId: lesson.id, courseId: lesson.courseId }
+}
+
+/** Material da revisão pós-aula: só o que é padrão na geração (fala/legenda e texto da aula), sem anotações nem anexos. */
+export async function reviewMaterial(db: Database, lessonId: number): Promise<{ text: string; kind: string }> {
+  const source = await lessonSource(db, lessonId)
+  const lesson = await lessonRow(db, lessonId)
+  const defaults = source.sections.filter((s) => s.defaultOn)
+  return { text: composeMaterial(defaults, defaults.map((s) => s.kind)), kind: lesson.kind }
 }
 
 /** Material da conversa: fala com marcas de tempo (transcrição ou legenda), texto da aula e, se pedido, as anotações. */

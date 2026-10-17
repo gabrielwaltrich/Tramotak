@@ -2,11 +2,11 @@
 
 ## Estado atual
 
-- **Última versão publicada: v0.6.2** (janela flutuante), só para **Windows e Linux**.
-  Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.2
-- Testes no momento da publicação: 448 unitários (Vitest) e 15 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão publicada: v0.6.3** (revisão pós-aula, a primeira parte da 0.7), só para **Windows e Linux**.
+  Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.3
+- Testes no momento da publicação: 456 unitários (Vitest) e 16 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.6.2; não há trabalho pela metade.
+- `main` está igual à v0.6.3; não há trabalho pela metade.
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -20,6 +20,7 @@
 | 0.6.0 | Plano de estudos por curso (data-alvo ou minutos por dia, tarefas no Planner, replanejamento), **FSRS-6** no lugar do SM-2 com opções por baralho, aparência salva no banco, macOS descontinuado |
 | 0.6.1 | Aba **Anotações** (todas as notas, busca, filtro, exportar `.md`) e envio de notas para os **cadernos** com horários clicáveis |
 | 0.6.2 | **Janela flutuante** do player (sempre por cima, transparência, ±10 s, próxima aula, opções); no Wayland, processo separado em X11 |
+| 0.6.3 | **Revisão pós-aula**: 3 a 5 perguntas da IA ao concluir (sem parar o autoplay), transcreve antes se preciso, erradas viram flashcard |
 
 Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 
@@ -33,17 +34,24 @@ Perguntar ao terminar cada parte.
   (`src/renderer/src/components/player/DocumentLesson.tsx`).
 - Objetivo: abrir o **PDF dentro do app** (leitor com páginas, zoom, busca), **grifar** trechos e **anotar** com
   referência à página (as anotações de hoje usam `timestamp_sec`; para PDF faz sentido uma coluna de página, numa
-  migration nova, a 12).
+  migration nova, a 13 — a 12 é a da revisão pós-aula).
 - Texto do PDF como **material da IA** (`src/main/ai/source.ts`, `resolveSource`), respeitando a regra de usar só
   o conteúdo.
 - Os PDFs dos cursos não podem ser alterados: grifos ficam no banco, não no arquivo.
 - Avaliar o `pdfjs-dist` (o caderno já gera PDF em `components/notebooks/pdf.ts`, mas isso é exportação, não leitura).
 
-### 2. Revisão pós-aula
-- Ao concluir uma aula, oferecer **3 a 5 perguntas rápidas sobre o assunto** (geradas pela IA a partir da
-  transcrição/legenda; reaproveitar `buildPrompt`/`parseQuestions` de `src/shared/ai.ts`).
-- Sem provedor de IA ou sem material, não mostrar (ou sugerir transcrever).
-- Respostas erradas podem virar flashcards com um clique.
+### 2. Revisão pós-aula ✅ (publicada na v0.6.3)
+- Ao concluir (fim do vídeo ou botão Concluir), faixa "Que tal N perguntas rápidas?" e, com o autoplay, o botão
+  na contagem da próxima aula (que sobe de 3 para 10 s). Botão **Revisão rápida** no cabeçalho a qualquer hora.
+- Decisões do dono: oferecer sem parar o autoplay; numa aula sem material, **Transcrever e revisar** (usa o
+  provedor de transcrição configurado); gerar **só ao clicar** (nada de pré-gerar). As perguntas ficam salvas
+  por aula (migration 12, `lesson_reviews`) para refazer sem gastar IA; "Novas perguntas" gera outras.
+- Só múltipla escolha e verdadeiro/falso, corrigidas na hora; teclas 1–5 e Enter. Erradas viram flashcard no
+  baralho do curso (`deckForCourse`) com um clique, uma a uma ou todas no fim.
+- Código: `src/shared/review.ts` (pedido, carta, acerto), `src/main/db/reviews.ts`, `reviewMaterial` em
+  `src/main/ai/source.ts`, handlers `review:*` em `src/main/ipc/ai.ts`, `components/review/` (diálogo e
+  configuração em Configurações → Inteligência artificial).
+- Não feito: oferta quando a aula termina na janela flutuante (só no player do app).
 
 ### 3. Pomodoro / modo foco
 - Temporizador (25/5 configurável) integrado ao tempo de estudo (`recordStudyTime` em `src/main/db/study.ts`) e à

@@ -13,6 +13,7 @@ import { PackageSettings } from '../components/backup/PackageSettings'
 import { AppearanceSettings } from '../components/AppearanceSettings'
 import { UpdateSettings } from '../components/UpdateSettings'
 import { PipSettings } from '../components/player/PipSettings'
+import { ReviewSettings } from '../components/review/ReviewSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -178,6 +179,7 @@ export function SettingsPage() {
 
       <Section title="Inteligência artificial" description="Gere flashcards, questões, resumos e mapas mentais a partir das aulas. Dá para usar de graça (Gemini com a conta Google, OpenRouter ou um modelo local) ou com a sua própria chave.">
         {settings.data && <AiSettings key={settings.data.aiProvider} settings={settings.data} />}
+        {settings.data && <ReviewSettings key={JSON.stringify(settings.data.review)} settings={settings.data.review} />}
       </Section>
 
       <Section title="Dados e backup" description="Biblioteca, progresso e anotações ficam neste computador, na pasta abaixo.">

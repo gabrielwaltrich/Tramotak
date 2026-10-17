@@ -597,6 +597,129 @@ test('conversa com a IA: resposta em tempo real só com a fala da aula e horári
   }
 })
 
+test('revisão pós-aula: ao terminar o vídeo, perguntas só da fala da aula, correção na hora e erradas viram flashcard', async () => {
+  // Legenda mais longa só neste teste: a revisão precisa de material suficiente
+  const { readFile, writeFile } = await import('node:fs/promises')
+  const srt = join(coursePath, '01. Primeiro módulo', '01. Boas-vindas.pt-BR.srt')
+  const original = await readFile(srt, 'utf8')
+  await writeFile(
+    srt,
+    `${original.trimEnd()}\n\n2\n00:00:01,000 --> 00:00:02,000\nO comando ls lista os arquivos de um diretório e o comando cd muda o diretório atual.\n\n3\n00:00:02,000 --> 00:00:03,000\nO kernel é a parte do sistema operacional que conversa diretamente com o hardware da máquina.\n`
+  )
+
+  const { createServer } = await import('node:http')
+  const received: { system: string; user: string; format: string }[] = []
+  const server = createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    res.setHeader('content-type', 'application/json')
+    if (req.url === '/api/version') return res.end(JSON.stringify({ version: '0.0.0-teste' }))
+    if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'modelo-teste' }] }))
+    const data = JSON.parse(body)
+    received.push({ system: data.messages[0].content, user: data.messages.at(-1).content, format: data.format })
+    const questions = [
+      { type: 'single', statement: 'Qual comando lista os arquivos de um diretório?', options: ['ls', 'cd', 'pwd'], correct: [0], explanation: 'O ls lista o conteúdo.' },
+      { type: 'truefalse', statement: 'No vídeo, o professor usou o comando ls.', answer: true },
+      { type: 'truefalse', statement: 'O kernel conversa diretamente com o hardware.', answer: true, explanation: 'É o núcleo do sistema.' }
+    ]
+    res.end(JSON.stringify({ message: { content: JSON.stringify({ questions }) } }))
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const port = (server.address() as { port: number }).port
+
+  const { app, page } = await launch()
+  try {
+    await page.evaluate(
+      (url) =>
+        window.api.settings.update({
+          aiProvider: 'ollama',
+          ollamaUrl: url,
+          aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' },
+          review: { enabled: true, count: 3 }
+        }),
+      `http://127.0.0.1:${port}`
+    )
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('link', { name: /Boas-vindas/ }).click()
+    await expect(page.getByRole('button', { name: /Revisão rápida/ })).toBeVisible()
+
+    // O vídeo termina: a contagem para a próxima aula oferece a revisão, e a faixa abaixo do título também
+    const video = page.locator('video')
+    await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState), { timeout: 20_000 }).toBeGreaterThan(0)
+    await video.evaluate((v: HTMLVideoElement) => {
+      v.currentTime = Math.max(0, v.duration - 0.3)
+      void v.play()
+    })
+    await expect(page.getByText(/Próxima aula em/)).toBeVisible()
+    await expect(page.getByText('Aula concluída. Que tal 3 perguntas rápidas sobre o assunto?')).toBeVisible()
+    await page.getByRole('button', { name: 'Revisar (3 perguntas)' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Revisão rápida' })
+    await expect(dialog.getByText('Pergunta 1 de 2')).toBeVisible()
+    // A contagem parou: continua na mesma aula
+    await page.waitForTimeout(1500)
+    await expect(page.getByRole('heading', { name: 'Boas-vindas' })).toBeVisible()
+
+    // Só a fala da aula foi para a IA; a pergunta sobre o vídeo foi descartada
+    expect(received).toHaveLength(1)
+    expect(received[0].format).toBe('json')
+    expect(received[0].user).toContain('Crie 3 questões')
+    expect(received[0].user).toContain('O kernel é a parte do sistema operacional')
+    expect(received[0].user).not.toContain('Boas-vindas')
+    expect(received[0].user).not.toContain('Curso E2E')
+    expect(received[0].user).not.toContain('Minha primeira anotação')
+
+    // Errar pela tecla 2 (as teclas não vão para o player), virar flashcard, acertar a seguinte
+    await page.keyboard.press('2')
+    await expect(dialog.getByText('Não foi dessa vez.')).toBeVisible()
+    await expect(dialog.getByText('O ls lista o conteúdo.')).toBeVisible()
+    expect(await video.evaluate((v: HTMLVideoElement) => v.paused)).toBe(true)
+    await dialog.getByRole('button', { name: 'Virar flashcard' }).click()
+    await expect(dialog.getByText('Flashcard criado')).toBeVisible()
+    await page.getByRole('button', { name: /Próxima pergunta/ }).click()
+    await expect(dialog.getByText('Pergunta 2 de 2')).toBeVisible()
+    await dialog.getByRole('radio', { name: 'Verdadeiro' }).click()
+    await expect(dialog.getByText('Certo!')).toBeVisible()
+    await page.getByRole('button', { name: /Ver resultado/ }).click()
+    await expect(dialog.getByText('Você acertou 1 de 2.')).toBeVisible()
+    // A errada já virou carta: não oferece criar de novo
+    await expect(dialog.getByRole('button', { name: /Criar o flashcard/ })).toHaveCount(0)
+
+    const cards = await page.evaluate(async () => {
+      const course = (await window.api.courses.list()).find((c) => c.title === 'Curso E2E')!
+      const deck = await window.api.decks.get(await window.api.decks.forCourse(course.id))
+      return deck.cards.map((c) => ({ id: c.id, front: c.front, back: c.back, lesson: c.lessonTitle }))
+    })
+    const card = cards.find((c) => c.front === 'Qual comando lista os arquivos de um diretório?')
+    expect(card).toMatchObject({ back: 'ls\n\nO ls lista o conteúdo.', lesson: 'Boas-vindas' })
+    // Os testes seguintes contam as cartas do baralho do curso
+    await page.evaluate((id) => window.api.cards.delete(id), card!.id)
+
+    // Fechar e reabrir: o resultado ficou salvo e dá para refazer sem gerar de novo
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('button', { name: /Revisão rápida 1\/2/ })).toBeVisible()
+    await page.getByRole('button', { name: /Revisão rápida/ }).click()
+    await expect(dialog.getByText('Você acertou 1 de 2.')).toBeVisible()
+    await dialog.getByRole('button', { name: 'Refazer' }).click()
+    await expect(dialog.getByText('Pergunta 1 de 2')).toBeVisible()
+    expect(received).toHaveLength(1)
+    await page.keyboard.press('Escape')
+
+    // Desligada nas Configurações: sem oferta ao concluir, mas o botão continua
+    await page.evaluate(() => window.api.settings.update({ review: { enabled: false, count: 3 } }))
+    await page.reload()
+    await expect(page.getByRole('button', { name: /Revisão rápida/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Concluída' }).click()
+    await page.getByRole('button', { name: 'Concluir' }).click()
+    await expect(page.getByText(/Que tal 3 perguntas/)).toHaveCount(0)
+    await page.evaluate(() => window.api.settings.update({ review: { enabled: true, count: 4 } }))
+  } finally {
+    await app.close()
+    server.close()
+    await writeFile(srt, original)
+  }
+})
+
 test('backup e pacote: salva o banco, exporta baralho com anotações e importa ligado ao curso', async () => {
   const backupFile = join(workdir, 'backup.db')
   const packageFile = join(workdir, 'pacote.tramotak')
