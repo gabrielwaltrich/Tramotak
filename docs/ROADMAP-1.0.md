@@ -96,8 +96,9 @@ Prioridades revistas em 17/10/2026, depois do levantamento de apps parecidos e d
   Junto: **instância única** (abrir de novo só traz a janela existente).
 - ✅ **Licença GPL-3.0 ou posterior** (antes o projeto não tinha licença) e arquivos da comunidade: CONTRIBUTING,
   código de conduta, SECURITY, formulários de issue e de PR, README com capturas de tela.
-- **"Relatar problema"**: arquivo de diagnóstico sem dados pessoais (versão, sistema, erros recentes, configurações
-  sem chaves nem caminhos), para anexar no formulário de issue.
+- ✅ **"Relatar problema"** (Configurações → Sobre): diagnóstico sem dados pessoais (versão, sistema, instalação,
+  contagens, opções, erros recentes) com prévia, copiar, salvar e abrir o formulário de problema; registro de erros em
+  `logs/erros.jsonl` (500 entradas, 14 dias).
 - **Exportar flashcards para o Anki** (`.apkg` e CSV): sem prender a pessoa ao app e com revisão no celular de graça
   (AnkiDroid/AnkiMobile).
 - **Assinatura grátis do instalador do Windows** pela SignPath Foundation (exige licença OSI, que agora existe, e

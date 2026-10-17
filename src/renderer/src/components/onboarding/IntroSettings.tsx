@@ -5,6 +5,7 @@ import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
 import { ConfirmDialog } from '../ConfirmDialog'
 import { useToast } from '../Toast'
+import { ReportProblem } from '../ReportProblem'
 
 /** Configurações → Sobre: rever a introdução e pôr ou tirar o curso de exemplo. */
 export function IntroSettings() {
@@ -38,6 +39,7 @@ export function IntroSettings() {
 
   return (
     <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+      <ReportProblem />
       <Button variant="ghost" onClick={() => reopen.mutate()} disabled={reopen.isPending}>
         <RotateCcw size={16} /> Ver a introdução de novo
       </Button>

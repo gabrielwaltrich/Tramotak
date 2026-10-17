@@ -236,6 +236,11 @@ export const IPC = {
   backupInspect: 'backup:inspect',
   backupRestore: 'backup:restore',
   backupChooseFolder: 'backup:chooseFolder',
+  diagnosticsGet: 'diagnostics:get',
+  diagnosticsCopy: 'diagnostics:copy',
+  diagnosticsSave: 'diagnostics:save',
+  diagnosticsOpenIssue: 'diagnostics:openIssue',
+  diagnosticsLogError: 'diagnostics:logError',
   onboardingGet: 'onboarding:get',
   onboardingFinish: 'onboarding:finish',
   onboardingReopen: 'onboarding:reopen',
@@ -590,6 +595,17 @@ export interface TramotakApi {
     clearFolder(): Promise<FolderBackupStatus>
     /** Grava um backup na pasta escolhida agora. */
     folderNow(): Promise<FolderBackupStatus>
+  }
+  diagnostics: {
+    /** Texto do diagnóstico já sem dados pessoais (o mesmo que vai ser copiado ou salvo). */
+    get(): Promise<string>
+    copy(): Promise<void>
+    /** "Salvar como" para o .txt. Devolve o caminho, ou `null` se cancelar. */
+    save(): Promise<string | null>
+    /** Abre o formulário de problema no GitHub com a versão preenchida. */
+    openIssue(): Promise<void>
+    /** Registra um erro da interface. */
+    logError(error: { message: string; stack?: string }): Promise<void>
   }
   onboarding: {
     /** Boas-vindas, lista de primeiros passos do Início e o curso de exemplo (se instalado). */

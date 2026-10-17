@@ -56,6 +56,11 @@ body:
     validations:
       required: true
   - type: textarea
+    id: diagnostico
+    attributes:
+      label: Diagnóstico
+      description: Em Configurações → Sobre → Relatar problema, clique em Copiar e cole aqui. Ele já vem sem caminhos pessoais, títulos e chaves; confira antes.
+  - type: textarea
     id: extras
     attributes:
       label: Capturas de tela ou mensagens de erro

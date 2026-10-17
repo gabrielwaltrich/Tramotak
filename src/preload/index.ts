@@ -252,6 +252,13 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.pipEvent, listener)
     }
   },
+  diagnostics: {
+    get: () => ipcRenderer.invoke(IPC.diagnosticsGet),
+    copy: () => ipcRenderer.invoke(IPC.diagnosticsCopy),
+    save: () => ipcRenderer.invoke(IPC.diagnosticsSave),
+    openIssue: () => ipcRenderer.invoke(IPC.diagnosticsOpenIssue),
+    logError: (error) => ipcRenderer.invoke(IPC.diagnosticsLogError, error)
+  },
   onboarding: {
     get: () => ipcRenderer.invoke(IPC.onboardingGet),
     finish: () => ipcRenderer.invoke(IPC.onboardingFinish),

@@ -174,7 +174,24 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 - Configurações do repositório no GitHub ficam com o dono (o app não mexe): descrição, tópicos, Discussions e o aviso
   privado de segurança (que o SECURITY.md usa).
 
+### 4. Relatar problema ✅ (17/10/2026, sem commit)
+- Configurações → Sobre → **Relatar problema** (`components/ReportProblem.tsx`): prévia do texto inteiro, **Copiar**,
+  **Salvar arquivo…** e **Abrir formulário no GitHub** (só a versão vai na URL; o diagnóstico a pessoa cola no campo
+  Diagnóstico do `problema.yml`). Decisões do dono: esse fluxo, botão só em Sobre (sem tela de erro nova), registro em
+  arquivo, contagens e opções sem nada pessoal.
+- Registro (`src/main/diagnostics.ts`, `ErrorLog`): `<dados>/logs/erros.jsonl`, um JSON por linha, 500 entradas e 14
+  dias; repetição em menos de 1 min só conta. Entra: `uncaughtExceptionMonitor`, `unhandledRejection`,
+  `render-process-gone`/`child-process-gone`, `console.error` do principal (menos o "Error occurred in handler" do
+  Electron), toda falha de `ipcMain.handle` (aviso, com o canal; `captureErrors` em `index.ts` embrulha o
+  `ipcMain.handle` antes de qualquer registro) e erros da interface (`window` error/unhandledrejection →
+  `diagnostics:logError`). "Cancelado" não entra.
+- Limpeza (`sanitize` em `src/shared/diagnostics.ts`): pastas dos cursos → `<curso N>`, pasta de dados →
+  `<dados do app>`, pasta pessoal → `<pasta pessoal>`, outros usuários em caminhos, chaves (`sk-`, `AIza`, `gsk_`,
+  Bearer), e-mails e IPs (fora 127.0.0.1); também em URLs codificadas. Aplicada às mensagens e às opções, não ao
+  cabeçalho (versões têm pontos que pareceriam IP). Conferido com uma cópia do banco do dono: nenhum caminho, usuário
+  ou título no texto.
+
 ## Próximo: resto da 0.9 e 1.0
-Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): **Relatar problema** → **exportar para o Anki** → pedir o
+Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): ~~Relatar problema~~ ✅ → **exportar para o Anki** → pedir o
 **SignPath** e publicar no **Flathub/winget** → **acessibilidade** → publicar a 0.9 e começar o **beta** → 1.0
 (correções, documentação de uso, Sponsors).

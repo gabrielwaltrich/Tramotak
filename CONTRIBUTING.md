@@ -9,8 +9,9 @@ A interface, a documentação, as issues e os commits são em **português do Br
 ## Relatar um problema
 
 1. Confira se já não existe uma [issue](https://github.com/gabrielwaltrich/Tramotak/issues) sobre ele.
-2. Abra uma issue com o formulário **Problema** e diga a versão do app (Configurações → Sobre), o sistema, como você
-   instalou e os passos para repetir o problema.
+2. Abra uma issue com o formulário **Problema** e conte o que aconteceu e os passos para repetir. Em
+   **Configurações → Sobre → Relatar problema**, copie o diagnóstico (versão, sistema e erros recentes, já sem dados
+   pessoais) e cole no campo Diagnóstico.
 3. **Nunca** cole chaves de API, senhas, caminhos com o seu nome ou conteúdo de cursos pagos.
 
 Falhas de segurança não vão em issue pública: veja [SECURITY.md](SECURITY.md).

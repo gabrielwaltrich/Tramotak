@@ -19,6 +19,8 @@ import { registerAiIpc } from './ipc/ai'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerBackupIpc } from './ipc/backup'
 import { registerOnboardingIpc } from './ipc/onboarding'
+import { registerDiagnosticsIpc } from './ipc/diagnostics'
+import { ErrorLog, logFile } from './diagnostics'
 import { applyPendingRestore, autoBackup } from './backup/backup'
 import { FolderBackup, withTimeout } from './backup/folder'
 import { getInternal, setInternal } from './db/settings'
@@ -179,6 +181,7 @@ app.whenReady().then(() => {
 
   const userData = app.getPath('userData')
   const dbPath = join(userData, 'tramotak.db')
+  const errors = captureErrors(logFile(userData))
   const backupsDir = join(userData, 'backups')
   if (applyPendingRestore(userData, dbPath, backupsDir)) console.log('Backup restaurado')
   db = openDatabase(dbPath)
@@ -228,6 +231,7 @@ app.whenReady().then(() => {
       app.exit(0)
     }
   })
+  registerDiagnosticsIpc({ db, log: errors, dbPath, userData, app: { version: app.getVersion(), isPackaged: app.isPackaged, execPath: process.execPath, locale: app.getLocale() } })
   registerOnboardingIpc({
     db,
     userData,
@@ -280,6 +284,42 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+/**
+ * Registro de erros do "Relatar problema": exceções e promessas sem tratamento, processos que caíram, `console.error`
+ * e falhas dos pedidos da interface (o canal IPC vai junto). Chamado antes de registrar qualquer handler.
+ */
+function captureErrors(file: string): ErrorLog {
+  const log = new ErrorLog(file)
+  // "Monitor" só observa: o comportamento padrão do Electron diante da exceção continua o mesmo.
+  process.on('uncaughtExceptionMonitor', (error) => log.error('principal', error))
+  process.on('unhandledRejection', (reason) => log.error('principal', reason))
+  app.on('render-process-gone', (_e, _wc, d) => log.add('error', 'processo', `A interface parou: ${d.reason} (código ${d.exitCode})`))
+  app.on('child-process-gone', (_e, d) => {
+    if (d.reason !== 'clean-exit') log.add('error', 'processo', `Processo ${d.type}${d.name ? ` (${d.name})` : ''} parou: ${d.reason} (código ${d.exitCode})`)
+  })
+  const consoleError = console.error.bind(console)
+  console.error = (...args: unknown[]) => {
+    consoleError(...args)
+    // O Electron já escreve aqui cada pedido que falhou; esse vai para o registro pelo `ipcMain.handle` abaixo.
+    if (typeof args[0] === 'string' && args[0].startsWith('Error occurred in handler for')) return
+    const [first, ...rest] = args
+    const error = args.find((a): a is Error => a instanceof Error)
+    log.add('error', 'principal', [first, ...rest.filter((a) => !(a instanceof Error))].map((a) => (a instanceof Error ? a.message : String(a))).join(' ') || 'erro', error?.stack?.split('\n').slice(1, 9).join('\n'))
+  }
+  const handle = ipcMain.handle.bind(ipcMain)
+  ipcMain.handle = (channel, listener) =>
+    handle(channel, async (event, ...args) => {
+      try {
+        return await listener(event, ...args)
+      } catch (error) {
+        // A interface mostra o erro; aqui fica o registro com o pedido que falhou.
+        log.add('warn', 'ipc', `${channel}: ${error instanceof Error ? error.message : String(error)}`)
+        throw error
+      }
+    })
+  return log
+}
 
 /** Pomodoro no processo principal: comandos da interface, estado para todas as janelas e aviso do sistema. */
 function registerPomodoro(db: Database): Pomodoro {

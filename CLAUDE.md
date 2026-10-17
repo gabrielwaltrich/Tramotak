@@ -45,7 +45,7 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
   valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/` (`folder.ts`: cópia na pasta escolhida), `scanner/`,
   `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário), `pomodoro.ts` (relógio do Pomodoro), `pip/` (janela flutuante:
   `host.ts` grava progresso e troca de aula; `window.ts` cria a janela; `child.ts` é o processo separado em X11
-  usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA), `ai/courseIndex.ts` (trechos pesquisáveis do curso para a conversa sobre o curso), `ai/courseGenerate.ts` (gerar do curso inteiro).
+  usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA), `ai/courseIndex.ts` (trechos pesquisáveis do curso para a conversa sobre o curso), `ai/courseGenerate.ts` (gerar do curso inteiro). `diagnostics.ts` (registro de erros e texto do "Relatar problema"; todo `ipcMain.handle` passa pelo `captureErrors` do `index.ts`), `onboarding.ts` (boas-vindas e curso de exemplo).
 - `src/preload/index.ts` — ponte `window.api` (tipos em `src/shared/ipc.ts`, interface `TramotakApi`).
 - `src/renderer/src/` — React 19 + TanStack Query + Tailwind 4 (cores por tokens CSS; temas em
   `src/shared/appearance.ts`). Uma rota por tela em `routes/`.

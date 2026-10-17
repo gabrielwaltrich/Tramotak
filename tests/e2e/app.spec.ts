@@ -1,6 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
-import { cp, mkdir, mkdtemp, readdir, rm, stat } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
@@ -1257,6 +1257,45 @@ test('primeira execução: introdução com curso de exemplo, primeiros passos n
     await page.evaluate(() => window.api.onboarding.dismiss())
     expect((await page.evaluate(() => window.api.onboarding.get())).steps).toBeNull()
     await page.evaluate(() => window.api.settings.update({ dailyGoalMinutes: 60 }))
+  } finally {
+    await app.close()
+  }
+})
+
+test('relatar problema: erros registrados, diagnóstico sem dados pessoais, copiar, salvar e abrir o formulário', async () => {
+  const { page, app } = await launch()
+  const saved = join(workdir, 'diagnostico.txt')
+  try {
+    // Um pedido que falha (pasta inexistente) entra no registro com o canal.
+    await page.evaluate((root) => window.api.courses.import({ path: `${root}/nao-existe`, title: '', structure: 'auto', numbering: 'dot' }).catch(() => {}), coursePath)
+    await app.evaluate(({ dialog, shell }, path) => {
+      dialog.showSaveDialog = (async () => ({ canceled: false, filePath: path })) as typeof dialog.showSaveDialog
+      ;(globalThis as { opened?: string[] }).opened = []
+      shell.openExternal = (async (url: string) => void (globalThis as { opened?: string[] }).opened!.push(url)) as typeof shell.openExternal
+    }, saved)
+
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Relatar problema' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Relatar problema' })
+    const text = dialog.getByLabel('Diagnóstico')
+    await expect(text).toContainText('## Diagnóstico do Tramotak')
+    await expect(text).toContainText('courses:import: Pasta não encontrada')
+    const shown = (await text.textContent()) ?? ''
+    // Nada de caminhos pessoais nem nomes de cursos.
+    expect(shown).not.toContain(workdir)
+    expect(shown).not.toContain('Curso E2E')
+    expect(shown).toMatch(/- Banco: versão \d+/)
+
+    await dialog.getByRole('button', { name: 'Copiar' }).click()
+    await expect(page.getByText('Diagnóstico copiado')).toBeVisible()
+    expect(await app.evaluate(({ clipboard }) => clipboard.readText())).toBe(shown)
+    await dialog.getByRole('button', { name: 'Salvar arquivo…' }).click()
+    await expect(page.getByText('Diagnóstico salvo')).toBeVisible()
+    expect(await readFile(saved, 'utf8')).toBe(shown)
+    await dialog.getByRole('button', { name: 'Abrir formulário no GitHub' }).click()
+    await expect.poll(() => app.evaluate(() => (globalThis as { opened?: string[] }).opened)).toEqual([
+      expect.stringMatching(/^https:\/\/github\.com\/gabrielwaltrich\/Tramotak\/issues\/new\?template=problema\.yml&versao=\d+\.\d+\.\d+$/)
+    ])
   } finally {
     await app.close()
   }
