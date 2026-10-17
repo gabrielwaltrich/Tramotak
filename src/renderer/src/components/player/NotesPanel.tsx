@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { Clock, Layers, Loader2, NotebookPen, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
+import { BookOpen, Clock, Layers, Loader2, NotebookPen, Pencil, Plus, StickyNote, Trash2 } from 'lucide-react'
 import type { Note } from '@shared/course'
 import { formatClock } from '@shared/format'
-import type { NoteEntry } from '@shared/notes'
+import { noteWhere, type NoteEntry } from '@shared/notes'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
 import { TextArea } from '../Field'
@@ -34,9 +34,24 @@ function TimeChip({ seconds, onClick }: { seconds: number; onClick?: () => void 
   )
 }
 
-function NoteItem({ note, onSeek, lessonId, onMakeCard, onSend }: {
+function PageChip({ note, onClick }: { note: Note; onClick?: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      title={onClick ? 'Abrir o PDF nesta página' : undefined}
+      className="inline-flex h-6 max-w-40 shrink-0 items-center gap-1 rounded bg-accent-soft px-1.5 text-xs font-medium text-accent tabular-nums hover:brightness-125 disabled:cursor-default"
+    >
+      <BookOpen size={12} className="shrink-0" /> <span className="truncate">{noteWhere(note)}</span>
+    </button>
+  )
+}
+
+function NoteItem({ note, onSeek, onOpenPage, lessonId, onMakeCard, onSend }: {
   note: Note
   onSeek?: (sec: number) => void
+  onOpenPage?: (page: number, assetPath: string | null) => void
   lessonId: number
   onMakeCard: (note: Note) => void
   onSend: (note: Note) => void
@@ -65,7 +80,9 @@ function NoteItem({ note, onSeek, lessonId, onMakeCard, onSend }: {
 
   return (
     <li className="group flex gap-3 rounded-lg px-2 py-2.5 hover:bg-surface-2">
-      {note.timestampSec !== null ? (
+      {note.page !== null ? (
+        <PageChip note={note} onClick={onOpenPage ? () => onOpenPage(note.page!, note.assetPath) : undefined} />
+      ) : note.timestampSec !== null ? (
         <TimeChip seconds={note.timestampSec} onClick={onSeek ? () => onSeek(note.timestampSec!) : undefined} />
       ) : (
         <StickyNote size={16} className="mt-1 shrink-0 text-muted" />
@@ -140,7 +157,7 @@ function NoteItem({ note, onSeek, lessonId, onMakeCard, onSend }: {
  * Anotações da aula. `N` (fora de campos de texto) abre o editor já com o horário atual do vídeo;
  * Ctrl/Cmd+Enter salva, Esc cancela.
  */
-export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getTime, onSeek }: {
+export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getTime, onSeek, getPage, onOpenPage }: {
   lessonId: number
   lessonTitle: string
   course: { id: number; title: string }
@@ -149,8 +166,12 @@ export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getT
   /** Horário atual do vídeo; `null` quando a aula não é vídeo. */
   getTime: () => number | null
   onSeek?: (sec: number) => void
+  /** Página atual do PDF da aula; `null`/ausente quando a aula não é PDF. */
+  getPage?: () => number | null
+  /** Abre o PDF (da aula ou de um anexo) numa página. */
+  onOpenPage?: (page: number, assetPath: string | null) => void
 }) {
-  const [composing, setComposing] = useState<{ timestampSec: number | null } | null>(null)
+  const [composing, setComposing] = useState<{ timestampSec: number | null; page: number | null } | null>(null)
   const [cardNote, setCardNote] = useState<Note | null>(null)
   const [sending, setSending] = useState<Note[] | null>(null)
   // O diálogo de envio trabalha com anotações que conhecem a aula e o curso.
@@ -162,7 +183,8 @@ export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getT
   const toast = useToast()
 
   const start = () => {
-    setComposing({ timestampSec: getTime() })
+    const page = getPage?.() ?? null
+    setComposing({ timestampSec: page === null ? getTime() : null, page })
     requestAnimationFrame(() => textareaRef.current?.focus())
   }
   const startRef = useRef(start)
@@ -186,36 +208,33 @@ export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getT
   }
 
   const create = useMutation({
-    mutationFn: () => window.api.notes.create({ lessonId, timestampSec: composing?.timestampSec ?? null, body: draft }),
-    onSuccess: (note) => {
-      queryClient.setQueryData<Note[]>(queryKeys.notes(lessonId), (list) =>
-        [...(list ?? []), note].sort(
-          (a, b) =>
-            Number(a.timestampSec === null) - Number(b.timestampSec === null) ||
-            (a.timestampSec ?? 0) - (b.timestampSec ?? 0) ||
-            a.id - b.id
-        )
-      )
+    mutationFn: () => window.api.notes.create({ lessonId, timestampSec: composing?.timestampSec ?? null, page: composing?.page ?? null, body: draft }),
+    onSuccess: () => {
+      // A ordem (por horário, página e anexo) vem do banco.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notes(lessonId) })
       cancel()
     },
     onError: (error) => toast(errorMessage(error), 'error')
   })
 
-  // Re-renderiza a cada segundo para o botão mostrar o horário atual do vídeo.
+  // Re-renderiza a cada segundo para o botão mostrar o horário do vídeo (ou a página do PDF) atual.
   const [, setTick] = useState(0)
   useEffect(() => {
-    if (getTime() === null) return
+    if (getTime() === null && !getPage) return
     const timer = setInterval(() => setTick((t) => t + 1), 1000)
     return () => clearInterval(timer)
-  }, [getTime])
+  }, [getTime, getPage])
   const currentTime = getTime()
+  const currentPage = getPage?.() ?? null
 
   return (
     <div>
       {composing ? (
         <div className="mb-3 space-y-2 rounded-lg border border-accent/40 bg-bg p-3">
           <div className="flex items-center gap-2 text-xs text-muted">
-            {composing.timestampSec !== null ? (
+            {composing.page !== null ? (
+              `Anotação na página ${composing.page}`
+            ) : composing.timestampSec !== null ? (
               <>
                 Anotação em <TimeChip seconds={composing.timestampSec} />
               </>
@@ -256,7 +275,7 @@ export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getT
           className="mb-3 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-3 py-2.5 text-sm text-muted hover:border-accent/60 hover:text-text"
         >
           <Plus size={16} />
-          {currentTime !== null ? `Anotar em ${formatClock(currentTime)}` : 'Nova anotação'}
+          {currentPage !== null ? `Anotar na página ${currentPage}` : currentTime !== null ? `Anotar em ${formatClock(currentTime)}` : 'Nova anotação'}
           <kbd className="ml-auto rounded border border-border px-1.5 text-xs">N</kbd>
         </button>
       )}
@@ -270,7 +289,7 @@ export function NotesPanel({ lessonId, lessonTitle, course, notes, loading, getT
       ) : (
         <ul className="divide-y divide-border">
           {notes.map((n) => (
-            <NoteItem key={n.id} note={n} onSeek={onSeek} lessonId={lessonId} onMakeCard={setCardNote} onSend={(note) => setSending([note])} />
+            <NoteItem key={n.id} note={n} onSeek={onSeek} onOpenPage={onOpenPage} lessonId={lessonId} onMakeCard={setCardNote} onSend={(note) => setSending([note])} />
           ))}
         </ul>
       )}

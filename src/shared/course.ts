@@ -136,6 +136,8 @@ export interface LessonAssetView {
   id: number
   kind: AssetKind
   name: string
+  /** Caminho dentro do curso (identifica o anexo nos grifos e anotações de PDF). */
+  relPath: string
   lang: string | null
   /** URL no protocolo do app (legendas já chegam como WebVTT). */
   url: string
@@ -168,7 +170,8 @@ export interface LessonView {
 
 export interface ProgressUpdate {
   lessonId: number
-  positionSec: number
+  /** Segundo do vídeo ou página do PDF da aula; `null` só conta o tempo (ex.: lendo um anexo). */
+  positionSec: number | null
   durationSec: number | null
   /** Segundos efetivamente assistidos desde o último envio (alimenta o tempo de estudo). */
   watchedSec: number
@@ -179,6 +182,10 @@ export interface Note {
   lessonId: number
   /** Segundo do vídeo em que a nota foi criada; `null` em aulas sem vídeo. */
   timestampSec: number | null
+  /** Página do PDF (da aula ou do anexo em `assetPath`); `null` fora de PDFs. */
+  page: number | null
+  /** Anexo PDF da nota, pelo caminho dentro do curso; `null` = a própria aula. */
+  assetPath: string | null
   body: string
   createdAt: number
   updatedAt: number
@@ -224,6 +231,9 @@ export interface SearchHit {
   lessonId: number | null
   lessonKind: LessonKind | null
   timestampSec: number | null
+  /** Notas de PDF: página e anexo (nulo = o PDF da aula). */
+  page?: number | null
+  assetPath?: string | null
   /** Só para cartas. Em cartas, `courseId`/`courseTitle` vêm da aula ligada (ou 0/vazio). */
   deckId: number | null
   deckTitle: string | null

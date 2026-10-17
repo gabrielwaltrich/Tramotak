@@ -1,9 +1,9 @@
 import { createReadStream } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
-import { extname } from 'node:path'
+import { dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import { protocol } from 'electron'
-import { MEDIA_SCHEME, parseMediaUrl } from '@shared/media'
+import { MEDIA_SCHEME, parseMediaUrl, parsePdfjsUrl } from '@shared/media'
 import type { Database } from '../db/database'
 import { assetFilePath, lessonFilePath } from '../db/lessons'
 import { getTranscript } from '../db/media'
@@ -54,8 +54,14 @@ export async function serveFile(path: string, rangeHeader: string | null): Promi
   return new Response(info.size === 0 ? null : stream, { status: range ? 206 : 200, headers })
 }
 
+/** Pasta do pdfjs-dist (dentro do asar no app instalado; o `fs` do Electron lê de lá). */
+let pdfjsRoot: string | null = null
+const pdfjsDir = () => (pdfjsRoot ??= dirname(require.resolve('pdfjs-dist/package.json')))
+
 export function handleMediaProtocol(db: Database, convertedDir: string): void {
   protocol.handle(MEDIA_SCHEME, async (request) => {
+    const asset = parsePdfjsUrl(request.url)
+    if (asset) return serveFile(join(pdfjsDir(), asset.dir, asset.file), request.headers.get('range'))
     const target = parseMediaUrl(request.url)
     if (!target) return text(400, 'URL inválida')
     try {

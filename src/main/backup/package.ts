@@ -41,7 +41,8 @@ export interface PkgCourse {
   lessons: string[]
   /** Só referenciado por outro item (sem anotações/progresso próprios no pacote). */
   withData: boolean
-  notes: { relPath: string; timestampSec: number | null; body: string; createdAt: number }[]
+  /** `page`/`assetPath`: notas de PDF (pacotes da 0.7 em diante). */
+  notes: { relPath: string; timestampSec: number | null; body: string; createdAt: number; page?: number | null; assetPath?: string | null }[]
   progress: { relPath: string; positionSec: number; durationSec: number | null; completedAt: number | null; favorite: boolean; lastWatchedAt: number | null }[]
   transcripts: { relPath: string; provider: string; model: string; language: string; segments: TranscriptSegment[] }[]
 }
@@ -283,7 +284,7 @@ export function buildPackage(db: Database, input: ExportSelection, appVersion: s
         notes: full
           ? (db
               .prepare(
-                `SELECT l.rel_path AS relPath, n.timestamp_sec AS timestampSec, n.body_md AS body, n.created_at AS createdAt
+                `SELECT l.rel_path AS relPath, n.timestamp_sec AS timestampSec, n.page, n.asset_path AS assetPath, n.body_md AS body, n.created_at AS createdAt
                    FROM notes n JOIN lessons l ON l.id = n.lesson_id WHERE l.course_id = ? ORDER BY n.id`
               )
               .all(id) as PkgCourse['notes'])
@@ -376,7 +377,17 @@ export function parsePackage(buffer: Buffer): TramotakPackage {
         notes: arr(c.notes).flatMap((n0) => {
           const n = n0 as Record<string, unknown>
           const body = text(n?.body, 20_000).trim()
-          return typeof n?.relPath === 'string' && body ? [{ relPath: n.relPath, timestampSec: num(n.timestampSec), body, createdAt: num(n.createdAt) ?? 0 }] : []
+          const page = num(n?.page)
+          return typeof n?.relPath === 'string' && body
+            ? [{
+                relPath: n.relPath,
+                timestampSec: num(n.timestampSec),
+                body,
+                createdAt: num(n.createdAt) ?? 0,
+                page: page !== null && Number.isInteger(page) && page >= 1 ? page : null,
+                assetPath: typeof n.assetPath === 'string' ? n.assetPath.slice(0, 2000) : null
+              }]
+            : []
         }),
         progress: arr(c.progress).flatMap((p0) => {
           const p = p0 as Record<string, unknown>
@@ -603,7 +614,13 @@ export function importPackage(db: Database, pkg: TramotakPackage, courseMap: Rec
           continue
         }
         if (noteExists.get(l.id, n.body, n.timestampSec)) continue
-        createNote(db, { lessonId: l.id, timestampSec: n.timestampSec, body: n.body }, n.createdAt || undefined)
+        const note = { lessonId: l.id, timestampSec: n.timestampSec, body: n.body }
+        try {
+          createNote(db, { ...note, page: n.page ?? null, assetPath: n.assetPath ?? null }, n.createdAt || undefined)
+        } catch {
+          // O PDF da página não existe nesta cópia do curso: a nota entra sem página.
+          createNote(db, note, n.createdAt || undefined)
+        }
         result.notes++
       }
       for (const p of c.progress) {

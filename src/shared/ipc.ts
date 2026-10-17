@@ -31,6 +31,7 @@ import type {
 import type { Appearance } from './appearance'
 import type { PipAppEvent, PipCommand, PipOpenRequest, PipSettings, PipStatus } from './pip'
 import type { LessonReview, ReviewSettings, ReviewStatus } from './review'
+import type { HighlightColor, NewHighlight, PdfHighlight } from './pdf'
 
 export interface AppInfo {
   name: string
@@ -223,6 +224,10 @@ export const IPC = {
   packageExport: 'package:export',
   packageOpen: 'package:open',
   packageImport: 'package:import',
+  pdfHighlights: 'pdf:highlights',
+  pdfHighlightCreate: 'pdf:highlightCreate',
+  pdfHighlightColor: 'pdf:highlightColor',
+  pdfHighlightDelete: 'pdf:highlightDelete',
   reviewStatus: 'review:status',
   reviewGet: 'review:get',
   reviewGenerate: 'review:generate',
@@ -492,6 +497,13 @@ export interface TramotakApi {
     /** Sugestão de regras de nomes para um curso, a partir de exemplos dos nomes e de um pedido opcional. */
     suggestTitleRules(courseId: number, request: string): Promise<TitleRules>
   }
+  pdf: {
+    /** Grifos do PDF da aula (`assetPath` nulo) ou de um anexo PDF dela. */
+    highlights(lessonId: number, assetPath: string | null): Promise<PdfHighlight[]>
+    createHighlight(input: NewHighlight): Promise<PdfHighlight>
+    setHighlightColor(id: number, color: HighlightColor): Promise<void>
+    deleteHighlight(id: number): Promise<void>
+  }
   review: {
     /** O que dá para oferecer nesta aula (IA, material, revisão salva). */
     status(lessonId: number): Promise<ReviewStatus>
@@ -584,7 +596,8 @@ export interface TramotakApi {
   }
   notes: {
     list(lessonId: number): Promise<Note[]>
-    create(input: { lessonId: number; timestampSec: number | null; body: string }): Promise<Note>
+    /** Em PDFs, `page` (e `assetPath` para um anexo) no lugar do horário. */
+    create(input: { lessonId: number; timestampSec: number | null; body: string; page?: number | null; assetPath?: string | null }): Promise<Note>
     update(id: number, body: string): Promise<Note>
     delete(id: number): Promise<void>
     /** Todas as anotações (ou só as de um curso), com aula, módulos e curso. */

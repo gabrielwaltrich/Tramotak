@@ -188,10 +188,11 @@ export function registerAiIpc(db: Database): void {
     const web = input.webSearch === true && info.web !== null
 
     const material = await chatMaterial(db, lessonId, input.includeNotes === true)
-    if (!material.text.trim()) throw new Error('Esta aula ainda não tem transcrição nem legenda para a IA ler. Transcreva o vídeo na aba Transcrição.')
+    if (!material.text.trim()) throw new Error('Esta aula ainda não tem transcrição, legenda nem texto para a IA ler.')
     const { text } = fitSource(material.text, info.maxSourceChars)
     const videoSec = typeof input.videoSec === 'number' && Number.isFinite(input.videoSec) ? Math.max(0, input.videoSec) : null
-    const asked: ChatMessage = { role: 'user', content: question, at: Math.floor(Date.now() / 1000), videoSec }
+    const page = material.info.kind === 'pdf' && Number.isInteger(input.page) && (input.page as number) >= 1 ? (input.page as number) : null
+    const asked: ChatMessage = { role: 'user', content: question, at: Math.floor(Date.now() / 1000), videoSec, ...(page !== null ? { page } : {}) }
     const history = chatHistory([...getChat(db, lessonId), asked])
 
     const controller = new AbortController()
@@ -202,7 +203,7 @@ export function registerAiIpc(db: Database): void {
     try {
       const result = await chatStream(
         clientConfig(db, provider),
-        { system: buildChatSystem(text, { web, hasNotes: input.includeNotes === true && material.info.notes > 0 }), messages: history, maxTokens: 4000, json: false, web, cacheSystem: true },
+        { system: buildChatSystem(text, { web, hasNotes: input.includeNotes === true && material.info.notes > 0, pdf: material.info.kind === 'pdf' }), messages: history, maxTokens: 4000, json: false, web, cacheSystem: true },
         send,
         controller.signal
       )

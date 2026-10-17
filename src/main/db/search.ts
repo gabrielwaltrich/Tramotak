@@ -69,6 +69,8 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
   const notes = fetch<{
     id: number
     timestampSec: number | null
+    page: number | null
+    assetPath: string | null
     lessonId: number
     lessonTitle: string
     lessonKind: SearchHit['lessonKind']
@@ -77,7 +79,7 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
     moduleTitle: string | null
   }>(
     ids.note,
-    `SELECT n.id, n.timestamp_sec AS timestampSec, l.id AS lessonId, l.title AS lessonTitle, l.kind AS lessonKind,
+    `SELECT n.id, n.timestamp_sec AS timestampSec, n.page, n.asset_path AS assetPath, l.id AS lessonId, l.title AS lessonTitle, l.kind AS lessonKind,
             l.course_id AS courseId, c.title AS courseTitle, m.title AS moduleTitle
        FROM notes n JOIN lessons l ON l.id = n.lesson_id JOIN courses c ON c.id = l.course_id
        LEFT JOIN modules m ON m.id = l.module_id
@@ -129,7 +131,9 @@ export function search(db: Database, input: string, limit = DEFAULT_LIMIT): Sear
         moduleTitle: n.moduleTitle,
         lessonId: n.lessonId,
         lessonKind: n.lessonKind,
-        timestampSec: n.timestampSec
+        timestampSec: n.timestampSec,
+        page: n.page,
+        assetPath: n.assetPath
       })
     } else if (kind === 'card' && cards.has(id)) {
       const k = cards.get(id)!

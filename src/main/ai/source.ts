@@ -10,6 +10,8 @@ import { listNotes } from '../db/notes'
 import { getTranscript } from '../db/media'
 import { getPage } from '../db/notebooks'
 import { htmlToText } from '../importers/html'
+import { isPdfPath, pdfPlainText, pdfTextWithPages } from '@shared/pdf'
+import { pdfPagesText } from '../pdf/text'
 
 const MAX_FILE_BYTES = 2 * 1024 * 1024
 const TEXT_EXT = new Set(['.txt', '.md', '.markdown', '.html', '.htm'])
@@ -54,10 +56,10 @@ async function readText(path: string): Promise<string | null> {
 async function lessonRow(db: Database, lessonId: number) {
   const lesson = db
     .prepare(
-      `SELECT l.id, l.title, l.kind, l.course_id AS courseId, c.title AS courseTitle
+      `SELECT l.id, l.title, l.kind, l.rel_path AS relPath, l.course_id AS courseId, c.title AS courseTitle
          FROM lessons l JOIN courses c ON c.id = l.course_id WHERE l.id = ?`
     )
-    .get(lessonId) as { id: number; title: string; kind: string; courseId: number; courseTitle: string } | undefined
+    .get(lessonId) as { id: number; title: string; kind: string; relPath: string; courseId: number; courseTitle: string } | undefined
   if (!lesson) throw new Error('Aula não encontrada')
   return lesson
 }
@@ -89,6 +91,11 @@ async function lessonSource(db: Database, lessonId: number): Promise<AiSource> {
     const text = await readText(lessonOriginalPath(db, lessonId)).catch(() => null)
     if (text?.trim()) sections.push({ kind: 'lesson-text', label: 'Texto da aula', text, defaultOn: true })
   }
+  if (lesson.kind === 'document' && isPdfPath(lesson.relPath)) {
+    const pages = await pdfPagesText(lessonOriginalPath(db, lessonId)).catch(() => [])
+    const text = pdfPlainText(pages)
+    if (text.trim()) sections.push({ kind: 'lesson-text', label: 'Texto do PDF', text, defaultOn: true })
+  }
 
   const transcript = getTranscript(db, lessonId)
   if (transcript?.segments.length) {
@@ -106,11 +113,17 @@ async function lessonSource(db: Database, lessonId: number): Promise<AiSource> {
   }[]
   const supportTexts: string[] = []
   for (const a of attachments) {
-    if (!TEXT_EXT.has(extname(a.relPath).toLowerCase())) continue
+    const ext = extname(a.relPath).toLowerCase()
+    if (ext === '.pdf') {
+      const text = pdfPlainText(await pdfPagesText(assetFilePath(db, a.id)).catch(() => []))
+      if (text.trim()) supportTexts.push(text.trim())
+      continue
+    }
+    if (!TEXT_EXT.has(ext)) continue
     const text = await readText(assetFilePath(db, a.id)).catch(() => null)
     if (text?.trim()) supportTexts.push(text.trim())
   }
-  if (supportTexts.length) sections.push({ kind: 'attachments', label: 'Anexos de texto', text: supportTexts.join('\n\n'), defaultOn: false })
+  if (supportTexts.length) sections.push({ kind: 'attachments', label: 'Anexos (texto e PDF)', text: supportTexts.join('\n\n'), defaultOn: false })
 
   const notes = notesText(db, lessonId)
   if (notes.count) sections.push({ kind: 'notes', label: 'Minhas anotações', text: notes.text, defaultOn: false })
@@ -137,6 +150,13 @@ export async function chatMaterial(db: Database, lessonId: number, includeNotes:
     if (text?.trim()) {
       parts.push(`## Conteúdo escrito\n${text.trim()}`)
       kind = 'text'
+    }
+  }
+  if (lesson.kind === 'document' && isPdfPath(lesson.relPath)) {
+    const text = pdfTextWithPages(await pdfPagesText(lessonOriginalPath(db, lessonId)).catch(() => []))
+    if (text) {
+      parts.push(`## Conteúdo do PDF (com o número de cada página)\n${text}`)
+      kind = 'pdf'
     }
   }
   const transcript = getTranscript(db, lessonId)

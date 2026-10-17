@@ -5,10 +5,11 @@ import { groupByLesson, noteMarkdown, suggestedPageTitle, type NoteEntry, type S
 import { getCourseDetail, orderedLessons } from './courses'
 import { transaction, type Database } from './database'
 import { createNotebook, createPage, getNotebook, getPage, savePage } from './notebooks'
+import { assertPdf } from './pdf'
 
 export const MAX_NOTE_LENGTH = 20_000
 
-const COLUMNS = `id, lesson_id AS lessonId, timestamp_sec AS timestampSec, body_md AS body,
+const COLUMNS = `id, lesson_id AS lessonId, timestamp_sec AS timestampSec, page, asset_path AS assetPath, body_md AS body,
   created_at AS createdAt, updated_at AS updatedAt`
 
 function cleanBody(body: unknown): string {
@@ -24,28 +25,31 @@ function getNote(db: Database, id: number): Note {
   return note
 }
 
-/** Notas com horário primeiro, em ordem de vídeo; depois as sem horário, por criação. */
+/** Notas com horário (ou página) primeiro, em ordem de vídeo ou de página; depois as sem posição, por criação. */
 export function listNotes(db: Database, lessonId: number): Note[] {
   return db
     .prepare(
       `SELECT ${COLUMNS} FROM notes WHERE lesson_id = ?
-        ORDER BY timestamp_sec IS NULL, timestamp_sec, created_at, id`
+        ORDER BY timestamp_sec IS NULL AND page IS NULL, asset_path IS NOT NULL, asset_path, page, timestamp_sec, created_at, id`
     )
     .all(lessonId) as unknown as Note[]
 }
 
 export function createNote(
   db: Database,
-  input: { lessonId: number; timestampSec: number | null; body: string },
+  input: { lessonId: number; timestampSec: number | null; body: string; page?: number | null; assetPath?: string | null },
   now = Math.floor(Date.now() / 1000)
 ): Note {
   const lesson = db.prepare('SELECT id FROM lessons WHERE id = ?').get(input.lessonId)
   if (!lesson) throw new Error('Aula não encontrada')
+  // Nota de PDF: página (e o anexo, se não for a própria aula); não tem horário.
+  const page = Number.isInteger(input.page) && (input.page as number) >= 1 ? (input.page as number) : null
+  const assetPath = page !== null ? assertPdf(db, input.lessonId, input.assetPath ?? null) : null
   const timestamp =
-    typeof input.timestampSec === 'number' && Number.isFinite(input.timestampSec) ? Math.max(0, input.timestampSec) : null
+    page === null && typeof input.timestampSec === 'number' && Number.isFinite(input.timestampSec) ? Math.max(0, input.timestampSec) : null
   const { lastInsertRowid } = db
-    .prepare('INSERT INTO notes (lesson_id, timestamp_sec, body_md, created_at, updated_at) VALUES (?, ?, ?, ?, ?)')
-    .run(input.lessonId, timestamp, cleanBody(input.body), now, now)
+    .prepare('INSERT INTO notes (lesson_id, timestamp_sec, page, asset_path, body_md, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)')
+    .run(input.lessonId, timestamp, page, assetPath, cleanBody(input.body), now, now)
   return getNote(db, Number(lastInsertRowid))
 }
 
@@ -76,7 +80,7 @@ interface EntryRow extends Note {
 export function listAllNotes(db: Database, courseId: number | null = null): NoteEntry[] {
   const rows = db
     .prepare(
-      `SELECT n.id, n.lesson_id AS lessonId, n.timestamp_sec AS timestampSec, n.body_md AS body, n.created_at AS createdAt,
+      `SELECT n.id, n.lesson_id AS lessonId, n.timestamp_sec AS timestampSec, n.page, n.asset_path AS assetPath, n.body_md AS body, n.created_at AS createdAt,
               n.updated_at AS updatedAt, l.title AS lessonTitle, l.kind AS lessonKind, l.module_id AS moduleId,
               c.id AS courseId, c.title AS courseTitle
          FROM notes n JOIN lessons l ON l.id = n.lesson_id JOIN courses c ON c.id = l.course_id
@@ -109,7 +113,10 @@ export function listAllNotes(db: Database, courseId: number | null = null): Note
         a.courseTitle.localeCompare(b.courseTitle, 'pt-BR') ||
         a.courseId - b.courseId ||
         a.lessonOrder - b.lessonOrder ||
-        Number(a.timestampSec === null) - Number(b.timestampSec === null) ||
+        Number(a.timestampSec === null && a.page === null) - Number(b.timestampSec === null && b.page === null) ||
+        Number(a.assetPath !== null) - Number(b.assetPath !== null) ||
+        (a.assetPath ?? '').localeCompare(b.assetPath ?? '') ||
+        (a.page ?? 0) - (b.page ?? 0) ||
         (a.timestampSec ?? 0) - (b.timestampSec ?? 0) ||
         a.createdAt - b.createdAt ||
         a.id - b.id

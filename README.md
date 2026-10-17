@@ -6,14 +6,15 @@ Windows e Linux.
 
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Nomes das aulas:** regras por curso para limpar títulos vindos de nomes de arquivo (código como `#F0009` vira `9`, datas, numeração interna, autor depois do `@`, emojis, `_`, sufixos de cópia, textos e trocas personalizados), com prévia de todas as aulas e sugestão opcional da IA. Os arquivos não são renomeados.
-- **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
+- **Player:** retoma de onde parou, velocidade de 0,25× a 2×, legendas `.srt`/`.vtt`, próxima aula automática, janela flutuante sempre por cima (com transparência) e atalhos de teclado; converte vídeos que não tocam (ex.: HEVC) e transcreve aulas, com o texto falado pesquisável.
+- **PDFs:** aulas e anexos em PDF abrem no leitor do app (páginas, zoom, busca no texto), com grifos coloridos e anotações por página; a aula continua de onde parou e conta como concluída ao chegar na última página. O arquivo do curso não é alterado.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele. A página **Anotações** reúne as de todos os cursos (busca, filtro, exportar em Markdown) e envia as escolhidas para um caderno, com os horários clicáveis.
 - **Busca global:** barra de pesquisa no topo (ou `Ctrl+K` em qualquer tela) encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
 - **Flashcards:** repetição espaçada com o FSRS (o algoritmo do Anki atual), retenção desejada e limites por baralho; transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
 - **Questões e simulados:** bancos com 5 tipos de questão e fórmulas LaTeX, simulados cronometrados com anti-cola, correção e desempenho por tópico; importa e exporta JSON, CSV e GIFT (Moodle).
 - **Cadernos:** páginas com Markdown, fórmulas, desenho à mão (caneta com pressão) e links para o seu material; exporta PDF.
 - **Mapas mentais:** editor por teclado com layouts automáticos (árvore, organograma, radial), cores e anexos; exporta PNG e JSON.
-- **IA (dá para usar de graça):** converse com a IA sobre a aula (as respostas citam o momento do vídeo, com clique para pular até ele) e gere flashcards, questões, resumos e mapas mentais a partir do que é falado na aula, revise e salve. A IA usa só o conteúdo, nunca título, curso ou nomes de arquivos; a pesquisa na internet é opcional. Gemini grátis com a conta Google, login no OpenRouter (modelos grátis e pagos), modelos leves no seu computador pelo Ollama (Llama, Qwen, Gemma), chave do Claude ou qualquer API compatível com a OpenAI.
+- **IA (dá para usar de graça):** converse com a IA sobre a aula (as respostas citam o momento do vídeo, com clique para pular até ele) e gere flashcards, questões, resumos e mapas mentais a partir do que é falado na aula (ou do texto do PDF), revise e salve. Ao concluir uma aula, uma revisão rápida de 3 a 5 perguntas sobre o assunto; as erradas viram flashcards. A IA usa só o conteúdo, nunca título, curso ou nomes de arquivos; a pesquisa na internet é opcional. Gemini grátis com a conta Google, login no OpenRouter (modelos grátis e pagos), modelos leves no seu computador pelo Ollama (Llama, Qwen, Gemma), chave do Claude ou qualquer API compatível com a OpenAI.
 - **Planner:** tarefas em quadro (arrastar e soltar) e calendário com as revisões previstas; avisos antes dos blocos de estudo.
 - **Plano de estudos:** escolha até quando quer terminar um curso (ou quantos minutos por dia) e as aulas são distribuídas no Planner; previsão de término pelo seu ritmo real e replanejamento quando atrasar.
 - **Progresso:** mapa de atividade, minutos dos últimos 30 dias contra a meta, progresso por curso e histórico.
@@ -58,7 +59,7 @@ As chaves ficam cifradas pelo cofre do sistema e nunca voltam para a interface.
 
 **Backup e outro computador:** em Configurações → Dados e backup. O backup é um arquivo `.db` com tudo, menos os vídeos e as chaves de API. Para migrar, restaure o backup no computador novo e use **Trocar pasta…** no menu dos cursos que estiverem em outro caminho; o progresso e as anotações são mantidos. Para compartilhar só parte do material, use **Exportar pacote…**.
 
-**Licenças:** o Tramotak inclui o FFmpeg (GPL) e o whisper.cpp (MIT) como programas separados; a licença do FFmpeg está em Configurações → Sobre e a do whisper.cpp junto do programa (`resources/whisper`).
+**Licenças:** o Tramotak inclui o FFmpeg (GPL) e o whisper.cpp (MIT) como programas separados e usa o pdf.js (Apache 2.0) no leitor de PDF; a licença do FFmpeg está em Configurações → Sobre e a do whisper.cpp junto do programa (`resources/whisper`).
 
 ## Desenvolvimento
 

@@ -79,6 +79,12 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.aiOllamaPullProgress, listener)
     }
   },
+  pdf: {
+    highlights: (lessonId, assetPath) => ipcRenderer.invoke(IPC.pdfHighlights, lessonId, assetPath),
+    createHighlight: (input) => ipcRenderer.invoke(IPC.pdfHighlightCreate, input),
+    setHighlightColor: (id, color) => ipcRenderer.invoke(IPC.pdfHighlightColor, id, color),
+    deleteHighlight: (id) => ipcRenderer.invoke(IPC.pdfHighlightDelete, id)
+  },
   review: {
     status: (lessonId) => ipcRenderer.invoke(IPC.reviewStatus, lessonId),
     get: (lessonId) => ipcRenderer.invoke(IPC.reviewGet, lessonId),

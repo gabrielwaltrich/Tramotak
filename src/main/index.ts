@@ -16,6 +16,7 @@ import { registerQuestionIpc } from './ipc/questions'
 import { registerNotebookIpc } from './ipc/notebooks'
 import { registerMediaIpc } from './ipc/media'
 import { registerAiIpc } from './ipc/ai'
+import { registerPdfIpc } from './ipc/pdf'
 import { registerBackupIpc } from './ipc/backup'
 import { applyPendingRestore, autoBackup } from './backup/backup'
 import { getInternal, setInternal } from './db/settings'
@@ -179,6 +180,7 @@ app.whenReady().then(() => {
   pip = registerPip(db, convertedDir)
   const mediaQueue = registerMediaIpc(db, convertedDir)
   registerAiIpc(db)
+  registerPdfIpc(db)
   registerBackupIpc({
     db,
     userData,

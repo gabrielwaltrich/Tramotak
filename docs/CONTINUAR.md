@@ -6,7 +6,8 @@
   Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.3
 - Testes no momento da publicação: 456 unitários (Vitest) e 16 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.6.3; não há trabalho pela metade.
+- **PDFs no leitor do app prontos, ainda não publicados** (segunda parte da 0.7; ver abaixo). Testes: 468
+  unitários e 17 E2E.
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -29,16 +30,21 @@ Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 O dono prefere publicar partes prontas como versão de correção (ex.: 0.6.1) em vez de esperar a 0.7 inteira.
 Perguntar ao terminar cada parte.
 
-### 1. PDFs como aula
-- Hoje: aulas `document` (`.pdf`, `.docx`…) só mostram "Abrir arquivo" no aplicativo do sistema
-  (`src/renderer/src/components/player/DocumentLesson.tsx`).
-- Objetivo: abrir o **PDF dentro do app** (leitor com páginas, zoom, busca), **grifar** trechos e **anotar** com
-  referência à página (as anotações de hoje usam `timestamp_sec`; para PDF faz sentido uma coluna de página, numa
-  migration nova, a 13 — a 12 é a da revisão pós-aula).
-- Texto do PDF como **material da IA** (`src/main/ai/source.ts`, `resolveSource`), respeitando a regra de usar só
-  o conteúdo.
-- Os PDFs dos cursos não podem ser alterados: grifos ficam no banco, não no arquivo.
-- Avaliar o `pdfjs-dist` (o caderno já gera PDF em `components/notebooks/pdf.ts`, mas isso é exportação, não leitura).
+### 1. PDFs como aula ✅ (pronto em 16/10, não publicado)
+- Leitor com o `pdfjs-dist` 6 (`components/pdf/`): páginas desenhadas só perto da tela, zoom (Ctrl+roda, ajustar
+  à largura), busca no texto, ← → entre páginas. Grifos em 4 cores pela seleção (clique no grifo: cor, anotar,
+  remover) e anotação pela seleção ou pelo painel ("Anotar na página N"). Nada é escrito no PDF.
+- Decisões do dono: **anexos PDF** de aulas de vídeo também abrem no leitor (janela grande), com grifos e notas
+  na aula; a aula em PDF **conclui ao chegar na última página** (e oferece a revisão pós-aula).
+- Banco (migration 13): `notes.page` e `notes.asset_path`, tabela `pdf_highlights` (retângulos em fração da
+  página). O anexo é guardado pelo **caminho no curso**, não pelo id (reescanear recria os anexos). Nas aulas em
+  PDF, `lesson_progress.position_sec` guarda a última página; o tempo de leitura conta com janela em foco e
+  atividade recente (`useReadingTime`). Ler anexo só soma tempo (`positionSec: null` não mexe na posição).
+- IA: texto extraído no processo principal (`src/main/pdf/text.ts`, cache em memória) vira material padrão da
+  aula em PDF; anexos PDF entram em "Anexos" (desmarcado). A conversa cita `[p. N]` (clicável) e recebe a página
+  aberta. Links internos `#/lesson/ID?p=N` (e `&a=caminho` para anexo) nas Anotações, busca e cadernos.
+- Não feito: PDF escaneado (sem texto) não tem OCR; grifos não vão nos pacotes `.tramotak` (as notas com página
+  vão); texto dos PDFs não entra na busca global.
 
 ### 2. Revisão pós-aula ✅ (publicada na v0.6.3)
 - Ao concluir (fim do vídeo ou botão Concluir), faixa "Que tal N perguntas rápidas?" e, com o autoplay, o botão

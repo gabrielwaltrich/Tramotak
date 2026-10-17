@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, ExternalLink, ListChecks, Loader2, Sparkles, Star } from 'lucide-react'
-import type { LessonView } from '@shared/course'
+import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, ExternalLink, ListChecks, Loader2, Sparkles, Star } from 'lucide-react'
+import type { LessonAssetView, LessonView } from '@shared/course'
+import { isPdfPath } from '@shared/pdf'
 import { errorMessage, queryKeys } from '../lib/api'
 import { VideoPlayer } from '../components/player/VideoPlayer'
 import { TextLesson } from '../components/player/TextLesson'
@@ -12,6 +13,9 @@ import { NotesPanel } from '../components/player/NotesPanel'
 import { TranscriptPanel } from '../components/player/TranscriptPanel'
 import { LessonChat } from '../components/ai/LessonChat'
 import { ReviewDialog } from '../components/review/ReviewDialog'
+import { PdfLesson } from '../components/pdf/PdfLesson'
+import { PdfAttachmentDialog } from '../components/pdf/PdfAttachmentDialog'
+import type { PdfController } from '../components/pdf/PdfReader'
 import { playerPrefs } from '../components/player/prefs'
 import { useToast } from '../components/Toast'
 
@@ -23,13 +27,17 @@ const NEXT_COUNTDOWN_WITH_REVIEW_SEC = 10
 export function PlayerPage() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  // `?t=495` abre a aula nesse segundo (ex.: vindo de uma anotação na busca).
+  // `?t=495` abre a aula nesse segundo (ex.: vindo de uma anotação na busca); `?p=12` abre o PDF na página 12 e,
+  // com `&a=caminho`, num anexo PDF da aula.
   const raw = params.get('t')
   const startAt = raw !== null && Number.isFinite(Number(raw)) ? Math.max(0, Number(raw)) : null
-  return <LessonPlayer key={`${id}:${raw}`} lessonId={Number(id)} startAt={startAt} />
+  const rawPage = Number(params.get('p'))
+  const page = Number.isInteger(rawPage) && rawPage >= 1 ? rawPage : null
+  const asset = params.get('a')
+  return <LessonPlayer key={`${id}:${raw}:${page}:${asset}`} lessonId={Number(id)} startAt={startAt} startPage={page} startAsset={asset} />
 }
 
-function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number | null }) {
+function LessonPlayer({ lessonId, startAt, startPage, startAsset }: { lessonId: number; startAt: number | null; startPage: number | null; startAsset: string | null }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -41,6 +49,9 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
   const [offer, setOffer] = useState(false)
   const [reviewOpen, setReviewOpen] = useState(false)
   const playerRef = useRef<HTMLDivElement>(null)
+  // PDFs: leitor da aula e o anexo aberto no leitor (com a página).
+  const pdfRef = useRef<PdfController | null>(null)
+  const [reading, setReading] = useState<{ relPath: string; page: number | null } | null>(startAsset ? { relPath: startAsset, page: startPage } : null)
 
   const lesson = useQuery({ queryKey: queryKeys.lesson(lessonId), queryFn: () => window.api.lessons.get(lessonId), staleTime: 0 })
   const courseId = lesson.data?.course.id
@@ -61,16 +72,25 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
   const notes = useQuery({ queryKey: queryKeys.notes(lessonId), queryFn: () => window.api.notes.list(lessonId) })
   const isVideo = lesson.data?.kind === 'video'
+  const isPdf = lesson.data?.kind === 'document' && isPdfPath(lesson.data.relPath)
   const review = useQuery({
     queryKey: ['review', lessonId],
     queryFn: () => window.api.review.status(lessonId),
-    enabled: lesson.data !== undefined && lesson.data.kind !== 'document',
+    enabled: lesson.data !== undefined && (lesson.data.kind !== 'document' || isPdf),
     staleTime: 0
   })
   const canReview = review.data !== undefined && review.data.ai && review.data.material !== 'none'
   const offerReview = canReview && review.data!.enabled
 
   const getTime = useCallback(() => (isVideo ? (videoRef.current?.currentTime ?? 0) : null), [isVideo])
+  const getPage = useCallback(() => pdfRef.current?.page() ?? null, [])
+  const openPage = useCallback((page: number, assetPath: string | null) => {
+    if (assetPath) setReading({ relPath: assetPath, page })
+    else {
+      pdfRef.current?.goTo(page)
+      playerRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    }
+  }, [])
 
   const seek = useCallback((sec: number) => {
     const video = videoRef.current
@@ -119,6 +139,13 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
     if (autoplay && next) setCountdown(offerReview ? NEXT_COUNTDOWN_WITH_REVIEW_SEC : NEXT_COUNTDOWN_SEC)
   }
 
+  // PDF: chegar na última página conta como terminar a aula (como o fim do vídeo).
+  const onPdfEnd = () => {
+    if (lesson.data?.progress.completed) return
+    setCompleted.mutate(true)
+    setOffer(offerReview)
+  }
+
   const openReview = () => {
     videoRef.current?.pause()
     setCountdown(null)
@@ -149,6 +176,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
 
   const l = lesson.data
   const attachments = l.assets.filter((a) => a.kind === 'attachment')
+  const readingAsset: LessonAssetView | undefined = reading ? attachments.find((a) => a.relPath === reading.relPath && isPdfPath(a.relPath)) : undefined
 
   return (
     <div className="grid h-full grid-cols-[minmax(0,1fr)_20rem] gap-5 p-5">
@@ -170,6 +198,13 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
             />
           ) : l.kind === 'text' ? (
             <TextLesson lessonId={l.id} />
+          ) : isPdf ? (
+            <PdfLesson
+              lesson={l}
+              initialPage={startAsset === null && startPage !== null ? startPage : Math.max(1, Math.round(l.progress.positionSec))}
+              controllerRef={pdfRef}
+              onReachEnd={onPdfEnd}
+            />
           ) : (
             <DocumentLesson lesson={l} />
           )}
@@ -298,7 +333,7 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
               [
                 ['notes', `Anotações (${notes.data?.length ?? 0})`],
                 ...(isVideo ? [['transcript', 'Transcrição']] : []),
-                ...(isVideo || l.kind === 'text' ? [['ai', 'Perguntar à IA']] : []),
+                ...(isVideo || l.kind === 'text' || isPdf ? [['ai', 'Perguntar à IA']] : []),
                 ...(attachments.length > 0 ? [['attachments', `Anexos (${attachments.length})`]] : [])
               ] as [typeof tab, string][]
             ).map(([value, label]) => (
@@ -320,7 +355,15 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
             {tab === 'transcript' && isVideo ? (
               <TranscriptPanel lessonId={l.id} getTime={getTime} onSeek={seek} />
             ) : tab === 'ai' ? (
-              <LessonChat key={l.id} lessonId={l.id} getTime={getTime} onSeek={isVideo ? seek : undefined} onOpenTranscript={isVideo ? () => setTab('transcript') : undefined} />
+              <LessonChat
+                key={l.id}
+                lessonId={l.id}
+                getTime={getTime}
+                onSeek={isVideo ? seek : undefined}
+                onOpenTranscript={isVideo ? () => setTab('transcript') : undefined}
+                getPage={isPdf ? getPage : undefined}
+                onOpenPage={isPdf ? (page) => openPage(page, null) : undefined}
+              />
             ) : tab === 'notes' || attachments.length === 0 ? (
               <NotesPanel
                 lessonId={l.id}
@@ -330,19 +373,44 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
                 loading={notes.isPending}
                 getTime={getTime}
                 onSeek={isVideo ? seek : undefined}
+                getPage={isPdf ? getPage : undefined}
+                onOpenPage={openPage}
               />
             ) : (
               <ul className="space-y-1">
                 {attachments.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      type="button"
-                      onClick={() => window.api.files.openAsset(a.id).catch((e) => toast(errorMessage(e), 'error'))}
-                      className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2"
-                    >
-                      <ExternalLink size={14} className="shrink-0 text-muted" />
-                      <span className="truncate">{a.name}</span>
-                    </button>
+                  <li key={a.id} className="flex items-center gap-1">
+                    {isPdfPath(a.relPath) ? (
+                      <button
+                        type="button"
+                        onClick={() => setReading({ relPath: a.relPath, page: null })}
+                        title="Ler no app, com grifos e anotações"
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2"
+                      >
+                        <BookOpen size={14} className="shrink-0 text-accent" />
+                        <span className="truncate">{a.name}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => window.api.files.openAsset(a.id).catch((e) => toast(errorMessage(e), 'error'))}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2"
+                      >
+                        <ExternalLink size={14} className="shrink-0 text-muted" />
+                        <span className="truncate">{a.name}</span>
+                      </button>
+                    )}
+                    {isPdfPath(a.relPath) && (
+                      <button
+                        type="button"
+                        onClick={() => window.api.files.openAsset(a.id).catch((e) => toast(errorMessage(e), 'error'))}
+                        aria-label={`Abrir ${a.name} no aplicativo do sistema`}
+                        title="Abrir no aplicativo do sistema"
+                        className="grid size-7 shrink-0 place-items-center rounded text-muted hover:bg-surface-2 hover:text-text"
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -350,6 +418,16 @@ function LessonPlayer({ lessonId, startAt }: { lessonId: number; startAt: number
           </div>
         </section>
       </div>
+
+      {readingAsset && (
+        <PdfAttachmentDialog
+          key={`${readingAsset.relPath}:${reading?.page}`}
+          lessonId={l.id}
+          asset={readingAsset}
+          page={reading?.page ?? null}
+          onClose={() => setReading(null)}
+        />
+      )}
 
       {reviewOpen && (
         <ReviewDialog

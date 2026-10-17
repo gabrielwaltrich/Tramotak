@@ -409,5 +409,23 @@ export const MIGRATIONS: string[] = [
     created_at     INTEGER NOT NULL DEFAULT (unixepoch()),
     finished_at    INTEGER
   );
+  `,
+  /* 13 — PDFs no leitor do app: anotações com página (e de qual anexo PDF, se não for a própria aula) e grifos.
+     O anexo é guardado pelo caminho dentro do curso, não pelo id: reescanear o curso recria os anexos.
+     Nas aulas em PDF, lesson_progress.position_sec guarda a última página lida. */ `
+  ALTER TABLE notes ADD COLUMN page INTEGER;
+  ALTER TABLE notes ADD COLUMN asset_path TEXT;
+
+  CREATE TABLE pdf_highlights (
+    id         INTEGER PRIMARY KEY,
+    lesson_id  INTEGER NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+    asset_path TEXT, -- caminho do anexo no curso; NULL = o PDF da própria aula
+    page       INTEGER NOT NULL,
+    rects_json TEXT    NOT NULL, -- retângulos em fração da página (0 a 1), valem em qualquer zoom
+    text       TEXT    NOT NULL,
+    color      TEXT    NOT NULL,
+    created_at INTEGER NOT NULL DEFAULT (unixepoch())
+  );
+  CREATE INDEX pdf_highlights_lesson ON pdf_highlights(lesson_id, asset_path, page);
   `
 ]

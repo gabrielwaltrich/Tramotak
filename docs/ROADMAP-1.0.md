@@ -72,7 +72,8 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ✅ Primeira parte da 0.7, publicada antes: perguntas rápidas ao concluir a aula (detalhes no item da 0.7).
 
 ## 0.7 — PDFs e revisão pós-aula ⬜
-- PDFs como aula: leitura, grifo e anotações dentro do app; texto do PDF como material da IA.
+- ✅ PDFs como aula: leitura, grifo e anotações dentro do app (aulas e anexos PDF); texto do PDF como material da
+  IA; conclui ao chegar na última página.
 - ✅ Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto (múltipla escolha e V/F, correção na
   hora, erradas viram flashcard; sem transcrição, transcreve antes). Perguntas salvas por aula.
 - Pomodoro/modo foco integrado ao tempo de estudo.

@@ -21,8 +21,14 @@ function fileName(name: unknown): string {
 
 export function registerNoteIpc(db: Database): void {
   ipcMain.handle(IPC.notesList, (_e, lessonId: number) => listNotes(db, assertId(lessonId)))
-  ipcMain.handle(IPC.notesCreate, (_e, input: { lessonId: number; timestampSec: number | null; body: string }) =>
-    createNote(db, { lessonId: assertId(input?.lessonId), timestampSec: input.timestampSec ?? null, body: input.body })
+  ipcMain.handle(IPC.notesCreate, (_e, input: { lessonId: number; timestampSec: number | null; body: string; page?: number | null; assetPath?: string | null }) =>
+    createNote(db, {
+      lessonId: assertId(input?.lessonId),
+      timestampSec: input.timestampSec ?? null,
+      body: input.body,
+      page: input.page ?? null,
+      assetPath: input.assetPath ?? null
+    })
   )
   ipcMain.handle(IPC.notesUpdate, (_e, id: number, body: string) => updateNote(db, assertId(id), body))
   ipcMain.handle(IPC.notesDelete, (_e, id: number) => deleteNote(db, assertId(id)))

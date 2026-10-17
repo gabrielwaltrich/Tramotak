@@ -11,5 +11,5 @@
     "isolatedModules": true,
     "composite": true
   },
-  "include": ["playwright.config.ts", "tests/e2e/**/*", "src/preload/index.d.ts", "src/shared/**/*"]
+  "include": ["playwright.config.ts", "tests/e2e/**/*", "tests/helpers/pdf.ts", "src/preload/index.d.ts", "src/shared/**/*"]
 }

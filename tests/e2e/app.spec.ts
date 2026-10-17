@@ -4,6 +4,7 @@ import { cp, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import { makePdf } from '../helpers/pdf'
 
 const FIXTURE = join(__dirname, 'fixtures', 'Curso E2E')
 
@@ -717,6 +718,101 @@ test('revisão pós-aula: ao terminar o vídeo, perguntas só da fala da aula, c
     await app.close()
     server.close()
     await writeFile(srt, original)
+  }
+})
+
+test('PDF no leitor do app: busca, grifo, anotação na página, conclusão no fim, última página e anexo PDF', async () => {
+  const { copyFile, mkdir, writeFile } = await import('node:fs/promises')
+  const root = join(workdir, 'Curso PDF')
+  await mkdir(root, { recursive: true })
+  const filler = (n: number) => Array.from({ length: 34 }, (_, i) => `Linha ${i + 1} da pagina ${n}: o sistema operacional gerencia processos e memoria.`)
+  await writeFile(
+    join(root, '01 Apostila.pdf'),
+    makePdf([
+      ['Capitulo 1', ...filler(1)],
+      ['Capitulo 2', 'Containers compartilham o kernel do hospedeiro.', ...filler(2)],
+      ['Capitulo 3', ...filler(3)]
+    ])
+  )
+  await copyFile(join(FIXTURE, '01. Primeiro módulo', '01. Boas-vindas.mp4'), join(root, '02 Aula.mp4'))
+  await writeFile(join(root, '02 Aula.pdf'), makePdf([['Resumo da aula'], ['O comando ls lista arquivos.']]))
+
+  const { app, page } = await launch()
+  let courseId: number | null = null
+  try {
+    courseId = await page.evaluate((path) => window.api.courses.import({ path, title: 'Curso PDF', structure: 'flat', numbering: 'none' }), root)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso PDF' }).click()
+    await page.getByRole('link', { name: /01 Apostila/ }).click()
+
+    const reader = page.getByRole('toolbar', { name: 'Leitor de PDF' })
+    const pageBox = page.getByRole('textbox', { name: 'Página', exact: true })
+    await expect(reader.getByText('de 3')).toBeVisible()
+    await expect(page.locator('[data-page="1"] .textLayer span').first()).toBeAttached({ timeout: 20_000 })
+
+    // Busca: vai para a página com o termo e marca o trecho
+    await page.getByRole('textbox', { name: 'Buscar no PDF' }).fill('hospedeiro')
+    await page.keyboard.press('Enter')
+    await expect(pageBox).toHaveValue('2')
+    await expect(reader.getByText('1 página')).toBeVisible()
+    const hit = page.locator('[data-page="2"] .textLayer span.tk-hit').first()
+    await expect(hit).toBeVisible()
+
+    // Selecionar o trecho e grifar
+    const box = (await hit.boundingBox())!
+    await page.mouse.move(box.x + 1, box.y + box.height / 2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width - 1, box.y + box.height / 2, { steps: 5 })
+    await page.mouse.up()
+    await page.getByRole('button', { name: 'Grifar em amarelo' }).click()
+    await expect(page.locator('[data-page="2"] [data-highlight]')).toHaveCount(1)
+    const lessonId = await page.evaluate(() => Number(location.hash.match(/lesson\/(\d+)/)![1]))
+    const highlights = await page.evaluate((id) => window.api.pdf.highlights(id, null), lessonId)
+    expect(highlights).toEqual([expect.objectContaining({ page: 2, color: 'yellow', text: expect.stringContaining('hospedeiro') })])
+
+    // Anotação pelo painel: nasce na página aberta
+    await page.getByRole('button', { name: /Anotar na página 2/ }).click()
+    await page.getByRole('textbox', { name: 'Nova anotação' }).fill('Diferença para máquinas virtuais')
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'p. 2' })).toBeVisible()
+
+    // Clicar no grifo: opções; remover
+    await page.locator('[data-page="2"] [data-highlight]').scrollIntoViewIfNeeded()
+    const mark = (await page.locator('[data-page="2"] [data-highlight]').boundingBox())!
+    await page.mouse.click(mark.x + 4, mark.y + mark.height / 2)
+    await page.getByRole('button', { name: 'Remover grifo' }).click()
+    await expect(page.locator('[data-page="2"] [data-highlight]')).toHaveCount(0)
+
+    // Chegar ao fim conclui a aula
+    await page.locator('.tk-pdf').evaluate((el) => (el.scrollTop = el.scrollHeight))
+    await expect(page.getByRole('button', { name: 'Concluída' })).toBeVisible()
+    await expect(pageBox).toHaveValue('3')
+
+    // Sair e voltar: reabre na última página lida
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso PDF' }).click()
+    await page.getByRole('link', { name: /01 Apostila/ }).click()
+    await expect(pageBox).toHaveValue('3')
+
+    // A anotação na página Anotações leva de volta à página dela
+    await page.getByRole('navigation', { name: 'Principal' }).getByRole('link', { name: 'Anotações' }).click()
+    await page.getByRole('link', { name: 'p. 2' }).click()
+    await expect(pageBox).toHaveValue('2')
+
+    // Anexo PDF de uma aula de vídeo abre no leitor, com grifo próprio
+    await page.getByRole('link', { name: /02 Aula/ }).click()
+    await page.getByRole('tab', { name: /Anexos/ }).click()
+    await page.getByRole('button', { name: '02 Aula.pdf', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: '02 Aula.pdf' })
+    await expect(dialog.getByText('de 2')).toBeVisible()
+    await expect(dialog.locator('[data-page="1"] .textLayer span').first()).toBeAttached({ timeout: 20_000 })
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+
+  } finally {
+    // Os testes seguintes contam os cursos e anotações de antes
+    if (courseId !== null) await page.evaluate((id) => window.api.courses.delete(id), courseId).catch(() => {})
+    await app.close()
   }
 })
 

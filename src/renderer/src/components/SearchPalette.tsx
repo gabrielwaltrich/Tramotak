@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { BookOpen, ClipboardList, GitFork, NotebookPen, Clock, CornerDownLeft, FileText, FolderTree, Layers, Loader2, PlayCircle, Search, StickyNote, X } from 'lucide-react'
 import type { SearchHit, SearchKind } from '@shared/course'
-import { formatClock } from '@shared/format'
+import { noteLink, noteWhere } from '@shared/notes'
 import { errorMessage, queryKeys } from '../lib/api'
 import { readPref, writePref } from '../storage'
 import { Highlight } from './Highlight'
@@ -48,7 +48,7 @@ export function hitRoute(hit: SearchHit): string {
     case 'lesson':
       return `/lesson/${hit.id}`
     case 'note':
-      return hit.timestampSec !== null ? `/lesson/${hit.lessonId}?t=${Math.floor(hit.timestampSec)}` : `/lesson/${hit.lessonId}`
+      return noteLink(hit.lessonId!, hit.timestampSec, hit.page ?? null, hit.assetPath ?? null).slice(1)
     case 'card':
       return `/flashcards/${hit.deckId}`
     case 'question':
@@ -270,8 +270,10 @@ function PaletteBody({ initial, onClose }: { initial: string; onClose: () => voi
                         </p>
                       )}
                       <p className="mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted">
-                        {hit.kind === 'note' && hit.timestampSec !== null && (
-                          <span className="rounded bg-surface-2 px-1 tabular-nums">{formatClock(hit.timestampSec)}</span>
+                        {hit.kind === 'note' && (hit.timestampSec !== null || hit.page != null) && (
+                          <span className="rounded bg-surface-2 px-1 tabular-nums">
+                            {noteWhere({ timestampSec: hit.timestampSec, page: hit.page ?? null, assetPath: hit.assetPath ?? null })}
+                          </span>
                         )}
                         {context(hit)}
                       </p>

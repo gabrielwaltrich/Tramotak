@@ -170,3 +170,57 @@ body.pip {
   background: #000;
   overflow: hidden;
 }
+
+/* Leitor de PDF: camada de texto do pdf.js (invisível, só para selecionar e buscar), igual à do visualizador
+   oficial. O tamanho de cada trecho vem de --total-scale-factor, definido na página. */
+.tk-pdf-page { --scale-round-x: 1px; --scale-round-y: 1px; }
+.tk-pdf .textLayer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.tk-pdf .textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+  user-select: text;
+}
+.tk-pdf .textLayer > :not(.markedContent),
+.tk-pdf .textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.tk-pdf .textLayer .markedContent { display: contents; }
+.tk-pdf .textLayer span[role='img'] { user-select: none; cursor: default; }
+.tk-pdf .textLayer ::selection { background: rgb(37 99 235 / 0.3); color: transparent; }
+.tk-pdf .textLayer br::selection { background: transparent; }
+.tk-pdf .textLayer .endOfContent {
+  display: block;
+  position: absolute;
+  inset: 100% 0 0;
+  z-index: 0;
+  cursor: default;
+  user-select: none;
+}
+.tk-pdf .textLayer.selecting .endOfContent { top: 0; }
+/* Trechos que contêm a busca. */
+.tk-pdf .textLayer span.tk-hit { background: rgb(250 204 21 / 0.45); border-radius: 2px; }

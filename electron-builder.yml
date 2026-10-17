@@ -8,6 +8,11 @@ directories:
 files:
   - out/**
   - package.json
+  # pdf.js no processo principal só usa o build "legacy" (texto para a IA); o leitor já vai empacotado na interface.
+  # O canvas nativo (dependência opcional) não é usado: só desenho no Node, que o app não faz.
+  - '!node_modules/@napi-rs/**'
+  - '!node_modules/pdfjs-dist/{build,web,image_decoders,types}/**'
+  - '!node_modules/pdfjs-dist/**/*.map'
 icon: resources/icon.png
 # Transcrição embutida: whisper-cli compilado por scripts/build-whisper.sh (fica em resources/whisper).
 extraResources:

@@ -29,7 +29,7 @@ export function renderMarkdown(text: string, math: 'html' | 'mathml' = 'html'): 
 }
 
 /** Links para telas do próprio app (ex.: horário de uma anotação: `#/lesson/12?t=205`). */
-const INTERNAL_LINK = /^#\/(lesson|courses|flashcards|questions|notebooks|mindmaps|notes)(\/[\w-]+)*(\?[\w=&-]*)?$/
+const INTERNAL_LINK = /^#\/(lesson|courses|flashcards|questions|notebooks|mindmaps|notes)(\/[\w-]+)*(\?[\w=&%.-]*)?$/
 
 // Links externos abrem no navegador do sistema (o processo principal bloqueia navegação interna); links para
 // telas do app navegam dentro dele.

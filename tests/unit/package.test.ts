@@ -166,6 +166,30 @@ describe('pacotes de estudo', () => {
     expect(b.prepare('SELECT position_sec AS p FROM lesson_progress WHERE lesson_id = ?').get(introB)).toEqual({ p: 80 })
   })
 
+  it('anotações de PDF levam a página e o anexo; sem o anexo no destino, entram sem página', async () => {
+    const withPdf = async (db: Database, files: string[]) => {
+      const course = await makeCourse(files)
+      cleanups.push(course.cleanup)
+      const scan = await scanCourse(course.root, { structure: 'auto', numbering: 'dot' })
+      const courseId = insertScannedCourse(db, { title: 'C', rootPath: course.root, numbering: 'dot', scanStructure: 'auto' }, scan)
+      return { courseId, intro: (db.prepare("SELECT id FROM lessons WHERE title LIKE '%Introdução%'").get() as { id: number }).id }
+    }
+    const src = await withPdf(a, [...FILES, '01 Limites/01 Introdução.pdf'])
+    createNote(a, { lessonId: src.intro, timestampSec: null, page: 4, assetPath: '01 Limites/01 Introdução.pdf', body: 'na apostila' })
+    const pkg = parsePackage(serializePackage(buildPackage(a, { ...SEL, courseIds: [src.courseId] }, '0.7.0')))
+    expect(pkg.courses[0].notes[0]).toMatchObject({ page: 4, assetPath: '01 Limites/01 Introdução.pdf' })
+
+    const same = await withPdf(b, [...FILES, '01 Limites/01 Introdução.pdf'])
+    importPackage(b, pkg, { c1: same.courseId })
+    expect(listNotes(b, same.intro).map((n) => [n.body, n.page, n.assetPath])).toEqual([['na apostila', 4, '01 Limites/01 Introdução.pdf']])
+
+    const other = openDatabase(':memory:')
+    const without = await withPdf(other, FILES)
+    importPackage(other, pkg, { c1: without.courseId })
+    expect(listNotes(other, without.intro).map((n) => [n.body, n.page, n.assetPath])).toEqual([['na apostila', null, null]])
+    other.close()
+  })
+
   it('recusa arquivos estranhos e de versão futura; descarta itens malformados', () => {
     expect(() => parsePackage(Buffer.from('oi'))).toThrow(/não é um pacote/)
     expect(() => parsePackage(Buffer.from(JSON.stringify({ format: 'outro' })))).toThrow(/não é um pacote/)

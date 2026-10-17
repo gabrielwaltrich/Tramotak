@@ -1,5 +1,6 @@
 import type { LessonKind, Note } from './course'
 import { formatClock } from './format'
+import { pageLink } from './pdf'
 
 /** Anotação com o contexto da aula, para a página que reúne todas. */
 export interface NoteEntry extends Note {
@@ -38,16 +39,24 @@ export function groupByLesson(entries: NoteEntry[]): LessonNotes[] {
   return groups
 }
 
-/** Link interno que abre a aula no ponto da anotação (funciona dentro dos cadernos). */
-export function noteLink(lessonId: number, timestampSec: number | null): string {
+/** Link interno que abre a aula no ponto da anotação: horário do vídeo ou página do PDF (funciona nos cadernos). */
+export function noteLink(lessonId: number, timestampSec: number | null, page: number | null = null, assetPath: string | null = null): string {
+  if (page !== null) return pageLink(lessonId, page, assetPath)
   return timestampSec === null ? `#/lesson/${lessonId}` : `#/lesson/${lessonId}?t=${Math.floor(timestampSec)}`
 }
 
+/** "2:05", "p. 12" ou "apostila.pdf, p. 3": onde a nota foi feita. */
+export function noteWhere(note: Pick<Note, 'timestampSec' | 'page' | 'assetPath'>): string {
+  if (note.page !== null) return note.assetPath ? `${note.assetPath.split('/').pop()}, p. ${note.page}` : `p. ${note.page}`
+  return note.timestampSec === null ? '' : formatClock(note.timestampSec)
+}
+
 /** Uma anotação como item de lista em Markdown, com o horário clicável. Linhas extras ficam dentro do item. */
-export function noteMarkdown(note: Pick<Note, 'lessonId' | 'timestampSec' | 'body'>, links = true): string {
+export function noteMarkdown(note: Pick<Note, 'lessonId' | 'timestampSec' | 'body'> & Partial<Pick<Note, 'page' | 'assetPath'>>, links = true): string {
   const [first, ...rest] = note.body.split('\n')
-  const time = note.timestampSec === null ? '' : formatClock(note.timestampSec)
-  const prefix = time ? (links ? `[**${time}**](${noteLink(note.lessonId, note.timestampSec)}) ` : `**${time}** `) : ''
+  const where = { timestampSec: note.timestampSec, page: note.page ?? null, assetPath: note.assetPath ?? null }
+  const time = noteWhere(where)
+  const prefix = time ? (links ? `[**${time}**](${noteLink(note.lessonId, where.timestampSec, where.page, where.assetPath)}) ` : `**${time}** `) : ''
   return [`- ${prefix}${first}`, ...rest.map((line) => (line.trim() ? `  ${line}` : ''))].join('\n')
 }
 

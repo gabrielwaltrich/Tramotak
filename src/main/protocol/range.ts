@@ -50,7 +50,8 @@ const TYPES: Record<string, string> = {
   '.mp3': 'audio/mpeg',
   '.m4a': 'audio/mp4',
   '.wav': 'audio/wav',
-  '.ogg': 'audio/ogg'
+  '.ogg': 'audio/ogg',
+  '.wasm': 'application/wasm'
 }
 
 export function contentTypeFor(path: string): string {

@@ -86,7 +86,7 @@ export function getLessonView(db: Database, lessonId: number): LessonView {
     db
       .prepare('SELECT id, kind, rel_path AS relPath, lang FROM lesson_assets WHERE lesson_id = ? ORDER BY kind DESC, rel_path')
       .all(lesson.id) as unknown as { id: number; kind: 'subtitle' | 'attachment'; relPath: string; lang: string | null }[]
-  ).map((a) => ({ id: a.id, kind: a.kind, lang: a.lang, name: basename(a.relPath), url: mediaUrl.asset(a.id) }))
+  ).map((a) => ({ id: a.id, kind: a.kind, lang: a.lang, name: basename(a.relPath), relPath: a.relPath, url: mediaUrl.asset(a.id) }))
 
   return {
     id: lesson.id,
@@ -121,13 +121,13 @@ function assertLesson(db: Database, lessonId: number): number {
 /** Salva posição/duração, marca a aula e o curso como recentes e soma o tempo assistido. */
 export function saveProgress(db: Database, update: ProgressUpdate, now = Math.floor(Date.now() / 1000)): void {
   const courseId = assertLesson(db, update.lessonId)
-  const position = Math.max(0, update.positionSec)
+  const position = update.positionSec === null ? null : Math.max(0, update.positionSec)
   const watched = Math.max(0, Math.round(update.watchedSec))
 
   transaction(db, () => {
     ensureProgressRow(db, update.lessonId)
     db.prepare(
-      'UPDATE lesson_progress SET position_sec = ?, duration_sec = COALESCE(?, duration_sec), last_watched_at = ? WHERE lesson_id = ?'
+      'UPDATE lesson_progress SET position_sec = COALESCE(?, position_sec), duration_sec = COALESCE(?, duration_sec), last_watched_at = ? WHERE lesson_id = ?'
     ).run(position, update.durationSec, now, update.lessonId)
     if (update.durationSec && update.durationSec > 0) {
       db.prepare('UPDATE lessons SET duration_sec = ? WHERE id = ?').run(update.durationSec, update.lessonId)

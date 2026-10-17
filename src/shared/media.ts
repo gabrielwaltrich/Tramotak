@@ -15,6 +15,16 @@ export function parseMediaUrl(url: string): { type: 'lesson' | 'asset' | 'transc
   return { type: match[1] as 'lesson' | 'asset' | 'transcript', id: Number(match[2]) }
 }
 
+/** Recursos do pdf.js (fontes padrão, mapas de caracteres, decodificadores wasm, perfis de cor) servidos pelo app. */
+export const PDFJS_ASSET_DIRS = ['cmaps', 'standard_fonts', 'wasm', 'iccs'] as const
+export const pdfjsAssetBase = `${MEDIA_SCHEME}://pdfjs/`
+
+export function parsePdfjsUrl(url: string): { dir: (typeof PDFJS_ASSET_DIRS)[number]; file: string } | null {
+  const match = new RegExp(`^${MEDIA_SCHEME}://pdfjs/(${PDFJS_ASSET_DIRS.join('|')})/([\\w.-]+)$`).exec(url)
+  if (!match || match[2].startsWith('.')) return null
+  return { dir: match[1] as (typeof PDFJS_ASSET_DIRS)[number], file: match[2] }
+}
+
 // ── Formatos de vídeo ───────────────────────────────────────────────────────
 
 export interface ProbeResult {

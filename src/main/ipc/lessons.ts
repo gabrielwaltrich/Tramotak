@@ -45,7 +45,7 @@ export function registerLessonIpc(db: Database): void {
   ipcMain.handle(IPC.progressSave, (_e, update: ProgressUpdate) =>
     saveProgress(db, {
       lessonId: assertId(update?.lessonId),
-      positionSec: finite(update.positionSec) ?? 0,
+      positionSec: update.positionSec === null ? null : (finite(update.positionSec) ?? 0),
       durationSec: finite(update.durationSec),
       watchedSec: Math.min(finite(update.watchedSec) ?? 0, 600)
     })

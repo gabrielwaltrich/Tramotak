@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Clock, Download, Layers, Loader2, NotebookPen, Pencil, PlayCircle, Search, StickyNote, Trash2, X } from 'lucide-react'
+import { BookOpen, Clock, Download, Layers, Loader2, NotebookPen, Pencil, PlayCircle, Search, StickyNote, Trash2, X } from 'lucide-react'
 import { formatClock, plural } from '@shared/format'
-import { groupByLesson, notesToMarkdown, suggestedPageTitle, type NoteEntry } from '@shared/notes'
+import { groupByLesson, noteLink, notesToMarkdown, noteWhere, suggestedPageTitle, type NoteEntry } from '@shared/notes'
 import { matches } from '@shared/search'
 import { errorMessage, queryKeys } from '../lib/api'
 import { PageHeader } from '../components/PageHeader'
@@ -17,8 +17,7 @@ import { CardFromNoteDialog } from '../components/flashcards/CardFromNoteDialog'
 
 type Sort = 'course' | 'recent'
 
-const lessonUrl = (n: Pick<NoteEntry, 'lessonId' | 'timestampSec'>) =>
-  n.timestampSec !== null ? `/lesson/${n.lessonId}?t=${Math.floor(n.timestampSec)}` : `/lesson/${n.lessonId}`
+const lessonUrl = (n: Pick<NoteEntry, 'lessonId' | 'timestampSec' | 'page' | 'assetPath'>) => noteLink(n.lessonId, n.timestampSec, n.page, n.assetPath).slice(1)
 
 /** Todas as anotações dos cursos num lugar só: busca, filtro por curso, edição e envio para os cadernos. */
 export function NotesPage() {
@@ -269,7 +268,15 @@ function NoteRow({ note, checked, onToggle, onMakeCard, context = false }: {
         aria-label="Selecionar anotação"
         className="mt-1 size-4 shrink-0 accent-[var(--accent)]"
       />
-      {note.timestampSec !== null ? (
+      {note.page !== null ? (
+        <Link
+          to={lessonUrl(note)}
+          title="Abrir o PDF nesta página"
+          className="inline-flex h-6 max-w-40 shrink-0 items-center gap-1 rounded bg-accent-soft px-1.5 text-xs font-medium text-accent tabular-nums hover:brightness-125"
+        >
+          <BookOpen size={12} className="shrink-0" /> <span className="truncate">{noteWhere(note)}</span>
+        </Link>
+      ) : note.timestampSec !== null ? (
         <Link
           to={lessonUrl(note)}
           title="Abrir o vídeo neste ponto"

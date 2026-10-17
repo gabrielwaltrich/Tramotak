@@ -39,11 +39,11 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
 ## Arquitetura em uma olhada
 
 - `src/main/` — processo principal: `db/` (SQLite via `node:sqlite`, SQL direto; migrations em `db/migrations.ts`,
-  hoje até a **12**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
+  hoje até a **13**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
   valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/`, `scanner/`,
   `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário), `pip/` (janela flutuante:
   `host.ts` grava progresso e troca de aula; `window.ts` cria a janela; `child.ts` é o processo separado em X11
-  usado no Wayland; `mode.ts` escolhe entre os dois).
+  usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA).
 - `src/preload/index.ts` — ponte `window.api` (tipos em `src/shared/ipc.ts`, interface `TramotakApi`).
 - `src/renderer/src/` — React 19 + TanStack Query + Tailwind 4 (cores por tokens CSS; temas em
   `src/shared/appearance.ts`). Uma rota por tela em `routes/`.
@@ -91,5 +91,11 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
   `--ozone-platform=x11` (o mesmo executável com `--tramotak-pip`). `app.commandLine.appendSwitch('ozone-platform')`
   no main **não** adianta (chega tarde). No X11, `setAspectRatio` conta a sombra invisível e achata o vídeo, e o
   `screenX`/`outerWidth` da página incluem essa sombra: a posição exata vem de `win.getBounds()`.
+- **pdf.js**: no processo principal só o build `legacy` (extrai texto; os avisos de "polyfill DOMMatrix" são
+  esperados, o canvas nativo `@napi-rs/canvas` fica fora do instalador). Na interface, fontes padrão, cmaps e wasm
+  vêm pelo protocolo `tramotak-media://pdfjs/…` (por isso `font-src tramotak-media:` no CSP). O que o
+  `electron-builder.yml` exclui do `pdfjs-dist` não pode ser usado em tempo de execução.
+- **E2E**: se um teste falha, o Playwright reinicia o worker e os seguintes começam com um perfil vazio (falham em
+  cascata). Olhe a primeira falha. Testes que criam dados que mudam contagens (cursos, cartas) devem apagá-los no fim.
 - Para testar a janela flutuante: `TRAMOTAK_PIP_MODE=window|process` força o modo (o E2E usa `window`) e
   `TRAMOTAK_PIP_DEBUG_PORT=9339` abre a porta de depuração do processo separado (Playwright `connectOverCDP`).

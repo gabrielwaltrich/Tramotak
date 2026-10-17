@@ -225,6 +225,7 @@ export function SettingsPage() {
               Ver licença
             </button>
           </p>
+          <p className="mt-1 text-xs text-muted">O leitor de PDF usa o pdf.js, da Mozilla (licença Apache 2.0).</p>
           </>
         ) : (
           <p className="text-sm text-muted">Carregando…</p>
