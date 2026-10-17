@@ -45,7 +45,7 @@ export function subtitleToText(raw: string): string {
     .replace(/\s+/g, ' ')
     .trim()
 }
-async function readText(path: string): Promise<string | null> {
+export async function readText(path: string): Promise<string | null> {
   const info = await stat(path).catch(() => null)
   if (!info || info.size > MAX_FILE_BYTES) return null
   const content = await readFile(path, 'utf8')

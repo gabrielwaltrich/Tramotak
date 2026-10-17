@@ -431,5 +431,29 @@ export const MIGRATIONS: string[] = [
   /* 14 — Pomodoro: sessões de estudo de blocos de foco (o que o app não mediu por vídeo, PDF ou flashcards). */ `
   ALTER TABLE study_sessions ADD COLUMN source TEXT; -- NULL = medido pelo app; 'pomodoro' = bloco de foco
   CREATE INDEX study_sessions_time ON study_sessions(ended_at);
+  `,
+  /* 15 — conversa com a IA sobre o curso inteiro: trechos pesquisáveis do material das aulas (transcrição, legenda,
+     texto, PDF), refeitos quando o material muda (`chunk_sources.version`), e as conversas por curso. */ `
+  CREATE VIRTUAL TABLE course_chunks USING fts5(
+    text,
+    lesson_id UNINDEXED,
+    start_sec UNINDEXED, -- segundo do vídeo (transcrição/legenda)
+    page UNINDEXED,      -- página (PDF)
+    tokenize = 'unicode61 remove_diacritics 2'
+  );
+  CREATE TABLE chunk_sources (
+    lesson_id INTEGER PRIMARY KEY REFERENCES lessons(id) ON DELETE CASCADE,
+    kind      TEXT    NOT NULL,
+    version   TEXT    NOT NULL
+  );
+  CREATE TRIGGER chunk_sources_ad AFTER DELETE ON chunk_sources BEGIN
+    DELETE FROM course_chunks WHERE lesson_id = old.lesson_id;
+  END;
+
+  CREATE TABLE course_chats (
+    course_id     INTEGER PRIMARY KEY REFERENCES courses(id) ON DELETE CASCADE,
+    messages_json TEXT    NOT NULL DEFAULT '[]',
+    updated_at    INTEGER NOT NULL DEFAULT (unixepoch())
+  );
   `
 ]

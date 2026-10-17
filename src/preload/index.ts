@@ -67,6 +67,15 @@ const api: TramotakApi = {
     chatSend: (request) => ipcRenderer.invoke(IPC.aiChatSend, request),
     chatCancel: () => ipcRenderer.invoke(IPC.aiChatCancel),
     chatClear: (lessonId) => ipcRenderer.invoke(IPC.aiChatClear, lessonId),
+    courseChatGet: (courseId) => ipcRenderer.invoke(IPC.courseChatGet, courseId),
+    courseChatSend: (request) => ipcRenderer.invoke(IPC.courseChatSend, request),
+    courseChatCancel: () => ipcRenderer.invoke(IPC.courseChatCancel),
+    courseChatClear: (courseId) => ipcRenderer.invoke(IPC.courseChatClear, courseId),
+    onCourseChatDelta: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, delta: unknown) => delta && typeof delta === 'object' && callback(delta as never)
+      ipcRenderer.on(IPC.courseChatDelta, listener)
+      return () => ipcRenderer.removeListener(IPC.courseChatDelta, listener)
+    },
     suggestTitleRules: (courseId, request) => ipcRenderer.invoke(IPC.aiSuggestTitleRules, courseId, request),
     onChatDelta: (callback) => {
       const listener = (_event: Electron.IpcRendererEvent, delta: unknown) => delta && typeof delta === 'object' && callback(delta as never)

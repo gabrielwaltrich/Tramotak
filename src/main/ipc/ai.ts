@@ -19,7 +19,8 @@ import {
   type AiProvider,
   type AiSourceRef,
   type ChatMessage,
-  type ChatSendRequest
+  type ChatSendRequest,
+  type CourseChatSendRequest
 } from '@shared/ai'
 import { IPC, type OllamaPullState } from '@shared/ipc'
 import { buildTitleRulesPrompt, normalizeTitleRules, sampleNames, type TitleRules } from '@shared/titleRules'
@@ -32,6 +33,18 @@ import { loginOpenRouter } from '../ai/openrouterAuth'
 import { chatMaterial, resolveSource, reviewMaterial } from '../ai/source'
 import { getReview, reviewSummary, saveReviewAnswers, saveReviewQuestions } from '../db/reviews'
 import { REVIEW_MIN_CHARS, reviewRequest, type LessonReview, type ReviewStatus } from '@shared/review'
+import {
+  buildCourseChatSystem,
+  buildTermsPrompt,
+  composeCourseMaterial,
+  COURSE_MATERIAL_CHARS,
+  ftsQueryFromTerms,
+  keywords,
+  parseSearchTerms
+} from '@shared/courseChat'
+import { indexedLessons, searchCourseChunks, syncCourseChunks } from '../ai/courseIndex'
+import { appendCourseChat, clearCourseChat, getCourseChat } from '../db/courseChats'
+import { getCourseDetail } from '../db/courses'
 
 function assertId(id: unknown): number {
   if (!Number.isInteger(id)) throw new Error('Identificador inválido')
@@ -221,6 +234,92 @@ export function registerAiIpc(db: Database): void {
       throw error
     } finally {
       chatting = null
+    }
+  })
+
+  // ── Conversa sobre o curso inteiro ──
+  let courseChatting: AbortController | null = null
+
+  // Atualiza os trechos do curso (só o que mudou) e devolve a conversa e quantas aulas têm material.
+  ipcMain.handle(IPC.courseChatGet, async (_e, courseId: unknown) => {
+    const id = assertId(courseId)
+    const total = getCourseDetail(db, id).lessonCount
+    const synced = await syncCourseChunks(db, id).catch(() => ({ withMaterial: indexedLessons(db, id), total }))
+    return { messages: getCourseChat(db, id), material: { withMaterial: synced.withMaterial, total } }
+  })
+  ipcMain.handle(IPC.courseChatClear, (_e, courseId: unknown) => clearCourseChat(db, assertId(courseId)))
+  ipcMain.handle(IPC.courseChatCancel, () => courseChatting?.abort())
+
+  ipcMain.handle(IPC.courseChatSend, async (event, input: CourseChatSendRequest): Promise<ChatMessage> => {
+    const courseId = assertId(input?.courseId)
+    const question = String(input?.text ?? '').trim().slice(0, MAX_CHAT_QUESTION)
+    if (!question) throw new Error('Escreva uma pergunta')
+    const provider = getSettings(db).aiProvider
+    if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    if (courseChatting) throw new Error('Espere a resposta anterior terminar')
+    const info = AI_PROVIDERS[provider]
+    const web = input.webSearch === true && info.web !== null
+    const config = clientConfig(db, provider)
+
+    const controller = new AbortController()
+    courseChatting = controller
+    const asked: ChatMessage = { role: 'user', content: question, at: Math.floor(Date.now() / 1000) }
+    try {
+      const synced = await syncCourseChunks(db, courseId)
+      if (!synced.withMaterial) {
+        throw new Error('Nenhuma aula deste curso tem transcrição, legenda, texto ou PDF para a IA ler. Use "Transcrever curso" na página do curso.')
+      }
+      const saved = getCourseChat(db, courseId)
+
+      // 1. A IA transforma a pergunta em termos de busca (sem ela, ficam as palavras da própria pergunta).
+      let terms: string[] = []
+      try {
+        const previous = saved.filter((m) => m.role === 'user').slice(-2).map((m) => m.content.slice(0, 500))
+        const prompt = buildTermsPrompt(question, previous)
+        const answer = await chat(config, { system: prompt.system, messages: [{ role: 'user', content: prompt.user }], maxTokens: 400, json: true }, controller.signal)
+        terms = parseSearchTerms(extractJson(answer.text))
+      } catch (error) {
+        if (controller.signal.aborted) throw error
+      }
+
+      // 2. Busca local nos trechos do curso.
+      const query = ftsQueryFromTerms([...terms, ...keywords(question)])
+      const found = query ? searchCourseChunks(db, courseId, query, Math.min(info.maxSourceChars, COURSE_MATERIAL_CHARS)) : []
+      const { text: material, refs } = composeCourseMaterial(found)
+      const consulted = { chunks: found.length, lessons: Object.keys(refs).length, terms }
+
+      // 3. Resposta em tempo real só com os trechos encontrados.
+      const send = (piece: string) => {
+        if (!event.sender.isDestroyed()) event.sender.send(IPC.courseChatDelta, { courseId, text: piece })
+      }
+      try {
+        const result = await chatStream(
+          config,
+          { system: buildCourseChatSystem(material, { web, found: found.length > 0 }), messages: chatHistory([...saved, asked]), maxTokens: 4000, json: false, web },
+          send,
+          controller.signal
+        )
+        const answer: ChatMessage = {
+          role: 'assistant',
+          content: result.text.trim() || '(sem resposta)',
+          at: Math.floor(Date.now() / 1000),
+          refs,
+          consulted,
+          ...(result.sources.length ? { sources: result.sources } : {})
+        }
+        appendCourseChat(db, courseId, [asked, answer])
+        return answer
+      } catch (error) {
+        const partial = (error as { partial?: string }).partial
+        if (controller.signal.aborted) {
+          const answer: ChatMessage = { role: 'assistant', content: partial?.trim() || '', at: Math.floor(Date.now() / 1000), interrupted: true, refs, consulted }
+          appendCourseChat(db, courseId, [asked, answer])
+          return answer
+        }
+        throw error
+      }
+    } finally {
+      courseChatting = null
     }
   })
 

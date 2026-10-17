@@ -39,11 +39,11 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
 ## Arquitetura em uma olhada
 
 - `src/main/` — processo principal: `db/` (SQLite via `node:sqlite`, SQL direto; migrations em `db/migrations.ts`,
-  hoje até a **14**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
+  hoje até a **15**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
   valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/`, `scanner/`,
   `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário), `pomodoro.ts` (relógio do Pomodoro), `pip/` (janela flutuante:
   `host.ts` grava progresso e troca de aula; `window.ts` cria a janela; `child.ts` é o processo separado em X11
-  usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA).
+  usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA), `ai/courseIndex.ts` (trechos pesquisáveis do curso para a conversa sobre o curso).
 - `src/preload/index.ts` — ponte `window.api` (tipos em `src/shared/ipc.ts`, interface `TramotakApi`).
 - `src/renderer/src/` — React 19 + TanStack Query + Tailwind 4 (cores por tokens CSS; temas em
   `src/shared/appearance.ts`). Uma rota por tela em `routes/`.

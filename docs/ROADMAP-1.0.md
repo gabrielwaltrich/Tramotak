@@ -80,7 +80,8 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
   à meta diária, com aviso do sistema.
 
 ## 0.8 — IA no curso inteiro ⬜
-- Conversa sobre o curso todo (busca nas transcrições de todas as aulas, citando aula e minuto).
+- ✅ Conversa sobre o curso todo (busca nas transcrições, legendas, textos e PDFs de todas as aulas, com termos
+  sugeridos pela IA; cita aula e minuto, com link).
 - Gerar baralho/banco de questões do curso inteiro.
 - Tutor dos pontos fracos (a partir dos erros em simulados e flashcards) e "explique meu erro".
 - Custo estimado antes de gerar nos provedores pagos.

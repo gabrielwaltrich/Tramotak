@@ -616,6 +616,10 @@ export interface ChatMessage {
   videoSec?: number | null
   /** Página do PDF aberta quando a pergunta foi feita. */
   page?: number | null
+  /** Conversa do curso: código de cada aula citável ("A9") → id da aula. */
+  refs?: Record<string, number>
+  /** Conversa do curso: quantos trechos e de quantas aulas foram consultados, e os termos buscados. */
+  consulted?: { chunks: number; lessons: number; terms: string[] }
 }
 
 /** O que a conversa da aula tem como base. */
@@ -634,6 +638,18 @@ export interface ChatSendRequest {
   videoSec: number | null
   /** Página atual do PDF, para perguntas como "explique esta página". */
   page?: number | null
+}
+
+export interface CourseChatSendRequest {
+  courseId: number
+  text: string
+  webSearch: boolean
+}
+
+/** Quantas aulas do curso têm material (transcrição, legenda, texto ou PDF) para a conversa sobre o curso. */
+export interface CourseChatMaterial {
+  withMaterial: number
+  total: number
 }
 
 export const MAX_CHAT_QUESTION = 4000

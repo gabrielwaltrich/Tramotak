@@ -598,6 +598,69 @@ test('conversa com a IA: resposta em tempo real só com a fala da aula e horári
   }
 })
 
+test('conversa sobre o curso: termos pela IA, busca local, só trechos sem títulos e citação que abre a aula no minuto', async () => {
+  const { createServer } = await import('node:http')
+  const received: { format: string; system: string; user: string }[] = []
+  const server = createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    if (req.url === '/api/version') return res.end(JSON.stringify({ version: '0.0.0-teste' }))
+    if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'modelo-teste' }] }))
+    const data = JSON.parse(body)
+    received.push({ format: data.format ?? '', system: data.messages[0].content, user: data.messages.at(-1).content })
+    if (data.format === 'json') {
+      res.setHeader('content-type', 'application/json')
+      return res.end(JSON.stringify({ message: { content: JSON.stringify({ terms: ['legenda', 'saudação'] }) } }))
+    }
+    const ref = /\[(A\d+ \d+:\d{2})\] Olá/.exec(data.messages[0].content)?.[1] ?? 'nada'
+    res.setHeader('content-type', 'application/x-ndjson')
+    res.write(JSON.stringify({ message: { content: `A saudação está em [${ref}].` } }) + '\n')
+    res.end(JSON.stringify({ message: { content: '' }, done: true }) + '\n')
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const port = (server.address() as { port: number }).port
+
+  const { app, page } = await launch()
+  try {
+    await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: 'Perguntar ao curso' }).click()
+    const panel = page.getByRole('complementary', { name: 'Perguntar ao curso' })
+    // Legenda da aula de vídeo e o texto do Leia-me entram; a segunda aula (sem legenda) não
+    await expect(panel.getByText(/Base: 2 de 3 aulas/)).toBeVisible()
+
+    await panel.getByRole('textbox', { name: 'Pergunta sobre o curso' }).fill('Onde está a saudação?')
+    await page.keyboard.press('Enter')
+    const cite = panel.getByRole('button', { name: /Abrir Boas-vindas · 0:0\d/ })
+    await expect(cite).toBeVisible()
+    await expect(panel.getByText(/1 trecho de 1 aula/)).toBeVisible()
+
+    // 1º pedido: termos de busca (JSON); 2º: resposta só com os trechos, sem títulos nem nome do curso
+    expect(received.map((r) => r.format)).toEqual(['json', ''])
+    expect(received[0].user).toContain('Onde está a saudação?')
+    const material = received[1].system.slice(received[1].system.lastIndexOf('<material>'))
+    expect(material).toMatch(/### A\d+\n\[A\d+ 0:0\d\] Olá, legenda de teste/)
+    expect(material).not.toContain('Boas-vindas')
+    expect(material).not.toContain('Curso E2E')
+
+    // A conversa fica salva; a citação abre a aula no minuto
+    await page.reload()
+    await expect(page.getByRole('complementary', { name: 'Perguntar ao curso' }).getByText('Onde está a saudação?')).toBeVisible()
+    await page.getByRole('complementary', { name: 'Perguntar ao curso' }).getByRole('button', { name: /Abrir Boas-vindas/ }).click()
+    await expect(page.getByRole('heading', { name: 'Boas-vindas' })).toBeVisible()
+    expect(await page.evaluate(() => location.hash)).toMatch(/#\/lesson\/\d+\?t=\d+/)
+
+    // Fecha o painel (a escolha fica guardada para os próximos testes)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: 'Fechar a conversa' }).click()
+  } finally {
+    await app.close()
+    server.close()
+  }
+})
+
 test('revisão pós-aula: ao terminar o vídeo, perguntas só da fala da aula, correção na hora e erradas viram flashcard', async () => {
   // Legenda mais longa só neste teste: a revisão precisa de material suficiente
   const { readFile, writeFile } = await import('node:fs/promises')

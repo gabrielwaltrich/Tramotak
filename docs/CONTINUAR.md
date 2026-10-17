@@ -6,7 +6,8 @@
   Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.0
 - Testes no momento da publicação: 478 unitários (Vitest) e 18 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.7.0; não há trabalho pela metade. Próximo passo: 0.8 (ver o fim deste arquivo).
+- **0.8 em andamento**: conversa sobre o curso inteiro pronta, ainda sem commit (ver "0.8" abaixo). Testes: 485
+  unitários e 19 E2E.
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -93,10 +94,28 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 - Instalação e atualização no Windows de verdade (só o CI testou).
 - IA e pesquisa na internet com chaves e contas reais.
 
-## Próximo passo: 0.8 e depois (resumo do roteiro)
+## 0.8 — IA no curso inteiro (em andamento)
 
-- **0.8** — IA no curso inteiro: conversa sobre o curso todo (citando aula e minuto), gerar baralho/questões do
-  curso, tutor dos pontos fracos, custo estimado antes de gerar.
+### 1. Conversa sobre o curso inteiro ✅ (pronta em 16/10, sem commit)
+- Painel "Perguntar ao curso" na página do curso (`components/ai/CourseChat.tsx`; fica aberto/fechado como a
+  pessoa deixou). As respostas citam `[A9 12:34]` / `[A9 p. 3]`, que viram botões com o título da aula e o minuto.
+- Decisões do dono: a **IA sugere termos de busca** (um pedido curto em JSON) e a **busca é local** (FTS5); o
+  painel fica **na página do curso**.
+- Como funciona (`src/shared/courseChat.ts`, `src/main/ai/courseIndex.ts`, handlers `ai:courseChat*` em
+  `src/main/ipc/ai.ts`): o material das aulas (transcrição > legenda; texto; PDF) vira trechos de ~900 caracteres na
+  tabela FTS5 `course_chunks` (migration 15), refeitos só quando o material muda (`chunk_sources.version`). Cada
+  pergunta: termos da IA + palavras da pergunta → consulta OR → trechos até 40 mil caracteres (ou o limite do
+  provedor) → resposta em streaming. Cada aula vai só com o código "A" + posição no curso; **títulos nunca vão para
+  a IA**. A mensagem guarda `refs` (código → aula) e `consulted` (trechos, aulas, termos).
+- Conversas por curso em `course_chats` (somem com o curso).
+
+### Próximas partes da 0.8
+- Gerar baralho/banco de questões do curso inteiro (pode reaproveitar `course_chunks` para escolher o material).
+- Tutor dos pontos fracos (erros em simulados, flashcards e revisões pós-aula) e "explique meu erro".
+- Custo estimado antes de gerar nos provedores pagos.
+
+## Depois da 0.8 (resumo do roteiro)
+
 - **0.9** — Polimento e beta: primeira execução guiada, "Relatar problema", acessibilidade, backup para pasta
   escolhida, beta com usuários reais.
 - **1.0** — Instalador do Windows assinado, correções do beta e documentação de uso.

@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CalendarRange, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, Mic, Play, PlayCircle, Type } from 'lucide-react'
+import { ArrowLeft, CalendarRange, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, MessageSquareText, Mic, Play, PlayCircle, Type } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -12,6 +12,20 @@ import { TitleRulesDialog } from '../components/TitleRulesDialog'
 import { TranscribeCourseDialog } from '../components/media/TranscribeCourseDialog'
 import { PlanCard } from '../components/planner/PlanCard'
 import { StudyPlanDialog } from '../components/planner/StudyPlanDialog'
+import { CourseChat } from '../components/ai/CourseChat'
+import { readPref, writePref } from '../storage'
+
+const CHAT_PREF = 'tramotak.course.chat'
+
+/** Títulos de todas as aulas do curso (para as citações da conversa). */
+function lessonTitles(lessons: CourseLesson[], modules: CourseModuleNode[]): Map<number, string> {
+  const map = new Map<number, string>()
+  const add = (list: CourseLesson[]) => list.forEach((l) => map.set(l.id, l.title))
+  const walk = (mods: CourseModuleNode[]) => mods.forEach((m) => (add(m.lessons), walk(m.children)))
+  add(lessons)
+  walk(modules)
+  return map
+}
 
 function countLessons(m: CourseModuleNode): { total: number; done: number } {
   return m.children.reduce(
@@ -83,7 +97,14 @@ export function CourseDetailPage() {
   const [naming, setNaming] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
   const [planning, setPlanning] = useState(false)
+  // A conversa sobre o curso fica aberta ou fechada como a pessoa deixou (só neste computador).
+  const [chatOpen, setChatOpen] = useState(() => readPref(CHAT_PREF) === '1')
+  const toggleChat = (open: boolean) => {
+    setChatOpen(open)
+    writePref(CHAT_PREF, open ? '1' : '0')
+  }
   const course = useQuery({ queryKey: queryKeys.course(id), queryFn: () => window.api.courses.get(id) })
+  const titles = useMemo(() => (course.data ? lessonTitles(course.data.lessons, course.data.modules) : new Map<number, string>()), [course.data])
   const plan = useQuery({ queryKey: queryKeys.plan(id), queryFn: () => window.api.plans.get(id), staleTime: 0 })
   const measuring = useCourseDurations(id)
 
@@ -100,13 +121,19 @@ export function CourseDetailPage() {
   const progress = percent(c.completedCount, c.lessonCount)
 
   return (
-    <div className="mx-auto max-w-4xl p-8">
+    <div className={chatOpen ? 'mx-auto grid max-w-[90rem] grid-cols-[minmax(0,1fr)_minmax(22rem,28rem)] items-start gap-6 p-8' : ''}>
+    <div className={chatOpen ? 'min-w-0' : 'mx-auto max-w-4xl p-8'}>
       <Link to="/courses" className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted hover:text-text">
         <ArrowLeft size={16} /> Meus Cursos
       </Link>
       <header className="mb-6">
-        <div className="flex items-start gap-4">
-          <h1 className="flex-1 text-2xl font-semibold tracking-tight">{c.title}</h1>
+        <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+          <h1 className="min-w-64 flex-1 text-2xl font-semibold tracking-tight">{c.title}</h1>
+          {!chatOpen && (
+            <Button variant="ghost" onClick={() => toggleChat(true)} title="Conversar com a IA sobre o curso inteiro, com citações de aula e minuto">
+              <MessageSquareText size={16} /> Perguntar ao curso
+            </Button>
+          )}
           <Button variant="ghost" onClick={() => setNaming(true)} title="Regras para deixar os títulos das aulas legíveis">
             <Type size={16} /> Nomes das aulas
           </Button>
@@ -178,6 +205,12 @@ export function CourseDetailPage() {
       {naming && <TitleRulesDialog course={c} open onClose={() => setNaming(false)} />}
       {transcribing && <TranscribeCourseDialog courseId={c.id} onClose={() => setTranscribing(false)} />}
       {planning && <StudyPlanDialog courseId={c.id} courseTitle={c.title} plan={plan.data ?? null} onClose={() => setPlanning(false)} />}
+    </div>
+    {chatOpen && (
+      <div className="sticky top-0 h-[calc(100vh-7.5rem)]">
+        <CourseChat courseId={c.id} lessonTitles={titles} onTranscribe={() => setTranscribing(true)} onClose={() => toggleChat(false)} />
+      </div>
+    )}
     </div>
   )
 }

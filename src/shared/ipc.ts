@@ -13,7 +13,7 @@ import type { Compatibility, MediaJob, MediaJobKind, Transcript, WhisperModelId 
 import type { TitleRules } from './titleRules'
 import type { UpdateInfo } from './updates'
 import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
-import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest } from './ai'
+import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest, CourseChatMaterial, CourseChatSendRequest } from './ai'
 import type {
   SearchHit,
   DashboardData,
@@ -248,6 +248,11 @@ export const IPC = {
   reviewGenerate: 'review:generate',
   reviewAnswer: 'review:answer',
   reviewCancel: 'review:cancel',
+  courseChatGet: 'ai:courseChatGet',
+  courseChatSend: 'ai:courseChatSend',
+  courseChatCancel: 'ai:courseChatCancel',
+  courseChatClear: 'ai:courseChatClear',
+  courseChatDelta: 'ai:courseChatDelta',
   aiChatGet: 'ai:chatGet',
   aiChatSend: 'ai:chatSend',
   aiChatCancel: 'ai:chatCancel',
@@ -509,6 +514,13 @@ export interface TramotakApi {
     chatCancel(): Promise<void>
     chatClear(lessonId: number): Promise<void>
     onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
+    /** Conversa sobre o curso inteiro; atualiza antes os trechos pesquisáveis das aulas (só o que mudou). */
+    courseChatGet(courseId: number): Promise<{ messages: ChatMessage[]; material: CourseChatMaterial }>
+    /** Pergunta sobre o curso: a IA sugere termos, a busca local escolhe trechos e a resposta chega por `onCourseChatDelta`. */
+    courseChatSend(request: CourseChatSendRequest): Promise<ChatMessage>
+    courseChatCancel(): Promise<void>
+    courseChatClear(courseId: number): Promise<void>
+    onCourseChatDelta(callback: (delta: { courseId: number; text: string }) => void): () => void
     /** Sugestão de regras de nomes para um curso, a partir de exemplos dos nomes e de um pedido opcional. */
     suggestTitleRules(courseId: number, request: string): Promise<TitleRules>
   }
