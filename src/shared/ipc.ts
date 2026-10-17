@@ -33,6 +33,7 @@ import type { PipAppEvent, PipCommand, PipOpenRequest, PipSettings, PipStatus } 
 import type { LessonReview, ReviewSettings, ReviewStatus } from './review'
 import type { HighlightColor, NewHighlight, PdfHighlight } from './pdf'
 import type { PomodoroSettings, PomodoroState } from './pomodoro'
+import type { CourseGenerateProgress, CourseGenerateRequest, CourseMaterialSummary } from './courseGenerate'
 
 export interface AppInfo {
   name: string
@@ -248,6 +249,11 @@ export const IPC = {
   reviewGenerate: 'review:generate',
   reviewAnswer: 'review:answer',
   reviewCancel: 'review:cancel',
+  aiCourseMaterial: 'ai:courseMaterial',
+  aiCourseGenerate: 'ai:courseGenerate',
+  aiCourseStatus: 'ai:courseStatus',
+  aiCourseCancel: 'ai:courseCancel',
+  aiCourseProgress: 'ai:courseProgress',
   courseChatGet: 'ai:courseChatGet',
   courseChatSend: 'ai:courseChatSend',
   courseChatCancel: 'ai:courseChatCancel',
@@ -514,6 +520,14 @@ export interface TramotakApi {
     chatCancel(): Promise<void>
     chatClear(lessonId: number): Promise<void>
     onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
+    /** Aulas e material disponíveis para gerar do curso inteiro (ou dos módulos escolhidos). */
+    courseMaterial(courseId: number, moduleIds: number[]): Promise<CourseMaterialSummary>
+    /** Começa a gerar do curso, aula por aula, salvando direto; o andamento chega por `onCourseProgress`. */
+    courseGenerate(request: CourseGenerateRequest): Promise<CourseGenerateProgress | null>
+    /** Andamento da última geração do curso (ou `null`). */
+    courseStatus(): Promise<CourseGenerateProgress | null>
+    courseCancel(): Promise<void>
+    onCourseProgress(callback: (progress: CourseGenerateProgress) => void): () => void
     /** Conversa sobre o curso inteiro; atualiza antes os trechos pesquisáveis das aulas (só o que mudou). */
     courseChatGet(courseId: number): Promise<{ messages: ChatMessage[]; material: CourseChatMaterial }>
     /** Pergunta sobre o curso: a IA sugere termos, a busca local escolhe trechos e a resposta chega por `onCourseChatDelta`. */

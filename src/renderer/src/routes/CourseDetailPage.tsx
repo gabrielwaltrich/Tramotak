@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, CalendarRange, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, MessageSquareText, Mic, Play, PlayCircle, Type } from 'lucide-react'
+import { ArrowLeft, CalendarRange, CheckCircle2, ChevronRight, Circle, File, FileText, Film, Loader2, MessageSquareText, Mic, Play, PlayCircle, Sparkles, Type } from 'lucide-react'
 import type { CourseLesson, CourseModuleNode } from '@shared/course'
 import { formatDuration, percent, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -164,6 +164,9 @@ export function CourseDetailPage() {
         <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-2">
           <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
         </div>
+        <Link to={`/ai?course=${c.id}`} className="mt-3 inline-flex items-center gap-1.5 text-sm text-accent hover:underline">
+          <Sparkles size={14} /> Gerar flashcards ou questões do curso com a IA
+        </Link>
       </header>
 
       {plan.data ? (

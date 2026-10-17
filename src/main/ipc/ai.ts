@@ -44,6 +44,8 @@ import {
 } from '@shared/courseChat'
 import { indexedLessons, searchCourseChunks, syncCourseChunks } from '../ai/courseIndex'
 import { appendCourseChat, clearCourseChat, getCourseChat } from '../db/courseChats'
+import { courseMaterialSummary, runCourseGeneration } from '../ai/courseGenerate'
+import type { CourseGenerateProgress, CourseGenerateRequest } from '@shared/courseGenerate'
 import { getCourseDetail } from '../db/courses'
 
 function assertId(id: unknown): number {
@@ -235,6 +237,53 @@ export function registerAiIpc(db: Database): void {
     } finally {
       chatting = null
     }
+  })
+
+  // ── Gerar do curso inteiro ──
+  // Uma geração por vez; segue mesmo se a pessoa sair da tela (o estado vai para todas as janelas).
+  let courseJob: AbortController | null = null
+  let lastCourseProgress: CourseGenerateProgress | null = null
+  const broadcastCourse = (p: CourseGenerateProgress) => {
+    lastCourseProgress = p
+    for (const win of BrowserWindow.getAllWindows()) win.webContents.send(IPC.aiCourseProgress, p)
+  }
+
+  ipcMain.handle(IPC.aiCourseMaterial, (_e, courseId: unknown, moduleIds: unknown) =>
+    courseMaterialSummary(db, assertId(courseId), Array.isArray(moduleIds) ? moduleIds.filter(Number.isInteger) : [])
+  )
+  ipcMain.handle(IPC.aiCourseStatus, () => lastCourseProgress)
+  ipcMain.handle(IPC.aiCourseCancel, () => courseJob?.abort())
+  ipcMain.handle(IPC.aiCourseGenerate, async (_e, input: CourseGenerateRequest): Promise<CourseGenerateProgress> => {
+    const provider = getSettings(db).aiProvider
+    if (provider === 'none') throw new Error('Escolha um provedor de IA nas Configurações.')
+    if (courseJob) throw new Error('Já existe uma geração do curso em andamento')
+    const controller = new AbortController()
+    courseJob = controller
+    lastCourseProgress = null
+    // Volta assim que a geração começa (primeiro andamento); erros antes disso (nada para gerar) vão para quem pediu.
+    let started: (p: CourseGenerateProgress) => void = () => {}
+    const begun = new Promise<CourseGenerateProgress>((resolve) => (started = resolve))
+    const run = runCourseGeneration(
+      { ...input, courseId: assertId(input?.courseId) },
+      {
+        db,
+        provider,
+        config: clientConfig(db, provider),
+        signal: controller.signal,
+        onProgress: (p) => {
+          broadcastCourse(p)
+          started(p)
+        }
+      }
+    )
+    run
+      .catch((error) => {
+        if (lastCourseProgress) broadcastCourse({ ...lastCourseProgress, finished: true, error: error instanceof Error ? error.message : String(error) })
+      })
+      .finally(() => {
+        if (courseJob === controller) courseJob = null
+      })
+    return Promise.race([begun, run])
   })
 
   // ── Conversa sobre o curso inteiro ──

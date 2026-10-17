@@ -67,6 +67,15 @@ const api: TramotakApi = {
     chatSend: (request) => ipcRenderer.invoke(IPC.aiChatSend, request),
     chatCancel: () => ipcRenderer.invoke(IPC.aiChatCancel),
     chatClear: (lessonId) => ipcRenderer.invoke(IPC.aiChatClear, lessonId),
+    courseMaterial: (courseId, moduleIds) => ipcRenderer.invoke(IPC.aiCourseMaterial, courseId, moduleIds),
+    courseGenerate: (request) => ipcRenderer.invoke(IPC.aiCourseGenerate, request),
+    courseStatus: () => ipcRenderer.invoke(IPC.aiCourseStatus),
+    courseCancel: () => ipcRenderer.invoke(IPC.aiCourseCancel),
+    onCourseProgress: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, p: unknown) => p && typeof p === 'object' && callback(p as never)
+      ipcRenderer.on(IPC.aiCourseProgress, listener)
+      return () => ipcRenderer.removeListener(IPC.aiCourseProgress, listener)
+    },
     courseChatGet: (courseId) => ipcRenderer.invoke(IPC.courseChatGet, courseId),
     courseChatSend: (request) => ipcRenderer.invoke(IPC.courseChatSend, request),
     courseChatCancel: () => ipcRenderer.invoke(IPC.courseChatCancel),

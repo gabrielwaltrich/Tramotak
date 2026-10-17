@@ -15,10 +15,10 @@ import { RichText } from '../RichText'
 import { useToast } from '../Toast'
 
 const SELECT = 'h-9 w-full rounded-md border border-border bg-bg px-3 text-sm text-text'
-const NEW = 'new'
+export const NEW = 'new'
 
 /** Destino: um item existente ou um novo com nome. */
-function Destination({ label, id, items, value, onChange, newName, onNewName, newLabel }: {
+export function Destination({ label, id, items, value, onChange, newName, onNewName, newLabel }: {
   label: string
   id: string
   items: { id: number; title: string }[]

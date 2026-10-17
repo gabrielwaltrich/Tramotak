@@ -2,12 +2,11 @@
 
 ## Estado atual
 
-- **Última versão publicada: v0.7.0** (PDFs no leitor do app e Pomodoro; a 0.7 inteira), só para **Windows e
-  Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.0
-- Testes no momento da publicação: 478 unitários (Vitest) e 18 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão publicada: v0.7.1** (conversa sobre o curso inteiro e gerar do curso inteiro: as duas primeiras
+  partes da 0.8), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.1
+- Testes no momento da publicação: 491 unitários (Vitest) e 20 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- **0.8 em andamento**: conversa sobre o curso inteiro pronta, ainda sem commit (ver "0.8" abaixo). Testes: 485
-  unitários e 19 E2E.
+- `main` está igual à v0.7.1; não há trabalho pela metade. Próximo passo: o resto da 0.8 (ver abaixo).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -23,6 +22,7 @@
 | 0.6.2 | **Janela flutuante** do player (sempre por cima, transparência, ±10 s, próxima aula, opções); no Wayland, processo separado em X11 |
 | 0.6.3 | **Revisão pós-aula**: 3 a 5 perguntas da IA ao concluir (sem parar o autoplay), transcreve antes se preciso, erradas viram flashcard |
 | 0.7.0 | **PDFs no leitor do app** (grifos, anotações por página, anexos PDF, texto para a IA, conclui na última página) e **Pomodoro** (foco conta na meta sem duplicar) |
+| 0.7.1 | **IA no curso inteiro**: conversa sobre o curso (busca nas aulas, cita aula e minuto) e gerar flashcards/questões do curso ou de módulos, N por aula, salvando direto |
 
 Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 
@@ -96,7 +96,7 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 
 ## 0.8 — IA no curso inteiro (em andamento)
 
-### 1. Conversa sobre o curso inteiro ✅ (pronta em 16/10, sem commit)
+### 1. Conversa sobre o curso inteiro ✅ (publicada na v0.7.1)
 - Painel "Perguntar ao curso" na página do curso (`components/ai/CourseChat.tsx`; fica aberto/fechado como a
   pessoa deixou). As respostas citam `[A9 12:34]` / `[A9 p. 3]`, que viram botões com o título da aula e o minuto.
 - Decisões do dono: a **IA sugere termos de busca** (um pedido curto em JSON) e a **busca é local** (FTS5); o
@@ -109,8 +109,18 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   a IA**. A mensagem guarda `refs` (código → aula) e `consulted` (trechos, aulas, termos).
 - Conversas por curso em `course_chats` (somem com o curso).
 
+### 2. Gerar flashcards e questões do curso inteiro ✅ (publicado na v0.7.1)
+- Na tela IA, origem **Curso inteiro** (`components/ai/CourseGenerate.tsx`; atalho na página do curso,
+  `/ai?course=ID`): módulos (nenhum = o curso todo), flashcards ou questões, **N por aula com teto total**, instruções
+  e destino (baralho/banco existente ou novo; o novo fica escolhido para outra rodada).
+- Decisões do dono: **salva direto** no baralho/banco (revisa depois lá) e quantidade **por aula, com teto**.
+- `src/main/ai/courseGenerate.ts`: um pedido por aula com material (o texto vem dos trechos de `course_chunks`, sob
+  cabeçalho neutro), salvando na hora com `lessonId` nas cartas; descarta repetidos (inclusive os que já estavam no
+  destino), os que falam do vídeo e o excesso por aula. Limite de uso/sobrecarga: espera e tenta de novo (2 vezes);
+  3 aulas seguidas com erro param tudo. Roda no processo principal (segue fora da tela; interromper mantém o que já
+  foi salvo); andamento por `ai:courseProgress`.
+
 ### Próximas partes da 0.8
-- Gerar baralho/banco de questões do curso inteiro (pode reaproveitar `course_chunks` para escolher o material).
 - Tutor dos pontos fracos (erros em simulados, flashcards e revisões pós-aula) e "explique meu erro".
 - Custo estimado antes de gerar nos provedores pagos.
 

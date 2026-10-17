@@ -22,6 +22,7 @@ import { aiKeysQuery, aiReady } from '../components/ai/AiSettings'
 import { SourcePicker, selectedSections, useSource, type SourceState } from '../components/ai/SourcePicker'
 import { SourceLinks } from '../components/ai/SourceLinks'
 import { ResultReview } from '../components/ai/ResultReview'
+import { CourseGenerate } from '../components/ai/CourseGenerate'
 
 const TASKS: AiTask[] = ['cards', 'questions', 'summary', 'mindmap']
 const QUESTION_TYPES: AiQuestionType[] = ['single', 'multiple', 'truefalse', 'short']
@@ -57,14 +58,16 @@ export function AiPage() {
   const keys = useQuery({ ...aiKeysQuery, staleTime: 0 })
 
   const lessonParam = numberParam(params.get('lesson'))
+  // `?course=ID`: gerar do curso inteiro.
+  const courseParam = numberParam(params.get('course'))
   const pageParam = numberParam(params.get('page'))
   const deckId = numberParam(params.get('deck'))
   const bankId = numberParam(params.get('bank'))
   const taskParam = params.get('task') as AiTask | null
 
   const [state, setState] = useState<SourceState>({
-    mode: pageParam ? 'page' : 'lesson',
-    courseId: null,
+    mode: pageParam ? 'page' : courseParam ? 'course' : 'lesson',
+    courseId: courseParam,
     lessonId: lessonParam,
     notebookId: numberParam(params.get('notebook')),
     pageId: pageParam,
@@ -141,6 +144,10 @@ export function AiPage() {
         <SourcePicker state={state} onChange={onChange} source={source} loading={loading} error={error} maxChars={info.maxSourceChars} />
       </Card>
 
+      {state.mode === 'course' ? (
+        <CourseGenerate courseId={state.courseId} info={info} />
+      ) : (
+      <>
       <Card step={2} title="O que gerar">
         <div className="space-y-4">
           <Segmented label="Tipo de geração" value={task} onChange={setTask} options={TASKS.map((t) => ({ value: t, label: AI_TASK_LABEL[t] }))} />
@@ -242,6 +249,8 @@ export function AiPage() {
           )}
           <ResultReview key={generated.id} result={generated.response.result} source={generated.source} deckId={deckId} bankId={bankId} />
         </Card>
+      )}
+      </>
       )}
     </div>
   )

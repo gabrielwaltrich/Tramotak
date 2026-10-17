@@ -661,6 +661,67 @@ test('conversa sobre o curso: termos pela IA, busca local, só trechos sem títu
   }
 })
 
+test('gerar do curso inteiro: flashcards aula por aula, salvos direto no baralho e ligados à aula', async () => {
+  const { readFile, writeFile } = await import('node:fs/promises')
+  const srt = join(coursePath, '01. Primeiro módulo', '01. Boas-vindas.pt-BR.srt')
+  const original = await readFile(srt, 'utf8')
+  await writeFile(srt, `${original.trimEnd()}\n\n2\n00:00:01,000 --> 00:00:03,000\n${'O comando ls lista os arquivos de um diretório e o cd muda de pasta. '.repeat(5)}\n`)
+
+  const { createServer } = await import('node:http')
+  const received: string[] = []
+  const server = createServer(async (req, res) => {
+    let body = ''
+    for await (const chunk of req) body += chunk
+    res.setHeader('content-type', 'application/json')
+    if (req.url === '/api/version') return res.end(JSON.stringify({ version: '0.0.0-teste' }))
+    if (req.url === '/api/tags') return res.end(JSON.stringify({ models: [{ name: 'modelo-teste' }] }))
+    received.push(JSON.parse(body).messages.at(-1).content)
+    const cards = [
+      { front: 'Que comando lista arquivos?', back: 'ls' },
+      { front: 'No vídeo, qual comando aparece primeiro?', back: 'ls' }
+    ]
+    res.end(JSON.stringify({ message: { content: JSON.stringify({ cards }) } }))
+  })
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const port = (server.address() as { port: number }).port
+
+  const { app, page } = await launch()
+  let deckId: number | null = null
+  try {
+    await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
+    await page.getByRole('link', { name: 'Meus Cursos' }).click()
+    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('link', { name: 'Gerar flashcards ou questões do curso com a IA' }).click()
+
+    await expect(page.getByRole('radio', { name: 'Curso inteiro' })).toHaveAttribute('aria-checked', 'true')
+    await expect(page.getByText(/1 aula com transcrição, legenda, texto ou PDF, de 3 no escopo/)).toBeVisible()
+    await expect(page.getByRole('checkbox', { name: /Primeiro módulo/ })).toBeVisible()
+    await page.locator('#ai-per-lesson').fill('2')
+    await expect(page.getByText('Até 2 cartas · 1 pedido a Ollama (local)')).toBeVisible()
+    await page.getByRole('button', { name: 'Gerar para 1 aula' }).click()
+
+    const progress = page.getByRole('region', { name: 'Andamento da geração do curso' })
+    await expect(progress.getByText('Pronto')).toBeVisible()
+    await expect(progress.getByText(/1 carta salva em Curso E2E — flashcards da IA · 1 descartadas/)).toBeVisible()
+    expect(received).toHaveLength(1)
+    expect(received[0]).toContain('O comando ls lista os arquivos')
+    expect(received[0]).not.toContain('Boas-vindas')
+    expect(received[0]).not.toContain('Curso E2E')
+
+    await progress.getByRole('link', { name: 'Curso E2E — flashcards da IA' }).click()
+    await expect(page.getByRole('heading', { name: 'Curso E2E — flashcards da IA' })).toBeVisible()
+    deckId = await page.evaluate(() => Number(location.hash.match(/flashcards\/(\d+)/)![1]))
+    const cards = await page.evaluate((id) => window.api.decks.get(id).then((d) => d.cards.map((c) => [c.front, c.lessonTitle])), deckId)
+    expect(cards).toEqual([['Que comando lista arquivos?', 'Boas-vindas']])
+  } finally {
+    // Os testes seguintes contam baralhos e cartas
+    if (deckId !== null) await page.evaluate((id) => window.api.decks.delete(id), deckId).catch(() => {})
+    await app.close()
+    server.close()
+    await writeFile(srt, original)
+  }
+})
+
 test('revisão pós-aula: ao terminar o vídeo, perguntas só da fala da aula, correção na hora e erradas viram flashcard', async () => {
   // Legenda mais longa só neste teste: a revisão precisa de material suficiente
   const { readFile, writeFile } = await import('node:fs/promises')

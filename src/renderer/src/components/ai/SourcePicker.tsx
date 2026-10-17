@@ -6,7 +6,7 @@ import type { CourseDetail, CourseLesson } from '@shared/course'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Label, Segmented, TextArea, TextInput } from '../Field'
 
-export type SourceMode = 'lesson' | 'page' | 'text'
+export type SourceMode = 'lesson' | 'course' | 'page' | 'text'
 
 export interface SourceState {
   mode: SourceMode
@@ -79,7 +79,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
   error: string | null
   maxChars: number
 }) {
-  const courses = useQuery({ queryKey: queryKeys.courses, queryFn: () => window.api.courses.list(), enabled: state.mode === 'lesson' })
+  const courses = useQuery({ queryKey: queryKeys.courses, queryFn: () => window.api.courses.list(), enabled: state.mode === 'lesson' || state.mode === 'course' })
   const course = useQuery({
     queryKey: queryKeys.course(state.courseId ?? 0),
     queryFn: () => window.api.courses.get(state.courseId!),
@@ -115,6 +115,7 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
         onChange={(mode) => onChange({ mode, sections: null })}
         options={[
           { value: 'lesson', label: 'Aula' },
+          { value: 'course', label: 'Curso inteiro' },
           { value: 'page', label: 'Página de caderno' },
           { value: 'text', label: 'Colar texto' }
         ]}
@@ -156,6 +157,25 @@ export function SourcePicker({ state, onChange, source, loading, error, maxChars
               ))}
             </select>
           </div>
+        </div>
+      )}
+
+      {state.mode === 'course' && (
+        <div>
+          <Label htmlFor="ai-course-all">Curso</Label>
+          <select
+            id="ai-course-all"
+            className={SELECT}
+            value={state.courseId ?? ''}
+            onChange={(e) => onChange({ courseId: e.target.value ? Number(e.target.value) : null, lessonId: null, sections: null })}
+          >
+            <option value="">Escolha um curso…</option>
+            {courses.data?.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

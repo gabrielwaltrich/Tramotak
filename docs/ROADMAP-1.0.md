@@ -79,10 +79,11 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ✅ Pomodoro/modo foco integrado ao tempo de estudo (bloco inteiro, sem contar duas vezes o que o app mediu) e
   à meta diária, com aviso do sistema.
 
-## 0.8 — IA no curso inteiro ⬜
+## 0.8 — IA no curso inteiro (em andamento; conversa e gerar do curso publicados na v0.7.1)
 - ✅ Conversa sobre o curso todo (busca nas transcrições, legendas, textos e PDFs de todas as aulas, com termos
   sugeridos pela IA; cita aula e minuto, com link).
-- Gerar baralho/banco de questões do curso inteiro.
+- ✅ Gerar baralho/banco de questões do curso inteiro (ou de módulos): aula por aula, N por aula com teto, salvando
+  direto com o link para a aula.
 - Tutor dos pontos fracos (a partir dos erros em simulados e flashcards) e "explique meu erro".
 - Custo estimado antes de gerar nos provedores pagos.
 
