@@ -38,7 +38,8 @@ describe('painel do Início', () => {
       lessonsCompletedToday: 0,
       streak: { current: 0, todayDone: false, best: 0 },
       continueLesson: null,
-      cardsDueToday: 0
+      cardsDueToday: 0,
+      backupWarning: null
     })
   })
 

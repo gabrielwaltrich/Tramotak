@@ -194,7 +194,7 @@ export function SettingsPage() {
         {settings.data && <ReviewSettings key={JSON.stringify(settings.data.review)} settings={settings.data.review} />}
       </Section>
 
-      <Section title="Dados e backup" description="Biblioteca, progresso e anotações ficam neste computador, na pasta abaixo.">
+      <Section id="backup" title="Dados e backup" description="Biblioteca, progresso e anotações ficam neste computador, na pasta abaixo.">
         {info.data && (
           <div className="flex items-center gap-3">
             <code className="min-w-0 flex-1 truncate rounded-md border border-border bg-bg px-3 py-2 text-xs select-text" title={info.data.dataPath}>

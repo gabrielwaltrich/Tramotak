@@ -5,6 +5,8 @@ import type { Database } from './database'
 import { getSettings } from './settings'
 import { secondsPerDay } from './progress'
 import { dueToday } from './flashcards'
+import { folderBackupWarning } from '@shared/backup'
+import { readFolderStatus } from '../backup/folder'
 
 /** Janela de histórico considerada para a sequência e o recorde. */
 const HISTORY_DAYS = 400
@@ -63,12 +65,16 @@ export function getDashboard(db: Database, now = new Date()): DashboardData {
     .prepare('SELECT COUNT(*) AS n FROM lesson_progress WHERE completed_at >= ?')
     .get(todayStart) as { n: number }
 
+  const folder = readFolderStatus(db)
+  const nowSec = Math.floor(now.getTime() / 1000)
+
   return {
     todaySeconds: perDay.get(dayKey(now)) ?? 0,
     goalMinutes: getSettings(db).dailyGoalMinutes,
     lessonsCompletedToday: completedToday.n,
     streak: computeStreak(activeDays, now),
     continueLesson: suggestContinue(db),
-    cardsDueToday: dueToday(db, Math.floor(now.getTime() / 1000))
+    cardsDueToday: dueToday(db, nowSec),
+    backupWarning: folderBackupWarning(folder, nowSec) ? { error: folder.error!, since: folder.failingSince!, days: Math.floor((nowSec - folder.failingSince!) / 86_400) } : null
   }
 }

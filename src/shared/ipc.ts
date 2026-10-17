@@ -12,7 +12,7 @@ import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript, WhisperModelId } from './media'
 import type { TitleRules } from './titleRules'
 import type { UpdateInfo } from './updates'
-import type { BackupEntry, BackupInfo, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
+import type { BackupInfo, BackupListing, BackupPlace, FolderBackupStatus, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
 import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest, CourseChatMaterial, CourseChatSendRequest } from './ai'
 import type {
   SearchHit,
@@ -233,6 +233,9 @@ export const IPC = {
   backupInspectFile: 'backup:inspectFile',
   backupInspect: 'backup:inspect',
   backupRestore: 'backup:restore',
+  backupChooseFolder: 'backup:chooseFolder',
+  backupClearFolder: 'backup:clearFolder',
+  backupFolderNow: 'backup:folderNow',
   packageCatalog: 'package:catalog',
   packageExport: 'package:export',
   packageOpen: 'package:open',
@@ -564,13 +567,19 @@ export interface TramotakApi {
   backup: {
     /** "Salvar como" e cria um backup completo (sem as chaves de API). `null` se cancelar. */
     create(): Promise<{ path: string; bytes: number } | null>
-    list(): Promise<{ dir: string; backups: BackupEntry[] }>
+    /** Backups da pasta do app e da pasta escolhida (com o estado do último envio). */
+    list(): Promise<BackupListing>
     openFolder(): Promise<void>
     /** Escolhe um arquivo de backup e mostra o que tem nele. `null` se cancelar. */
     inspectFile(): Promise<BackupInfo | null>
-    inspect(name: string): Promise<BackupInfo>
-    /** Restaura (backup da pasta do app pelo nome, ou o arquivo inspecionado com `null`) e reinicia o app. */
-    restore(name: string | null): Promise<{ relaunch: boolean }>
+    inspect(name: string, place?: BackupPlace): Promise<BackupInfo>
+    /** Restaura (backup pelo nome, da pasta do app ou da escolhida, ou o arquivo inspecionado com `null`) e reinicia o app. */
+    restore(name: string | null, place?: BackupPlace): Promise<{ relaunch: boolean }>
+    /** Escolhe a pasta dos backups automáticos (seletor do sistema) e grava o primeiro. `null` se cancelar. */
+    chooseFolder(): Promise<FolderBackupStatus | null>
+    clearFolder(): Promise<FolderBackupStatus>
+    /** Grava um backup na pasta escolhida agora. */
+    folderNow(): Promise<FolderBackupStatus>
   }
   packages: {
     catalog(): Promise<ExportCatalog>

@@ -1,10 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { readFile, stat, writeFile } from 'node:fs/promises'
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import { PACKAGE_EXT, type ExportSelection, type ImportRequest } from '@shared/backup'
+import { PACKAGE_EXT, type BackupListing, type BackupPlace, type ExportSelection, type ImportRequest } from '@shared/backup'
 import { IPC } from '@shared/ipc'
 import type { Database } from '../db/database'
 import { backupPath, createBackup, inspectBackup, listBackups, stageRestore, stamp } from '../backup/backup'
+import { fetchFolderBackup, folderErrorMessage, listFolderBackups, type FolderBackup } from '../backup/folder'
 import { buildPackage, exportCatalog, importPackage, parsePackage, previewPackage, serializePackage, type TramotakPackage } from '../backup/package'
 
 const MAX_PACKAGE_FILE = 200 * 1024 * 1024
@@ -34,11 +35,17 @@ export interface BackupIpcOptions {
   canRelaunch: boolean
   /** Fecha o banco e o app, reabrindo se `relaunch` (a restauração acontece no início). */
   restart: (relaunch: boolean) => void
+  /** Backup automático na pasta escolhida (Drive, Dropbox, pendrive). */
+  folder: FolderBackup
+  /** Pasta do app para cópias intermediárias. */
+  tmpDir: string
 }
 
-export function registerBackupIpc({ db, userData, backupsDir, appVersion, canRelaunch, restart }: BackupIpcOptions): void {
+export function registerBackupIpc({ db, userData, backupsDir, appVersion, canRelaunch, restart, folder, tmpDir }: BackupIpcOptions): void {
   // O caminho escolhido no seletor fica no processo principal; a interface só confirma.
   let inspectedFile: string | null = null
+  // Backup da pasta escolhida já copiado para a pasta do app (nome → cópia), pronto para restaurar.
+  let fetched: { name: string; path: string } | null = null
   const packages = new Map<string, TramotakPackage>()
 
   ipcMain.handle(IPC.backupCreate, async (event) => {
@@ -50,7 +57,29 @@ export function registerBackupIpc({ db, userData, backupsDir, appVersion, canRel
     return path ? createBackup(db, path) : null
   })
 
-  ipcMain.handle(IPC.backupList, () => ({ dir: backupsDir, backups: listBackups(backupsDir) }))
+  ipcMain.handle(IPC.backupList, async (): Promise<BackupListing> => {
+    const status = folder.status()
+    let backups: BackupListing['folder']['backups'] = []
+    let listError: string | null = null
+    if (status.path) {
+      try {
+        backups = await listFolderBackups(status.path)
+      } catch (error) {
+        listError = folderErrorMessage(error)
+      }
+    }
+    return { dir: backupsDir, backups: listBackups(backupsDir), folder: { ...status, backups, listError } }
+  })
+
+  // A pasta só é escolhida pelo seletor do sistema: a interface nunca manda um caminho.
+  ipcMain.handle(IPC.backupChooseFolder, async (event) => {
+    const path = await openDialog(event.sender, { title: 'Pasta para os backups automáticos', properties: ['openDirectory', 'createDirectory'] })
+    if (!path) return null
+    await folder.setFolder(path)
+    return folder.run()
+  })
+  ipcMain.handle(IPC.backupClearFolder, () => folder.setFolder(null))
+  ipcMain.handle(IPC.backupFolderNow, () => folder.run())
   ipcMain.handle(IPC.backupOpenFolder, async () => {
     const { mkdir } = await import('node:fs/promises')
     await mkdir(backupsDir, { recursive: true })
@@ -69,11 +98,25 @@ export function registerBackupIpc({ db, userData, backupsDir, appVersion, canRel
     inspectedFile = path
     return info
   })
-  ipcMain.handle(IPC.backupInspect, (_e, name: string) => inspectBackup(backupPath(backupsDir, name)))
+  ipcMain.handle(IPC.backupInspect, async (_e, name: string, place: BackupPlace = 'app') => {
+    if (place !== 'folder') return inspectBackup(backupPath(backupsDir, name))
+    const dir = folder.status().path
+    if (!dir) throw new Error('Nenhuma pasta de backup escolhida')
+    let path: string
+    try {
+      path = await fetchFolderBackup(dir, name, tmpDir)
+    } catch (error) {
+      throw new Error(folderErrorMessage(error), { cause: error })
+    }
+    fetched = { name, path }
+    return { ...inspectBackup(path), name }
+  })
 
-  /** `name` de um backup da pasta do app, ou `null` para o arquivo escolhido no seletor. */
-  ipcMain.handle(IPC.backupRestore, (_e, name: string | null) => {
-    const source = name === null ? inspectedFile : backupPath(backupsDir, name)
+  /** `name` de um backup da pasta do app ou da pasta escolhida (`place`), ou `null` para o arquivo do seletor. */
+  ipcMain.handle(IPC.backupRestore, (_e, name: string | null, place: BackupPlace = 'app') => {
+    const fromFolder = place === 'folder' && fetched !== null && fetched.name === name ? fetched.path : null
+    if (place === 'folder' && !fromFolder) throw new Error('Escolha o backup de novo')
+    const source = name === null ? inspectedFile : (fromFolder ?? backupPath(backupsDir, name))
     if (!source) throw new Error('Escolha um backup primeiro')
     stageRestore(userData, source)
     // Sem reabrir sozinho, dá tempo de a interface avisar para abrir o app de novo.

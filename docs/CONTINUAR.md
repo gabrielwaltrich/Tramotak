@@ -6,7 +6,8 @@
   partes da 0.8), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.1
 - Testes no momento da publicação: 491 unitários (Vitest) e 20 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.7.1; não há trabalho pela metade. Próximo passo: o resto da 0.8 (ver abaixo).
+- `main` está igual à v0.7.1, mais o backup na pasta e a instância única (prontos, sem commit). A 0.8 está fechada; próximo
+  passo: a **0.9** (ver abaixo).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -73,9 +74,6 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   do app com as do Pomodoro.
 
 ### Pendências pequenas (boas para entrar junto)
-- **Instância única**: hoje dá para abrir duas cópias do Tramotak ao mesmo tempo sobre o mesmo banco. Usar
-  `app.requestSingleInstanceLock()` e, na segunda abertura, focar a janela existente. Cuidado com o E2E, que abre
-  e fecha o app várias vezes (ver "Armadilhas" no `CLAUDE.md`).
 - **FSRS**: otimizar os parâmetros com o histórico da pessoa (hoje usa os padrões do Anki) e oferecer reagendar as
   cartas quando a retenção desejada muda.
 - Os `.dmg` de macOS das versões 0.2.0–0.5.0 continuam nas Releases antigas. **Só apagar se o dono pedir**
@@ -94,7 +92,7 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 - Instalação e atualização no Windows de verdade (só o CI testou).
 - IA e pesquisa na internet com chaves e contas reais.
 
-## 0.8 — IA no curso inteiro (em andamento)
+## 0.8 — IA no curso inteiro ✅ (publicada na v0.7.1)
 
 ### 1. Conversa sobre o curso inteiro ✅ (publicada na v0.7.1)
 - Painel "Perguntar ao curso" na página do curso (`components/ai/CourseChat.tsx`; fica aberto/fechado como a
@@ -120,11 +118,34 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   3 aulas seguidas com erro param tudo. Roda no processo principal (segue fora da tela; interromper mantém o que já
   foi salvo); andamento por `ai:courseProgress`.
 
-### Próximas partes da 0.8
-- Tutor dos pontos fracos (erros em simulados, flashcards e revisões pós-aula) e "explique meu erro".
-- Custo estimado antes de gerar nos provedores pagos.
+### Tirado do roteiro (16/10/2026)
+- Tutor dos pontos fracos / "explique meu erro" e custo estimado antes de gerar: o dono decidiu que não seriam úteis.
+  Nada disso chegou a ser implementado. Não retomar sem ele pedir.
 
-## Depois da 0.8 (resumo do roteiro)
+## 0.9 — Polimento e beta (em andamento)
+
+### 1. Backup numa pasta escolhida + instância única ✅ (pronto em 16/10/2026, sem commit)
+- Configurações → Dados e backup → **Cópia numa pasta sua** (`components/backup/BackupSettings.tsx`): escolher pela
+  janela do sistema (a interface nunca manda caminho), gravar agora, trocar, parar de usar, lista com Restaurar.
+- Decisões do dono: arquivos **datados, 7 mais recentes** (`Tramotak-auto-AAAA-MM-DD-HHMM.db`; o app só apaga os
+  automáticos dele, nunca outros arquivos da pasta); grava **um por dia e ao fechar o app, se algo mudou**; se a pasta
+  falhar, **erro nas Configurações e aviso no Início depois de 3 dias**; **sem senha** (mesmo `.db` dos backups locais,
+  sem as chaves de API).
+- `src/main/backup/folder.ts`: o banco vai primeiro para `backup-tmp/` (VACUUM INTO, rápido e consistente) e depois
+  para a pasta como `.partial`, renomeado no fim (o Drive nunca sincroniza arquivo pela metade). Nunca cria a pasta
+  (pendrive fora gravaria no disco local). Tudo com prazo (pasta de rede travada). Estado em `internal.folderBackup`
+  (`path`, `lastAt`, `error`, `failingSince`…), sem migration. Restaurar da pasta copia o arquivo para `backup-tmp/`
+  antes de inspecionar.
+- Agenda (`scheduleAutoBackup` em `src/main/index.ts`): verifica a cada hora; a pasta grava se nunca gravou, se a
+  última falhou ou depois de ~20 h, e vale mesmo com o "backup automático diário" local desligado. Ao fechar:
+  `before-quit` adia a saída até 20 s se `total_changes()` subiu desde o último envio; pula durante a instalação de
+  atualização.
+- **Instância única**: `app.requestSingleInstanceLock()` (a janela flutuante em processo separado não entra);
+  `second-instance` traz a janela para a frente. Conferido: restaurar backup e reabrir (`app.relaunch`) continua
+  funcionando, e a janela flutuante em modo processo abre.
+- Não validado: Google Drive/Dropbox de verdade (testado com pasta local e pasta removida) e Windows real.
+
+## Próximo: resto da 0.9 e 1.0 (resumo do roteiro)
 
 - **0.9** — Polimento e beta: primeira execução guiada, "Relatar problema", acessibilidade, backup para pasta
   escolhida, beta com usuários reais.

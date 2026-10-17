@@ -79,19 +79,21 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ✅ Pomodoro/modo foco integrado ao tempo de estudo (bloco inteiro, sem contar duas vezes o que o app mediu) e
   à meta diária, com aviso do sistema.
 
-## 0.8 — IA no curso inteiro (em andamento; conversa e gerar do curso publicados na v0.7.1)
+## 0.8 — IA no curso inteiro ✅ (publicada: v0.7.1)
 - ✅ Conversa sobre o curso todo (busca nas transcrições, legendas, textos e PDFs de todas as aulas, com termos
   sugeridos pela IA; cita aula e minuto, com link).
 - ✅ Gerar baralho/banco de questões do curso inteiro (ou de módulos): aula por aula, N por aula com teto, salvando
   direto com o link para a aula.
-- Tutor dos pontos fracos (a partir dos erros em simulados e flashcards) e "explique meu erro".
-- Custo estimado antes de gerar nos provedores pagos.
+- ~~Tutor dos pontos fracos e "explique meu erro"~~ e ~~custo estimado antes de gerar~~: tirados do roteiro em
+  16/10/2026 por decisão do dono (não seriam úteis). Não implementar sem ele pedir de novo.
 
-## 0.9 — Polimento e beta ⬜
+## 0.9 — Polimento e beta 🚧
 - Primeira execução guiada e curso de exemplo.
 - "Relatar problema": arquivo de diagnóstico sem dados pessoais.
 - Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
-- Backup automático para uma pasta escolhida (Drive/Dropbox) como sincronização simples.
+- ✅ Backup automático para uma pasta escolhida (Drive/Dropbox/pendrive) como sincronização simples: um por dia e
+  outro ao fechar (se algo mudou), 7 mais recentes, restaurar pela pasta, aviso no Início após 3 dias sem conseguir.
+  Junto: **instância única** (abrir de novo só traz a janela existente).
 - Beta com usuários em Windows e Linux reais.
 
 ## 1.0.0 ⬜

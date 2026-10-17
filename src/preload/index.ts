@@ -256,8 +256,11 @@ const api: TramotakApi = {
     list: () => ipcRenderer.invoke(IPC.backupList),
     openFolder: () => ipcRenderer.invoke(IPC.backupOpenFolder),
     inspectFile: () => ipcRenderer.invoke(IPC.backupInspectFile),
-    inspect: (name) => ipcRenderer.invoke(IPC.backupInspect, name),
-    restore: (name) => ipcRenderer.invoke(IPC.backupRestore, name)
+    inspect: (name, place) => ipcRenderer.invoke(IPC.backupInspect, name, place),
+    restore: (name, place) => ipcRenderer.invoke(IPC.backupRestore, name, place),
+    chooseFolder: () => ipcRenderer.invoke(IPC.backupChooseFolder),
+    clearFolder: () => ipcRenderer.invoke(IPC.backupClearFolder),
+    folderNow: () => ipcRenderer.invoke(IPC.backupFolderNow)
   },
   packages: {
     catalog: () => ipcRenderer.invoke(IPC.packageCatalog),

@@ -1,6 +1,6 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
-import { cp, mkdtemp, rm } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readdir, rm, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
@@ -989,6 +989,74 @@ test('backup e pacote: salva o banco, exporta baralho com anotações e importa 
     expect(imported.cards[0]).toMatchObject({ front: 'O que a legenda diz?', lessonTitle: 'Boas-vindas' })
   } finally {
     await app.close()
+  }
+})
+
+test('backup na pasta: grava ao escolher e ao fechar, restaura de lá, e abrir o app de novo só traz a janela', async () => {
+  const folder = join(workdir, 'Drive', 'Tramotak')
+  await mkdir(folder, { recursive: true })
+  const autos = async () => (await readdir(folder)).filter((n) => n.startsWith('Tramotak-auto-'))
+  const { app, page } = await launch()
+  let closed = false
+  try {
+    await app.evaluate(({ dialog }, path) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [path] })) as typeof dialog.showOpenDialog
+    }, folder)
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    const box = page.getByLabel('Pasta de backup')
+    await box.getByRole('button', { name: 'Escolher pasta…' }).click()
+    await expect(page.getByText('Backup gravado na pasta')).toBeVisible()
+    await expect(box.getByText(folder)).toBeVisible()
+    await expect(box.getByText(/Último backup:/)).toBeVisible()
+    expect(await autos()).toHaveLength(1)
+    expect((await readdir(folder)).some((n) => n.endsWith('.partial'))).toBe(false)
+
+    // Restaurar pela pasta (outro computador faria o mesmo): mostra o conteúdo do backup.
+    await box.getByRole('button', { name: 'Restaurar' }).click()
+    const restore = page.getByRole('dialog', { name: 'Restaurar backup' })
+    await expect(restore.getByText(/\d+ cursos? · \d+ aulas/)).toBeVisible()
+    await restore.getByRole('button', { name: 'Cancelar' }).click()
+
+    // Segunda cópia do app sobre o mesmo perfil: sai sozinha e a primeira recebe o aviso.
+    await app.evaluate(({ app }) => {
+      app.on('second-instance', () => ((globalThis as { secondInstance?: number }).secondInstance = ((globalThis as { secondInstance?: number }).secondInstance ?? 0) + 1))
+    })
+    const exe = await app.evaluate(() => process.execPath)
+    const args = ['.', `--user-data-dir=${userData}`]
+    if (process.platform === 'linux' && process.env.CI) args.push('--no-sandbox')
+    const second = spawn(exe, args, { stdio: 'ignore', env: { ...process.env, NODE_ENV: 'production' } })
+    const code = await new Promise<number | null>((resolve, reject) => {
+      const timer = setTimeout(() => (second.kill(), reject(new Error('A segunda cópia não saiu'))), 20_000)
+      second.once('exit', (c) => (clearTimeout(timer), resolve(c)))
+    })
+    expect(code).toBe(0)
+    await expect.poll(() => app.evaluate(() => (globalThis as { secondInstance?: number }).secondInstance ?? 0)).toBe(1)
+    await expect(page.getByRole('navigation', { name: 'Principal' })).toBeVisible()
+
+    // Algo muda e o app fecha: grava de novo na pasta antes de sair.
+    const [file] = await autos()
+    const before = (await stat(join(folder, file))).mtimeMs
+    await page.evaluate(() => window.api.decks.create({ title: 'Baralho do backup ao fechar' }))
+    await page.waitForTimeout(1100)
+    await app.close()
+    closed = true
+    const after = await autos()
+    const newest = after.sort().at(-1)!
+    expect((await stat(join(folder, newest))).mtimeMs).toBeGreaterThan(before)
+    expect((await readdir(folder)).some((n) => n.endsWith('.partial'))).toBe(false)
+  } finally {
+    if (!closed) await app.close()
+  }
+  // Os testes seguintes compartilham o perfil: desliga a pasta para eles não gravarem nela ao fechar.
+  const again = await launch()
+  try {
+    await again.page.evaluate(async () => {
+      await window.api.backup.clearFolder()
+      const deck = (await window.api.decks.list()).find((d) => d.title === 'Baralho do backup ao fechar')
+      if (deck) await window.api.decks.delete(deck.id)
+    })
+  } finally {
+    await again.app.close()
   }
 })
 

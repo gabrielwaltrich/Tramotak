@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
-import { FileText, Flame, FolderPlus, Layers, Play } from 'lucide-react'
+import { CloudOff, FileText, Flame, FolderPlus, Layers, Play } from 'lucide-react'
 import type { DashboardData } from '@shared/course'
 import { formatClock, percent, plural } from '@shared/format'
 import { formatLongDate, greeting } from '@shared/greeting'
@@ -93,6 +93,20 @@ export function HomePage() {
       />
 
       <div className="mb-8 space-y-4">
+        {d?.backupWarning && (
+          <section role="alert" className="flex items-center gap-4 rounded-xl border border-red-400/40 bg-red-400/5 p-5">
+            <div className="grid size-14 shrink-0 place-items-center rounded-lg bg-red-400/10 text-red-400">
+              <CloudOff size={22} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">A pasta de backup não recebe cópias há {plural(d.backupWarning.days, 'dia')}</p>
+              <p className="text-sm text-muted">{d.backupWarning.error}</p>
+            </div>
+            <Button variant="ghost" onClick={() => navigate('/settings#backup')}>
+              Ver backup
+            </Button>
+          </section>
+        )}
         {d && <GoalCard todaySeconds={d.todaySeconds} goalMinutes={d.goalMinutes} lessonsCompletedToday={d.lessonsCompletedToday} />}
         <TodayTasks />
         {d && d.cardsDueToday > 0 && (

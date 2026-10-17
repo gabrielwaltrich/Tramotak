@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { DatabaseBackup, FolderOpen, History, Loader2, RotateCcw } from 'lucide-react'
+import { AlertTriangle, CloudUpload, DatabaseBackup, FolderInput, FolderOpen, History, Loader2, RotateCcw } from 'lucide-react'
 import type { AppSettings } from '@shared/ipc'
-import type { BackupEntry, BackupInfo } from '@shared/backup'
+import type { BackupEntry, BackupInfo, BackupPlace } from '@shared/backup'
 import { formatBytes, plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../../lib/api'
 import { Button } from '../Button'
@@ -27,11 +27,13 @@ function Contents({ info }: { info: BackupInfo }) {
   return <p className="rounded-lg border border-border bg-bg/50 p-3 text-xs text-text">{items.join(' · ')}</p>
 }
 
+type RestoreTarget = { info: BackupInfo; name: string | null; place: BackupPlace }
+
 /** Confirmação de restauração: mostra o conteúdo do backup e avisa que o app reinicia. */
-function RestoreDialog({ target, onClose }: { target: { info: BackupInfo; name: string | null } | null; onClose: () => void }) {
+function RestoreDialog({ target, onClose }: { target: RestoreTarget | null; onClose: () => void }) {
   const toast = useToast()
   const restore = useMutation({
-    mutationFn: () => window.api.backup.restore(target!.name),
+    mutationFn: () => window.api.backup.restore(target!.name, target!.place),
     onError: (error) => toast(errorMessage(error), 'error')
   })
   const manualReopen = restore.data?.relaunch === false
@@ -71,10 +73,30 @@ function RestoreDialog({ target, onClose }: { target: { info: BackupInfo; name: 
   )
 }
 
+function BackupList({ backups, busy, onRestore }: { backups: BackupEntry[]; busy: boolean; onRestore: (name: string) => void }) {
+  return (
+    <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-lg border border-border">
+      {backups.map((b) => (
+        <li key={b.name} className="flex items-center gap-3 px-3 py-2 text-sm">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate">{dateTime(b.modifiedAt)}</span>
+            <span className="text-xs text-muted">
+              {KIND_LABEL[b.kind]} · {formatBytes(b.bytes)}
+            </span>
+          </span>
+          <Button variant="ghost" className="h-8" onClick={() => onRestore(b.name)} disabled={busy}>
+            Restaurar
+          </Button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function BackupSettings({ settings }: { settings: AppSettings }) {
   const toast = useToast()
   const queryClient = useQueryClient()
-  const [restoring, setRestoring] = useState<{ info: BackupInfo; name: string | null } | null>(null)
+  const [restoring, setRestoring] = useState<RestoreTarget | null>(null)
   const list = useQuery({ queryKey: ['backups'], queryFn: () => window.api.backup.list(), staleTime: 0 })
 
   const create = useMutation({
@@ -84,14 +106,42 @@ export function BackupSettings({ settings }: { settings: AppSettings }) {
   })
   const pickFile = useMutation({
     mutationFn: () => window.api.backup.inspectFile(),
-    onSuccess: (info) => info && setRestoring({ info, name: null }),
+    onSuccess: (info) => info && setRestoring({ info, name: null, place: 'app' }),
     onError: (error) => toast(errorMessage(error), 'error')
   })
   const pickListed = useMutation({
-    mutationFn: (name: string) => window.api.backup.inspect(name).then((info) => ({ info, name })),
+    mutationFn: ({ name, place }: { name: string; place: BackupPlace }) => window.api.backup.inspect(name, place).then((info) => ({ info, name, place })),
     onSuccess: setRestoring,
     onError: (error) => toast(errorMessage(error), 'error')
   })
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ['backups'] })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.dashboard })
+  }
+  const folderStatus = (s: { error: string | null } | null) => {
+    if (!s) return
+    if (s.error) toast(`Não foi possível gravar na pasta: ${s.error}`, 'error')
+    else toast('Backup gravado na pasta')
+  }
+  const chooseFolder = useMutation({
+    mutationFn: () => window.api.backup.chooseFolder(),
+    onSuccess: folderStatus,
+    onError: (error) => toast(errorMessage(error), 'error'),
+    onSettled: refresh
+  })
+  const folderNow = useMutation({
+    mutationFn: () => window.api.backup.folderNow(),
+    onSuccess: folderStatus,
+    onError: (error) => toast(errorMessage(error), 'error'),
+    onSettled: refresh
+  })
+  const clearFolder = useMutation({
+    mutationFn: () => window.api.backup.clearFolder(),
+    onError: (error) => toast(errorMessage(error), 'error'),
+    onSettled: refresh
+  })
+  const folder = list.data?.folder
+  const folderBusy = chooseFolder.isPending || folderNow.isPending || clearFolder.isPending
   const toggleAuto = useMutation({
     mutationFn: (value: boolean) => window.api.settings.update({ autoBackup: value }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.settings }),
@@ -131,21 +181,59 @@ export function BackupSettings({ settings }: { settings: AppSettings }) {
         {backups.length === 0 ? (
           <p className="rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted">Nenhum backup ainda. O automático roda um minuto depois de abrir o app.</p>
         ) : (
-          <ul className="max-h-56 divide-y divide-border overflow-y-auto rounded-lg border border-border">
-            {backups.map((b) => (
-              <li key={b.name} className="flex items-center gap-3 px-3 py-2 text-sm">
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate">{dateTime(b.modifiedAt)}</span>
-                  <span className="text-xs text-muted">
-                    {KIND_LABEL[b.kind]} · {formatBytes(b.bytes)}
-                  </span>
+          <BackupList backups={backups} busy={pickListed.isPending} onRestore={(name) => pickListed.mutate({ name, place: 'app' })} />
+        )}
+      </div>
+
+      <div className="space-y-3 rounded-lg border border-border p-4" aria-label="Pasta de backup">
+        <div>
+          <p className="inline-flex items-center gap-1.5 text-sm font-medium">
+            <CloudUpload size={16} /> Cópia numa pasta sua
+          </p>
+          <p className="mt-1 text-xs text-muted">
+            Escolha uma pasta do Google Drive, Dropbox, OneDrive ou de um pendrive. O Tramotak grava nela um backup por dia e outro ao fechar (se algo mudou), guardando os 7
+            mais recentes. Em outro computador, escolha a mesma pasta e restaure por aqui.
+          </p>
+        </div>
+        {!folder?.path ? (
+          <Button variant="ghost" onClick={() => chooseFolder.mutate()} disabled={folderBusy}>
+            {chooseFolder.isPending ? <Loader2 size={16} className="animate-spin" /> : <FolderInput size={16} />} Escolher pasta…
+          </Button>
+        ) : (
+          <>
+            <p className="truncate rounded-md bg-bg/50 px-2 py-1 font-mono text-xs" title={folder.path}>
+              {folder.path}
+            </p>
+            {folder.error ? (
+              <p role="alert" className="flex items-start gap-1.5 text-xs text-red-400">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+                <span>
+                  Última tentativa falhou{folder.errorAt ? ` (${dateTime(folder.errorAt)})` : ''}: {folder.error}
+                  {/[.?!)]$/.test(folder.error) ? ' ' : '. '}
+                  {folder.lastAt ? `Último backup gravado em ${dateTime(folder.lastAt)}.` : 'Nenhum backup gravado ainda.'} O app tenta de novo a cada hora.
                 </span>
-                <Button variant="ghost" className="h-8" onClick={() => pickListed.mutate(b.name)} disabled={pickListed.isPending}>
-                  Restaurar
-                </Button>
-              </li>
-            ))}
-          </ul>
+              </p>
+            ) : (
+              <p className="text-xs text-muted">{folder.lastAt ? `Último backup: ${dateTime(folder.lastAt)}` : 'Nenhum backup gravado ainda.'}</p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button variant="ghost" className="h-8" onClick={() => folderNow.mutate()} disabled={folderBusy}>
+                {folderNow.isPending ? <Loader2 size={14} className="animate-spin" /> : <CloudUpload size={14} />} Gravar agora
+              </Button>
+              <Button variant="ghost" className="h-8" onClick={() => chooseFolder.mutate()} disabled={folderBusy}>
+                <FolderInput size={14} /> Trocar pasta…
+              </Button>
+              <Button variant="ghost" className="h-8" onClick={() => clearFolder.mutate()} disabled={folderBusy}>
+                Parar de usar
+              </Button>
+            </div>
+            {folder.listError ? (
+              // Com a última tentativa já falhando, o motivo aparece acima; não repete.
+              !folder.error && <p className="text-xs text-muted">Não foi possível ler a pasta agora: {folder.listError}</p>
+            ) : folder.backups.length > 0 ? (
+              <BackupList backups={folder.backups} busy={pickListed.isPending} onRestore={(name) => pickListed.mutate({ name, place: 'folder' })} />
+            ) : null}
+          </>
         )}
       </div>
 

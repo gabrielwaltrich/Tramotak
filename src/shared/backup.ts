@@ -27,6 +27,47 @@ export interface BackupEntry {
   kind: 'auto' | 'pre-restore' | 'manual'
 }
 
+// ── Pasta de backup (Drive, Dropbox, pendrive) ──────────────────────────────
+
+/** Backups automáticos gravados pelo app na pasta escolhida (só estes são apagados ao passar de 7). */
+export const FOLDER_AUTO_PREFIX = 'Tramotak-auto-'
+export const FOLDER_KEEP = 7
+/** Sem conseguir gravar na pasta por tanto tempo, o Início avisa. */
+export const FOLDER_WARN_AFTER_SEC = 3 * 86_400
+
+export interface FolderBackupStatus {
+  /** Pasta escolhida, ou `null` (desligado). */
+  path: string | null
+  /** Último backup gravado na pasta. */
+  lastAt: number | null
+  lastFile: string | null
+  /** Erro da última tentativa (some quando uma tentativa dá certo). */
+  error: string | null
+  errorAt: number | null
+  /** Primeira falha desde o último sucesso (para o aviso depois de 3 dias). */
+  failingSince: number | null
+}
+
+export const EMPTY_FOLDER_STATUS: FolderBackupStatus = { path: null, lastAt: null, lastFile: null, error: null, errorAt: null, failingSince: null }
+
+/** Aviso do Início: pasta escolhida e nenhum backup gravado nela há 3 dias ou mais. */
+export function folderBackupWarning(status: FolderBackupStatus, nowSec: number): boolean {
+  return status.path !== null && status.error !== null && status.failingSince !== null && nowSec - status.failingSince >= FOLDER_WARN_AFTER_SEC
+}
+
+/** Onde está o backup a inspecionar/restaurar: pasta do app ou pasta escolhida. */
+export type BackupPlace = 'app' | 'folder'
+
+export interface BackupListing {
+  dir: string
+  backups: BackupEntry[]
+  folder: FolderBackupStatus & {
+    backups: BackupEntry[]
+    /** A pasta não pôde ser lida agora (desconectada, sem permissão). */
+    listError: string | null
+  }
+}
+
 // ── Pacotes ─────────────────────────────────────────────────────────────────
 
 export const PACKAGE_FORMAT = 'tramotak-package'

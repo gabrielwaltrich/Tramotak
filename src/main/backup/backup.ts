@@ -8,7 +8,7 @@ import type { Database } from '../db/database'
 export const PENDING_RESTORE = 'restore-pending.db'
 export const AUTO_KEEP = 7
 /** Um backup automático por dia; a folga cobre o app aberto sempre no mesmo horário. */
-const AUTO_INTERVAL_SEC = 20 * 3600
+export const AUTO_INTERVAL_SEC = 20 * 3600
 
 const pad = (n: number) => String(n).padStart(2, '0')
 

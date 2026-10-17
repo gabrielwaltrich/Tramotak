@@ -212,6 +212,8 @@ export interface DashboardData {
   continueLesson: ContinueLesson | null
   /** Flashcards para estudar hoje, somando todos os baralhos. */
   cardsDueToday: number
+  /** A pasta de backup escolhida não recebe backup há 3 dias ou mais. */
+  backupWarning: { error: string; since: number; days: number } | null
 }
 
 export type SearchKind = 'course' | 'module' | 'lesson' | 'note' | 'card' | 'question' | 'page' | 'mindmap'

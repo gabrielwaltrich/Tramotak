@@ -40,7 +40,7 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
 
 - `src/main/` — processo principal: `db/` (SQLite via `node:sqlite`, SQL direto; migrations em `db/migrations.ts`,
   hoje até a **15**; nunca editar uma migration publicada, só criar nova no fim), `ipc/` (um arquivo por área,
-  valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/`, `scanner/`,
+  valida tudo que vem da interface), `media/` (FFmpeg, durações, whisper), `ai/`, `backup/` (`folder.ts`: cópia na pasta escolhida), `scanner/`,
   `updater.ts` (electron-updater), `notifier.ts` (avisos e replanejamento diário), `pomodoro.ts` (relógio do Pomodoro), `pip/` (janela flutuante:
   `host.ts` grava progresso e troca de aula; `window.ts` cria a janela; `child.ts` é o processo separado em X11
   usado no Wayland; `mode.ts` escolhe entre os dois), `pdf/text.ts` (texto dos PDFs para a IA), `ai/courseIndex.ts` (trechos pesquisáveis do curso para a conversa sobre o curso), `ai/courseGenerate.ts` (gerar do curso inteiro).
@@ -99,3 +99,5 @@ Antes de dizer que algo está pronto: `typecheck`, `lint`, `npm test` e o E2E in
   cascata). Olhe a primeira falha. Testes que criam dados que mudam contagens (cursos, cartas) devem apagá-los no fim.
 - Para testar a janela flutuante: `TRAMOTAK_PIP_MODE=window|process` força o modo (o E2E usa `window`) e
   `TRAMOTAK_PIP_DEBUG_PORT=9339` abre a porta de depuração do processo separado (Playwright `connectOverCDP`).
+- **Instância única**: o app pega `requestSingleInstanceLock()` na pasta de dados. Abrir o app de novo antes de o
+  processo anterior sair faz a cópia nova fechar na hora; por isso o E2E espera o processo sair antes de relançar.

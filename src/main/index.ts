@@ -19,6 +19,7 @@ import { registerAiIpc } from './ipc/ai'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerBackupIpc } from './ipc/backup'
 import { applyPendingRestore, autoBackup } from './backup/backup'
+import { FolderBackup, withTimeout } from './backup/folder'
 import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
 import { Pomodoro } from './pomodoro'
@@ -40,6 +41,10 @@ let db: Database | undefined
 let mainWindow: BrowserWindow | undefined
 let pip: PipHost | undefined
 let pomodoro: Pomodoro | undefined
+let folderBackup: FolderBackup | undefined
+/** O backup na pasta ao fechar já rodou (o segundo `before-quit` segue direto). */
+let quitBackupDone = false
+let installingUpdate = false
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -148,8 +153,21 @@ function registerPip(db: Database, convertedDir: string): PipHost {
 const pipChild = process.argv.includes(PIP_CHILD_FLAG)
 if (pipChild) runPipChild()
 
+// Uma cópia do app por pasta de dados: duas abertas sobre o mesmo banco brigariam pelos dados. Abrir de novo só traz
+// a janela existente para a frente. A janela flutuante é um processo do próprio app e não entra nessa conta.
+const primary = pipChild || app.requestSingleInstanceLock()
+if (!primary) app.quit()
+else if (!pipChild) {
+  app.on('second-instance', () => {
+    if (!mainWindow) return
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+}
+
 app.whenReady().then(() => {
-  if (pipChild) return
+  if (pipChild || !primary) return
   electronApp.setAppUserModelId('com.tramotak.app')
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
@@ -186,8 +204,11 @@ app.whenReady().then(() => {
   const mediaQueue = registerMediaIpc(db, convertedDir)
   registerAiIpc(db)
   registerPdfIpc(db)
+  folderBackup = new FolderBackup({ db, tmpDir: join(userData, 'backup-tmp') })
   registerBackupIpc({
     db,
+    folder: folderBackup,
+    tmpDir: join(userData, 'backup-tmp'),
     userData,
     backupsDir,
     appVersion: app.getVersion(),
@@ -213,12 +234,25 @@ app.whenReady().then(() => {
   })
   ipcMain.handle(IPC.updatesInfo, () => updater.info())
   ipcMain.handle(IPC.updatesCheck, () => updater.check())
-  ipcMain.handle(IPC.updatesInstall, () => updater.install())
+  ipcMain.handle(IPC.updatesInstall, () => {
+    // O instalador espera o app fechar: nada de backup demorado na saída.
+    installingUpdate = true
+    return updater.install()
+  })
   ipcMain.handle(IPC.updatesOpenRelease, () => updater.openRelease())
   updater.start()
 
   // Ao sair, encerra o trabalho em segundo plano (FFmpeg, whisper) para nenhum processo filho segurar o app.
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
+    // Backup na pasta escolhida ao fechar, se algo mudou: a saída espera até 20 s e depois fecha de qualquer jeito.
+    if (!quitBackupDone && !installingUpdate && db && folderBackup?.status().path && folderBackup.changed()) {
+      quitBackupDone = true
+      event.preventDefault()
+      void withTimeout(folderBackup.run(), 20_000, 'tempo esgotado')
+        .catch((error) => console.error('Backup na pasta ao fechar falhou:', error))
+        .finally(() => app.quit())
+      return
+    }
     durations.stop()
     mediaQueue.cancelAll()
     pip?.close()
@@ -258,10 +292,16 @@ function registerPomodoro(db: Database): Pomodoro {
   return timer
 }
 
-/** Backup automático: um minuto depois de abrir e a cada 6 h (só grava se o último tiver mais de ~20 h). */
+/**
+ * Backup automático: um minuto depois de abrir e a cada hora (só grava se o último tiver mais de ~20 h). Na pasta
+ * escolhida, uma tentativa que falhou é repetida na hora seguinte.
+ */
 function scheduleAutoBackup(backupsDir: string): void {
   const run = () => {
-    if (!db || !getSettings(db).autoBackup) return
+    if (!db) return
+    // A pasta escolhida vale por si: escolher uma já é pedir os backups nela.
+    if (folderBackup?.due()) void folderBackup.run()
+    if (!getSettings(db).autoBackup) return
     try {
       const last = getInternal(db, 'lastAutoBackupAt')
       if (autoBackup(db, backupsDir, typeof last === 'number' ? last : null)) setInternal(db, 'lastAutoBackupAt', Math.floor(Date.now() / 1000))
@@ -270,7 +310,7 @@ function scheduleAutoBackup(backupsDir: string): void {
     }
   }
   setTimeout(run, 60_000).unref()
-  setInterval(run, 6 * 3600_000).unref()
+  setInterval(run, 3600_000).unref()
 }
 
 app.on('will-quit', () => {
