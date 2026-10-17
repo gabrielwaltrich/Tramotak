@@ -2,12 +2,11 @@
 
 ## Estado atual
 
-- **Última versão publicada: v0.6.3** (revisão pós-aula, a primeira parte da 0.7), só para **Windows e Linux**.
-  Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.6.3
-- Testes no momento da publicação: 456 unitários (Vitest) e 16 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão publicada: v0.7.0** (PDFs no leitor do app e Pomodoro; a 0.7 inteira), só para **Windows e
+  Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.0
+- Testes no momento da publicação: 478 unitários (Vitest) e 18 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- **PDFs no leitor do app prontos, ainda não publicados** (segunda parte da 0.7; ver abaixo). Testes: 468
-  unitários e 17 E2E.
+- `main` está igual à v0.7.0; não há trabalho pela metade. Próximo passo: 0.8 (ver o fim deste arquivo).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -22,15 +21,16 @@
 | 0.6.1 | Aba **Anotações** (todas as notas, busca, filtro, exportar `.md`) e envio de notas para os **cadernos** com horários clicáveis |
 | 0.6.2 | **Janela flutuante** do player (sempre por cima, transparência, ±10 s, próxima aula, opções); no Wayland, processo separado em X11 |
 | 0.6.3 | **Revisão pós-aula**: 3 a 5 perguntas da IA ao concluir (sem parar o autoplay), transcreve antes se preciso, erradas viram flashcard |
+| 0.7.0 | **PDFs no leitor do app** (grifos, anotações por página, anexos PDF, texto para a IA, conclui na última página) e **Pomodoro** (foco conta na meta sem duplicar) |
 
 Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 
-## Próximo passo: 0.7 — PDFs, revisão pós-aula e Pomodoro
+## 0.7 — PDFs, revisão pós-aula e Pomodoro ✅ (publicada: v0.6.3 e v0.7.0)
 
-O dono prefere publicar partes prontas como versão de correção (ex.: 0.6.1) em vez de esperar a 0.7 inteira.
-Perguntar ao terminar cada parte.
+O dono prefere publicar partes prontas como versão de correção (ex.: 0.6.1) em vez de esperar a versão inteira.
+Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para quem mexer nelas):
 
-### 1. PDFs como aula ✅ (pronto em 16/10, não publicado)
+### 1. PDFs como aula ✅ (publicado na v0.7.0)
 - Leitor com o `pdfjs-dist` 6 (`components/pdf/`): páginas desenhadas só perto da tela, zoom (Ctrl+roda, ajustar
   à largura), busca no texto, ← → entre páginas. Grifos em 4 cores pela seleção (clique no grifo: cor, anotar,
   remover) e anotação pela seleção ou pelo painel ("Anotar na página N"). Nada é escrito no PDF.
@@ -59,9 +59,17 @@ Perguntar ao terminar cada parte.
   configuração em Configurações → Inteligência artificial).
 - Não feito: oferta quando a aula termina na janela flutuante (só no player do app).
 
-### 3. Pomodoro / modo foco
-- Temporizador (25/5 configurável) integrado ao tempo de estudo (`recordStudyTime` em `src/main/db/study.ts`) e à
-  meta diária; aviso do sistema no fim de cada ciclo (`src/main/notifier.ts` já mostra notificações).
+### 3. Pomodoro / modo foco ✅ (publicado na v0.7.0)
+- Botão na barra superior (`components/pomodoro/`): tempo da fase, painel com começar/pausar/pular/recomeçar,
+  sequência até a pausa longa e o estudo do dia contra a meta. Opções em Configurações → Pomodoro (foco, pausas,
+  pausa longa a cada N, início automático, aviso).
+- O relógio fica no processo principal (`src/main/pomodoro.ts`, lógica pura em `src/shared/pomodoro.ts`): segue
+  ao trocar de tela, avisa com a janela minimizada e guarda o estado no banco (`internal.pomodoro`). Ao sair do
+  app, o foco é pausado; se o app cair rodando, reabre pausado sem somar o tempo fechado.
+- Decisões do dono: o bloco de foco conta **inteiro** no tempo de estudo e na meta, **descontando** o que o app já
+  mediu no período (vídeo, PDF, flashcards; `focusCredit`); o Pomodoro **não mexe no vídeo**.
+- Banco (migration 14): `study_sessions.source` ('pomodoro' = bloco de foco); `recordStudyTime` não junta sessões
+  do app com as do Pomodoro.
 
 ### Pendências pequenas (boas para entrar junto)
 - **Instância única**: hoje dá para abrir duas cópias do Tramotak ao mesmo tempo sobre o mesmo banco. Usar
@@ -78,12 +86,14 @@ Perguntar ao terminar cada parte.
   janelas foi conferida numa captura da tela real (sessão X11, 16/10); o modo processo separado (Wayland) só foi
   testado na sessão Wayland de 14/10.
 
+- PDFs reais grandes e com imagens no leitor (os testes usaram PDFs gerados) e o fim de um bloco do Pomodoro com o
+  relógio de verdade (aviso do sistema).
 - A primeira atualização automática real pelo `.deb` (0.6.0 → 0.6.1): deve aparecer "Atualizar para 0.6.1" na barra
   superior, pedir a senha do sistema e reabrir na versão nova.
 - Instalação e atualização no Windows de verdade (só o CI testou).
 - IA e pesquisa na internet com chaves e contas reais.
 
-## Depois da 0.7 (resumo do roteiro)
+## Próximo passo: 0.8 e depois (resumo do roteiro)
 
 - **0.8** — IA no curso inteiro: conversa sobre o curso todo (citando aula e minuto), gerar baralho/questões do
   curso, tutor dos pontos fracos, custo estimado antes de gerar.

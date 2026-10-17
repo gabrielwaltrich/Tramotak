@@ -79,6 +79,15 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.aiOllamaPullProgress, listener)
     }
   },
+  pomodoro: {
+    get: () => ipcRenderer.invoke(IPC.pomodoroGet),
+    command: (cmd) => ipcRenderer.invoke(IPC.pomodoroCommand, cmd),
+    onState: (callback) => {
+      const listener = (_event: Electron.IpcRendererEvent, view: unknown) => view && typeof view === 'object' && callback(view as never)
+      ipcRenderer.on(IPC.pomodoroState, listener)
+      return () => ipcRenderer.removeListener(IPC.pomodoroState, listener)
+    }
+  },
   pdf: {
     highlights: (lessonId, assetPath) => ipcRenderer.invoke(IPC.pdfHighlights, lessonId, assetPath),
     createHighlight: (input) => ipcRenderer.invoke(IPC.pdfHighlightCreate, input),

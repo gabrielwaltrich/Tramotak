@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { FolderOpen } from 'lucide-react'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -14,6 +15,7 @@ import { AppearanceSettings } from '../components/AppearanceSettings'
 import { UpdateSettings } from '../components/UpdateSettings'
 import { PipSettings } from '../components/player/PipSettings'
 import { ReviewSettings } from '../components/review/ReviewSettings'
+import { PomodoroSettings } from '../components/pomodoro/PomodoroSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -24,9 +26,9 @@ function formatGoal(minutes: number): string {
   return `${Math.floor(minutes / 60)}h${rest ? String(rest).padStart(2, '0') : ''}`
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({ id, title, description, children }: { id?: string; title: string; description?: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-xl border border-border bg-surface p-5">
+    <section id={id} className="scroll-mt-4 rounded-xl border border-border bg-surface p-5">
       <h2 className="font-medium">{title}</h2>
       {description && <p className="mt-1 text-sm text-muted">{description}</p>}
       <div className="mt-4">{children}</div>
@@ -152,6 +154,12 @@ export function SettingsPage() {
   const info = useQuery({ queryKey: ['app-info'], queryFn: () => window.api.app.info() })
   const settings = useQuery({ queryKey: queryKeys.settings, queryFn: () => window.api.settings.get(), staleTime: 0 })
   const toast = useToast()
+  // `/settings#pomodoro`: abre já na seção pedida.
+  const { hash } = useLocation()
+  const loaded = settings.data !== undefined
+  useEffect(() => {
+    if (hash && loaded) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' })
+  }, [hash, loaded])
 
   return (
     <div className="mx-auto max-w-3xl space-y-4 p-8">
@@ -163,6 +171,10 @@ export function SettingsPage() {
 
       <Section title="Meta diária" description="Quantos minutos você quer estudar por dia. Aparece na tela Início.">
         {settings.data ? <GoalSetting key={settings.data.dailyGoalMinutes} current={settings.data.dailyGoalMinutes} /> : null}
+      </Section>
+
+      <Section id="pomodoro" title="Pomodoro" description="Blocos de foco com pausas, para estudar com ritmo. O tempo de foco conta na meta diária.">
+        {settings.data && <PomodoroSettings key={JSON.stringify(settings.data.pomodoro)} settings={settings.data.pomodoro} />}
       </Section>
 
       <Section title="Notificações" description="Avisos do sistema para blocos de estudo com horário e um resumo do dia (a partir das 8h).">

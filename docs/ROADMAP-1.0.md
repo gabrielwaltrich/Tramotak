@@ -71,12 +71,13 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 ## 0.6.3 — Revisão pós-aula ✅ (publicada: v0.6.3)
 - ✅ Primeira parte da 0.7, publicada antes: perguntas rápidas ao concluir a aula (detalhes no item da 0.7).
 
-## 0.7 — PDFs e revisão pós-aula ⬜
+## 0.7 — PDFs, revisão pós-aula e Pomodoro ✅ (publicada: v0.6.3 e v0.7.0)
 - ✅ PDFs como aula: leitura, grifo e anotações dentro do app (aulas e anexos PDF); texto do PDF como material da
   IA; conclui ao chegar na última página.
 - ✅ Revisão pós-aula: ao concluir, 3 a 5 perguntas rápidas sobre o assunto (múltipla escolha e V/F, correção na
   hora, erradas viram flashcard; sem transcrição, transcreve antes). Perguntas salvas por aula.
-- Pomodoro/modo foco integrado ao tempo de estudo.
+- ✅ Pomodoro/modo foco integrado ao tempo de estudo (bloco inteiro, sem contar duas vezes o que o app mediu) e
+  à meta diária, com aviso do sistema.
 
 ## 0.8 — IA no curso inteiro ⬜
 - Conversa sobre o curso todo (busca nas transcrições de todas as aulas, citando aula e minuto).

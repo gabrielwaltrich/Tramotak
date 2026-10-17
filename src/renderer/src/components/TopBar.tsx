@@ -1,6 +1,7 @@
 import { Search } from 'lucide-react'
 import { useSearch } from '../lib/searchContext'
 import { UpdateBadge } from './UpdateSettings'
+import { PomodoroButton } from './pomodoro/PomodoroButton'
 
 const isMac = navigator.platform.toLowerCase().includes('mac')
 
@@ -29,6 +30,7 @@ export function TopBar() {
         <kbd className="ml-auto shrink-0 rounded border border-border bg-surface-2 px-1.5 text-[10px] tracking-wide">{isMac ? '⌘ K' : 'Ctrl K'}</kbd>
       </button>
       <UpdateBadge />
+      <PomodoroButton />
     </header>
   )
 }

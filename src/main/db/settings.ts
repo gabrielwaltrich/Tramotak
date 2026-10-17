@@ -4,6 +4,7 @@ import { WHISPER_MODELS } from '@shared/media'
 import { normalizeAppearance } from '@shared/appearance'
 import { DEFAULT_PIP_SETTINGS, normalizePipSettings } from '@shared/pip'
 import { DEFAULT_REVIEW_SETTINGS, normalizeReviewSettings } from '@shared/review'
+import { DEFAULT_POMODORO_SETTINGS, normalizePomodoroSettings } from '@shared/pomodoro'
 import type { Database } from './database'
 
 export type { AppSettings }
@@ -29,7 +30,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoUpdateCheck: true,
   appearance: null,
   pip: DEFAULT_PIP_SETTINGS,
-  review: DEFAULT_REVIEW_SETTINGS
+  review: DEFAULT_REVIEW_SETTINGS,
+  pomodoro: DEFAULT_POMODORO_SETTINGS
 }
 
 export const LEAD_OPTIONS = [0, 5, 10, 15] as const
@@ -111,6 +113,7 @@ function validate(patch: Partial<AppSettings>): Partial<AppSettings> {
   }
   if (patch.pip !== undefined) out.pip = normalizePipSettings(patch.pip)
   if (patch.review !== undefined) out.review = normalizeReviewSettings(patch.review)
+  if (patch.pomodoro !== undefined) out.pomodoro = normalizePomodoroSettings(patch.pomodoro)
   if (patch.autoBackup !== undefined) {
     if (typeof patch.autoBackup !== 'boolean') throw new Error('Valor inválido para backup automático')
     out.autoBackup = patch.autoBackup

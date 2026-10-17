@@ -427,5 +427,9 @@ export const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL DEFAULT (unixepoch())
   );
   CREATE INDEX pdf_highlights_lesson ON pdf_highlights(lesson_id, asset_path, page);
+  `,
+  /* 14 — Pomodoro: sessões de estudo de blocos de foco (o que o app não mediu por vídeo, PDF ou flashcards). */ `
+  ALTER TABLE study_sessions ADD COLUMN source TEXT; -- NULL = medido pelo app; 'pomodoro' = bloco de foco
+  CREATE INDEX study_sessions_time ON study_sessions(ended_at);
   `
 ]

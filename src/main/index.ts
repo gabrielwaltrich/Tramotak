@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Notification, session, shell } from 'electron'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
-import { IPC, type AppInfo } from '@shared/ipc'
+import { IPC, type AppInfo, type PomodoroCommand } from '@shared/ipc'
 import { openDatabase, type Database } from './db/database'
 import { getDashboard } from './db/dashboard'
 import { getSettings, updateSettings } from './db/settings'
@@ -21,6 +21,7 @@ import { registerBackupIpc } from './ipc/backup'
 import { applyPendingRestore, autoBackup } from './backup/backup'
 import { getInternal, setInternal } from './db/settings'
 import { startNotifier } from './notifier'
+import { Pomodoro } from './pomodoro'
 import { DurationScanner } from './media/durations'
 import { ensureMemoryStates } from './db/flashcards'
 import { Updater } from './updater'
@@ -38,6 +39,7 @@ registerMediaScheme()
 let db: Database | undefined
 let mainWindow: BrowserWindow | undefined
 let pip: PipHost | undefined
+let pomodoro: Pomodoro | undefined
 
 function createWindow(): void {
   const win = new BrowserWindow({
@@ -61,6 +63,7 @@ function createWindow(): void {
   win.on('closed', () => {
     if (mainWindow === win) mainWindow = undefined
     pip?.close()
+    pomodoro?.stop()
   })
 
   win.once('ready-to-show', () => {
@@ -101,8 +104,10 @@ function registerIpc(db: Database): void {
   ipcMain.handle(IPC.searchQuery, (_e, text: unknown) => search(db, String(text ?? '').slice(0, 200)))
   ipcMain.handle(IPC.settingsGet, () => getSettings(db))
   ipcMain.handle(IPC.settingsUpdate, (_e, patch) => {
+    const before = getSettings(db).pomodoro
     const settings = updateSettings(db, patch ?? {})
     pip?.settingsChanged(settings)
+    pomodoro?.settingsChanged(before, settings.pomodoro)
     return settings
   })
 }
@@ -222,11 +227,36 @@ app.whenReady().then(() => {
     session.defaultSession.flushStorageData()
   })
   startNotifier(db, () => mainWindow)
+  pomodoro = registerPomodoro(db)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+/** Pomodoro no processo principal: comandos da interface, estado para todas as janelas e aviso do sistema. */
+function registerPomodoro(db: Database): Pomodoro {
+  const timer = new Pomodoro({
+    db,
+    notify: (title, body) => {
+      if (!Notification.isSupported()) return
+      const n = new Notification({ title, body })
+      n.on('click', () => {
+        if (!mainWindow) return
+        if (mainWindow.isMinimized()) mainWindow.restore()
+        mainWindow.show()
+        mainWindow.focus()
+      })
+      n.show()
+    },
+    broadcast: (view) => {
+      for (const win of BrowserWindow.getAllWindows()) win.webContents.send(IPC.pomodoroState, view)
+    }
+  })
+  ipcMain.handle(IPC.pomodoroGet, () => timer.view())
+  ipcMain.handle(IPC.pomodoroCommand, (_e, cmd: unknown) => timer.command(cmd as PomodoroCommand))
+  return timer
+}
 
 /** Backup automático: um minuto depois de abrir e a cada 6 h (só grava se o último tiver mais de ~20 h). */
 function scheduleAutoBackup(backupsDir: string): void {

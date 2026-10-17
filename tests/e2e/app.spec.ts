@@ -904,6 +904,45 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
   }
 })
 
+test('pomodoro: começa pela barra superior, pausa, pula para a pausa, recomeça e as opções valem na hora', async () => {
+  const { app, page } = await launch()
+  try {
+    await page.getByRole('button', { name: 'Pomodoro', exact: true }).click()
+    const panel = page.getByRole('dialog', { name: 'Pomodoro' })
+    await expect(panel.getByText('25:00')).toBeVisible()
+    await panel.getByRole('button', { name: 'Começar foco' }).click()
+    await expect(panel.getByText(/^24:5\d$/)).toBeVisible({ timeout: 5000 })
+    await expect(page.getByRole('button', { name: /^Pomodoro: Foco, 24:5\d$/ })).toBeVisible()
+
+    await panel.getByRole('button', { name: 'Pausar' }).click()
+    await expect(panel.getByRole('button', { name: 'Continuar' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Pomodoro: Foco, 24:5\d \(pausado\)$/ })).toBeVisible()
+
+    // Pular o foco vai para a pausa curta (sem contar o bloco); recomeçar volta ao primeiro foco
+    await panel.getByRole('button', { name: 'Pular para a pausa' }).click()
+    await expect(panel.getByText('Pausa curta')).toBeVisible()
+    await expect(panel.getByText('05:00')).toBeVisible()
+    await expect(panel.getByText(/Hoje: 0 blocos/)).toBeVisible()
+    await panel.getByRole('button', { name: 'Recomeçar' }).click()
+    await expect(panel.getByText('25:00')).toBeVisible()
+
+    // Opções nas Configurações: foco de 50 min vale para o próximo bloco
+    await panel.getByRole('link', { name: 'Ajustar' }).click()
+    await expect(page.locator('#pomodoro')).toBeInViewport()
+    await page.getByRole('radiogroup', { name: 'Foco' }).getByRole('radio', { name: '50 min' }).click()
+    await expect.poll(() => page.evaluate(() => window.api.settings.get().then((s) => s.pomodoro.focusMinutes))).toBe(50)
+    await page.getByRole('button', { name: 'Pomodoro', exact: true }).click()
+    await expect(panel.getByText('50:00')).toBeVisible()
+
+    await page.evaluate(async () => {
+      const s = await window.api.settings.get()
+      await window.api.settings.update({ pomodoro: { ...s.pomodoro, focusMinutes: 25 } })
+    })
+  } finally {
+    await app.close()
+  }
+})
+
 test('janela flutuante: abre pelo P, comanda o vídeo, passa para a próxima aula e volta ao app', async () => {
   const { app, page } = await launch()
   const lessons = await page.evaluate(async () => {

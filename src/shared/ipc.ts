@@ -32,6 +32,7 @@ import type { Appearance } from './appearance'
 import type { PipAppEvent, PipCommand, PipOpenRequest, PipSettings, PipStatus } from './pip'
 import type { LessonReview, ReviewSettings, ReviewStatus } from './review'
 import type { HighlightColor, NewHighlight, PdfHighlight } from './pdf'
+import type { PomodoroSettings, PomodoroState } from './pomodoro'
 
 export interface AppInfo {
   name: string
@@ -78,6 +79,17 @@ export interface AppSettings {
   pip: PipSettings
   /** Revisão pós-aula: oferecer ao concluir e quantas perguntas. */
   review: ReviewSettings
+  /** Pomodoro: durações, pausa longa, início automático e avisos. */
+  pomodoro: PomodoroSettings
+}
+
+export type PomodoroCommand = 'start' | 'pause' | 'reset' | 'skip'
+
+/** Estado do Pomodoro com as configurações e o relógio do processo principal (para a contagem na tela). */
+export interface PomodoroView {
+  state: PomodoroState
+  settings: PomodoroSettings
+  now: number
 }
 
 export const IPC = {
@@ -224,6 +236,9 @@ export const IPC = {
   packageExport: 'package:export',
   packageOpen: 'package:open',
   packageImport: 'package:import',
+  pomodoroGet: 'pomodoro:get',
+  pomodoroCommand: 'pomodoro:command',
+  pomodoroState: 'pomodoro:state',
   pdfHighlights: 'pdf:highlights',
   pdfHighlightCreate: 'pdf:highlightCreate',
   pdfHighlightColor: 'pdf:highlightColor',
@@ -496,6 +511,12 @@ export interface TramotakApi {
     onChatDelta(callback: (delta: { lessonId: number; text: string }) => void): () => void
     /** Sugestão de regras de nomes para um curso, a partir de exemplos dos nomes e de um pedido opcional. */
     suggestTitleRules(courseId: number, request: string): Promise<TitleRules>
+  }
+  pomodoro: {
+    get(): Promise<PomodoroView>
+    command(cmd: PomodoroCommand): Promise<PomodoroView>
+    /** Avisa a cada mudança (início, pausa, fim de fase). Devolve o "desinscrever". */
+    onState(callback: (view: PomodoroView) => void): () => void
   }
   pdf: {
     /** Grifos do PDF da aula (`assetPath` nulo) ou de um anexo PDF dela. */
