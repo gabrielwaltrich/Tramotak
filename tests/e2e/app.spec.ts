@@ -91,6 +91,12 @@ test.afterAll(async () => {
 test('importar → assistir → anotar → concluir, e os dados sobrevivem a um reinício', async () => {
   const { app, page } = await launch()
 
+  // Perfil vazio: as boas-vindas aparecem sozinhas (o percurso completo é testado no fim).
+  const welcome = page.getByRole('dialog', { name: 'Boas-vindas ao Tramotak' })
+  await expect(welcome).toBeVisible()
+  await welcome.getByRole('button', { name: 'Pular introdução' }).click()
+  await expect(welcome).toBeHidden()
+
   // Importar
   await page.getByRole('link', { name: 'Meus Cursos' }).click()
   await page.getByRole('button', { name: 'Importar seu primeiro curso' }).click()
@@ -1195,4 +1201,63 @@ test('janela flutuante: abre pelo P, comanda o vídeo, passa para a próxima aul
   await page.getByRole('radiogroup', { name: 'Voltar/avançar' }).getByRole('radio', { name: '30 s' }).click()
   await expect.poll(() => page.evaluate(() => window.api.settings.get().then((s) => s.pip.seekStep))).toBe(30)
   await app.close()
+})
+
+test('primeira execução: introdução com curso de exemplo, primeiros passos no Início e remover o exemplo', async () => {
+  const { page, app } = await launch()
+  try {
+    const decksBefore = (await page.evaluate(() => window.api.decks.list())).length
+    // Quem já tem cursos não vê a introdução sozinha; dá para pedir de novo em Configurações → Sobre.
+    await expect(page.getByRole('dialog', { name: 'Boas-vindas ao Tramotak' })).toBeHidden()
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Ver a introdução de novo' }).click()
+
+    const welcome = page.getByRole('dialog', { name: 'Boas-vindas ao Tramotak' })
+    await expect(welcome).toBeVisible()
+    await welcome.getByRole('radio', { name: '30 min' }).click()
+    await welcome.getByRole('button', { name: 'Continuar' }).click()
+    const course = page.getByRole('dialog', { name: 'Seu primeiro curso' })
+    await course.getByRole('button', { name: 'Usar o curso de exemplo' }).click()
+    await expect(course.getByText('Pronto: curso, baralho e banco de exemplo')).toBeVisible()
+    await course.getByRole('button', { name: 'Continuar' }).click()
+    await page.getByRole('dialog', { name: 'Inteligência artificial (opcional)' }).getByRole('button', { name: 'Começar a estudar' }).click()
+
+    // Abre o curso de exemplo: 3 módulos, e o vídeo vem com legenda.
+    await expect(page.getByRole('heading', { name: 'Como usar o Tramotak' })).toBeVisible()
+    expect(await page.evaluate(() => window.api.settings.get().then((s) => s.dailyGoalMinutes))).toBe(30)
+    const view = await page.evaluate(() => window.api.onboarding.get())
+    const detail = await page.evaluate((id) => window.api.courses.get(id), view.sample!.courseId)
+    expect(detail.lessonCount).toBe(8)
+    const video = detail.modules[0].lessons.find((l) => l.kind === 'video')!
+    const lesson = await page.evaluate((id) => window.api.lessons.get(id), video.id)
+    expect(lesson.assets.some((a) => a.kind === 'subtitle')).toBe(true)
+    const deck = await page.evaluate((id) => window.api.decks.get(id), view.sample!.deckId!)
+    expect(deck.cards).toHaveLength(5)
+
+    // Início: lista de primeiros passos. Os testes anteriores já fizeram tudo; sem IA, fica um passo pendente.
+    const provider = await page.evaluate(() => window.api.settings.get().then((s) => s.aiProvider))
+    await page.evaluate(() => window.api.settings.update({ aiProvider: 'none' }))
+    await page.getByRole('link', { name: 'Início' }).click()
+    const steps = page.getByRole('region', { name: 'Primeiros passos' })
+    await expect(steps).toBeVisible()
+    await expect(steps.getByText('Primeiros passos · 5 de 6')).toBeVisible()
+    await expect(steps.getByRole('button', { name: /Importe um curso seu/ })).toBeDisabled()
+    await steps.getByRole('button', { name: /Configure a IA/ }).click()
+    await expect(page.getByRole('heading', { name: 'Inteligência artificial' })).toBeInViewport()
+    await page.evaluate((p) => window.api.settings.update({ aiProvider: p }), provider)
+
+    // Remover o exemplo devolve tudo como estava.
+    await page.getByRole('link', { name: 'Configurações' }).click()
+    await page.getByRole('button', { name: 'Remover o curso de exemplo' }).click()
+    await page.getByRole('dialog', { name: 'Remover o curso de exemplo' }).getByRole('button', { name: 'Remover', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Adicionar o curso de exemplo' })).toBeVisible()
+    expect((await page.evaluate(() => window.api.courses.list())).map((c) => c.title)).not.toContain('Como usar o Tramotak')
+    expect((await page.evaluate(() => window.api.decks.list())).length).toBe(decksBefore)
+
+    await page.evaluate(() => window.api.onboarding.dismiss())
+    expect((await page.evaluate(() => window.api.onboarding.get())).steps).toBeNull()
+    await page.evaluate(() => window.api.settings.update({ dailyGoalMinutes: 60 }))
+  } finally {
+    await app.close()
+  }
 })

@@ -2,12 +2,11 @@
 
 ## Estado atual
 
-- **Última versão publicada: v0.7.1** (conversa sobre o curso inteiro e gerar do curso inteiro: as duas primeiras
-  partes da 0.8), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.1
-- Testes no momento da publicação: 491 unitários (Vitest) e 20 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão publicada: v0.7.2** (backup numa pasta escolhida, instância única e primeira execução guiada com
+  curso de exemplo: as primeiras partes da 0.9), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.2
+- Testes no momento da publicação: 506 unitários (Vitest) e 22 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.7.1, mais o backup na pasta e a instância única (prontos, sem commit). A 0.8 está fechada; próximo
-  passo: a **0.9** (ver abaixo).
+- `main` está igual à v0.7.2; não há trabalho pela metade. Próximo passo: o resto da **0.9** (ver abaixo).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -24,6 +23,7 @@
 | 0.6.3 | **Revisão pós-aula**: 3 a 5 perguntas da IA ao concluir (sem parar o autoplay), transcreve antes se preciso, erradas viram flashcard |
 | 0.7.0 | **PDFs no leitor do app** (grifos, anotações por página, anexos PDF, texto para a IA, conclui na última página) e **Pomodoro** (foco conta na meta sem duplicar) |
 | 0.7.1 | **IA no curso inteiro**: conversa sobre o curso (busca nas aulas, cita aula e minuto) e gerar flashcards/questões do curso ou de módulos, N por aula, salvando direto |
+| 0.7.2 | **Backup numa pasta sua** (Drive/Dropbox/pendrive, diário e ao fechar), **uma cópia do app por vez**, **primeira execução guiada** e curso de exemplo "Como usar o Tramotak" |
 
 Detalhes de cada uma em `docs/releases/` e no `docs/ROADMAP-1.0.md`.
 
@@ -124,7 +124,7 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 
 ## 0.9 — Polimento e beta (em andamento)
 
-### 1. Backup numa pasta escolhida + instância única ✅ (pronto em 16/10/2026, sem commit)
+### 1. Backup numa pasta escolhida + instância única ✅ (publicado na v0.7.2)
 - Configurações → Dados e backup → **Cópia numa pasta sua** (`components/backup/BackupSettings.tsx`): escolher pela
   janela do sistema (a interface nunca manda caminho), gravar agora, trocar, parar de usar, lista com Restaurar.
 - Decisões do dono: arquivos **datados, 7 mais recentes** (`Tramotak-auto-AAAA-MM-DD-HHMM.db`; o app só apaga os
@@ -144,6 +144,25 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   `second-instance` traz a janela para a frente. Conferido: restaurar backup e reabrir (`app.relaunch`) continua
   funcionando, e a janela flutuante em modo processo abre.
 - Não validado: Google Drive/Dropbox de verdade (testado com pasta local e pasta removida) e Windows real.
+
+### 2. Primeira execução guiada e curso de exemplo ✅ (publicada na v0.7.2)
+- **Boas-vindas** (`components/onboarding/WelcomeDialog.tsx`, montada no `App.tsx`): meta diária → curso (exemplo ou
+  "Importar um curso meu", que abre `/courses?import=1`) → IA opcional (`/settings#ai`). "Pular" ou Esc contam como
+  concluída. **Primeiros passos** no Início (`FirstSteps.tsx`): importar um curso seu, assistir, anotar, revisar
+  flashcards, simulado, IA; some ao dispensar ou concluir tudo. Configurações → Sobre: "Ver a introdução de novo" e
+  pôr/tirar o curso de exemplo (`IntroSettings.tsx`).
+- Decisões do dono: boas-vindas + lista; exemplo **"Como usar o Tramotak"**; **baralho (5) e banco (3) de exemplo**
+  ligados às aulas; só para **quem ainda não tem cursos** (quem já usa nunca vê nada sozinho).
+- Regras em `src/shared/onboarding.ts` (`onboardingView`, dados do baralho/banco); banco em `src/main/onboarding.ts`
+  (`internal.onboarding` e `internal.sampleCourse`, sem migration). `welcome: 'requested'` = aberta até concluir: vale
+  para "ver de novo" e para quando o exemplo vira o primeiro curso no meio das boas-vindas (senão elas fechariam).
+- Curso em `resources/sample-course/` (vai como `extraResources` → `sample-course`; em desenvolvimento e no E2E, lido do
+  repositório). Ao instalar, é copiado para `<dados>/exemplo/` (o caminho do AppImage muda a cada abertura) e importado
+  como curso comum. Vídeo (slides + legenda `.srt`) e PDF gerados por `scripts/build-sample-course.ts`
+  (`node --experimental-strip-types`); os `.md` são editados à mão. Reinstalar depois de apagar o curso à mão
+  reaproveita o baralho e o banco que sobraram.
+- Conferido no app real: perfil vazio (todas as telas, vídeo, PDF, Início), cópia do banco do dono (nada aparece) e
+  app empacotado (`electron-builder --linux dir`) instalando o exemplo.
 
 ## Próximo: resto da 0.9 e 1.0 (resumo do roteiro)
 

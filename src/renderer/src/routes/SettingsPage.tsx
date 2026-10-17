@@ -16,6 +16,7 @@ import { UpdateSettings } from '../components/UpdateSettings'
 import { PipSettings } from '../components/player/PipSettings'
 import { ReviewSettings } from '../components/review/ReviewSettings'
 import { PomodoroSettings } from '../components/pomodoro/PomodoroSettings'
+import { IntroSettings } from '../components/onboarding/IntroSettings'
 
 const GOAL_PRESETS = [15, 30, 60, 90, 120]
 
@@ -189,7 +190,7 @@ export function SettingsPage() {
         {settings.data && <MediaSettings key={JSON.stringify(settings.data)} settings={settings.data} />}
       </Section>
 
-      <Section title="Inteligência artificial" description="Gere flashcards, questões, resumos e mapas mentais a partir das aulas. Dá para usar de graça (Gemini com a conta Google, OpenRouter ou um modelo local) ou com a sua própria chave.">
+      <Section id="ai" title="Inteligência artificial" description="Gere flashcards, questões, resumos e mapas mentais a partir das aulas. Dá para usar de graça (Gemini com a conta Google, OpenRouter ou um modelo local) ou com a sua própria chave.">
         {settings.data && <AiSettings key={settings.data.aiProvider} settings={settings.data} />}
         {settings.data && <ReviewSettings key={JSON.stringify(settings.data.review)} settings={settings.data.review} />}
       </Section>
@@ -238,6 +239,7 @@ export function SettingsPage() {
             </button>
           </p>
           <p className="mt-1 text-xs text-muted">O leitor de PDF usa o pdf.js, da Mozilla (licença Apache 2.0).</p>
+          <IntroSettings />
           </>
         ) : (
           <p className="text-sm text-muted">Carregando…</p>

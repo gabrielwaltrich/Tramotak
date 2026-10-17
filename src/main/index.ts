@@ -18,6 +18,7 @@ import { registerMediaIpc } from './ipc/media'
 import { registerAiIpc } from './ipc/ai'
 import { registerPdfIpc } from './ipc/pdf'
 import { registerBackupIpc } from './ipc/backup'
+import { registerOnboardingIpc } from './ipc/onboarding'
 import { applyPendingRestore, autoBackup } from './backup/backup'
 import { FolderBackup, withTimeout } from './backup/folder'
 import { getInternal, setInternal } from './db/settings'
@@ -221,6 +222,13 @@ app.whenReady().then(() => {
       if (relaunch) app.relaunch()
       app.exit(0)
     }
+  })
+  registerOnboardingIpc({
+    db,
+    userData,
+    // Instalado, o exemplo vem nos recursos (extraResources); em desenvolvimento e no E2E, de resources/ no repositório.
+    sampleSource: app.isPackaged ? join(process.resourcesPath, 'sample-course') : join(app.getAppPath(), 'resources', 'sample-course'),
+    onImported: (courseId) => void durations.request(courseId)
   })
   scheduleAutoBackup(backupsDir)
   createWindow()

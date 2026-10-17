@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Loader2, Plus, Search, SearchX } from 'lucide-react'
 import type { CourseSort, CourseSummary } from '@shared/course'
@@ -43,7 +43,15 @@ export function CoursesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
-  const [importing, setImporting] = useState(false)
+  // ?import=1 (boas-vindas, Primeiros passos) já abre a importação; fechar tira o parâmetro.
+  const [params, setParams] = useSearchParams()
+  const wantsImport = params.get('import') === '1'
+  const [importOpen, setImportOpen] = useState(false)
+  const importing = importOpen || wantsImport
+  const setImporting = (value: boolean) => {
+    setImportOpen(value)
+    if (!value && wantsImport) setParams({}, { replace: true })
+  }
   const [editing, setEditing] = useState<CourseSummary | null>(null)
   const [deleting, setDeleting] = useState<CourseSummary | null>(null)
   const [revalidating, setRevalidating] = useState<Set<number>>(new Set())

@@ -8,6 +8,7 @@ import { PlayerPage } from './routes/PlayerPage'
 import { SettingsPage } from './routes/SettingsPage'
 import { ComingSoonPage } from './routes/ComingSoonPage'
 import { SearchPalette } from './components/SearchPalette'
+import { WelcomeDialog } from './components/onboarding/WelcomeDialog'
 import { TopBar } from './components/TopBar'
 import { FlashcardsPage } from './routes/FlashcardsPage'
 import { DeckPage } from './routes/DeckPage'
@@ -121,6 +122,7 @@ export function App() {
           </main>
         </div>
         <SearchPalette open={searchOpen} initial={searchInitial} onClose={() => setSearchOpen(false)} />
+        <WelcomeDialog />
       </div>
     </SearchContext.Provider>
   )

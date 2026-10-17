@@ -11,6 +11,7 @@ import { Button } from '../components/Button'
 import { CourseCard } from '../components/CourseCard'
 import { GoalCard } from '../components/GoalCard'
 import { TodayTasks } from '../components/planner/TodayTasks'
+import { FirstSteps } from '../components/onboarding/FirstSteps'
 
 function StreakChip({ streak }: { streak: DashboardData['streak'] }) {
   const { current, todayDone, best } = streak
@@ -107,6 +108,7 @@ export function HomePage() {
             </Button>
           </section>
         )}
+        <FirstSteps />
         {d && <GoalCard todaySeconds={d.todaySeconds} goalMinutes={d.goalMinutes} lessonsCompletedToday={d.lessonsCompletedToday} />}
         <TodayTasks />
         {d && d.cardsDueToday > 0 && (

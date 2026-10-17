@@ -1,0 +1,47 @@
+1
+00:00:00,300 --> 00:00:04,800
+Esta aula mostra os atalhos do player.
+
+2
+00:00:05,300 --> 00:00:09,800
+Com eles, dá para estudar sem tirar as mãos do teclado.
+
+3
+00:00:10,300 --> 00:00:14,800
+A barra de espaço ou a tecla K pausa e continua o vídeo.
+
+4
+00:00:15,300 --> 00:00:19,800
+As setas para a esquerda e para a direita voltam ou avançam dez segundos.
+
+5
+00:00:20,300 --> 00:00:24,800
+Os colchetes mudam a velocidade: estudar a 1,25 ou 1,5 vez economiza tempo.
+
+6
+00:00:25,300 --> 00:00:29,800
+As setas para cima e para baixo mudam o volume, e a tecla M tira o som.
+
+7
+00:00:30,300 --> 00:00:34,800
+A tecla F deixa o vídeo em tela cheia.
+
+8
+00:00:35,300 --> 00:00:39,800
+A tecla P abre a janela flutuante, que fica por cima dos outros programas enquanto você pratica.
+
+9
+00:00:40,300 --> 00:00:44,800
+Shift mais N passa para a próxima aula.
+
+10
+00:00:45,300 --> 00:00:49,800
+Na aba Anotações, cada nota guarda o minuto do vídeo: clicar nela volta para aquele ponto.
+
+11
+00:00:50,300 --> 00:00:54,800
+A legenda desta aula vem de um arquivo .srt com o mesmo nome do vídeo.
+
+12
+00:00:55,300 --> 00:00:59,800
+Ela também é o material que a IA lê para conversar sobre a aula e gerar flashcards.

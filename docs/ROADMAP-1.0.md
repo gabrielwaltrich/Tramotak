@@ -87,8 +87,9 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ~~Tutor dos pontos fracos e "explique meu erro"~~ e ~~custo estimado antes de gerar~~: tirados do roteiro em
   16/10/2026 por decisão do dono (não seriam úteis). Não implementar sem ele pedir de novo.
 
-## 0.9 — Polimento e beta 🚧
-- Primeira execução guiada e curso de exemplo.
+## 0.9 — Polimento e beta 🚧 (backup na pasta e primeira execução publicados na v0.7.2)
+- ✅ Primeira execução guiada e curso de exemplo: boas-vindas em 3 passos (meta, curso de exemplo ou um seu, IA),
+  "Primeiros passos" no Início e o curso "Como usar o Tramotak" com baralho e banco de questões de exemplo.
 - "Relatar problema": arquivo de diagnóstico sem dados pessoais.
 - Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
 - ✅ Backup automático para uma pasta escolhida (Drive/Dropbox/pendrive) como sincronização simples: um por dia e

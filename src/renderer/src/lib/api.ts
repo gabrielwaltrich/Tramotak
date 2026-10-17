@@ -21,5 +21,6 @@ export const queryKeys = {
   plans: ['plans'] as const,
   plan: (courseId: number) => ['plans', courseId] as const,
   stats: ['stats'] as const,
+  onboarding: ['onboarding'] as const,
   history: (filter: object) => ['stats', 'history', filter] as const
 }

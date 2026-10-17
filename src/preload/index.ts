@@ -251,6 +251,14 @@ const api: TramotakApi = {
       return () => ipcRenderer.removeListener(IPC.pipEvent, listener)
     }
   },
+  onboarding: {
+    get: () => ipcRenderer.invoke(IPC.onboardingGet),
+    finish: () => ipcRenderer.invoke(IPC.onboardingFinish),
+    reopen: () => ipcRenderer.invoke(IPC.onboardingReopen),
+    dismiss: () => ipcRenderer.invoke(IPC.onboardingDismiss),
+    installSample: () => ipcRenderer.invoke(IPC.onboardingInstallSample),
+    removeSample: () => ipcRenderer.invoke(IPC.onboardingRemoveSample)
+  },
   backup: {
     create: () => ipcRenderer.invoke(IPC.backupCreate),
     list: () => ipcRenderer.invoke(IPC.backupList),

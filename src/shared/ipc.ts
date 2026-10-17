@@ -12,6 +12,7 @@ import type { MindMapData } from './mindmap'
 import type { Compatibility, MediaJob, MediaJobKind, Transcript, WhisperModelId } from './media'
 import type { TitleRules } from './titleRules'
 import type { UpdateInfo } from './updates'
+import type { OnboardingView, SampleInfo } from './onboarding'
 import type { BackupInfo, BackupListing, BackupPlace, FolderBackupStatus, ExportCatalog, ExportSelection, ImportRequest as PackageImportRequest, PackageImportResult, PackagePreview } from './backup'
 import type { AiGenerateRequest, AiGenerateResponse, AiLink, AiModelInfo, AiModels, AiProvider, AiSource, AiSourceRef, ChatMaterialInfo, ChatMessage, ChatSendRequest, CourseChatMaterial, CourseChatSendRequest } from './ai'
 import type {
@@ -234,6 +235,12 @@ export const IPC = {
   backupInspect: 'backup:inspect',
   backupRestore: 'backup:restore',
   backupChooseFolder: 'backup:chooseFolder',
+  onboardingGet: 'onboarding:get',
+  onboardingFinish: 'onboarding:finish',
+  onboardingReopen: 'onboarding:reopen',
+  onboardingDismiss: 'onboarding:dismiss',
+  onboardingInstallSample: 'onboarding:installSample',
+  onboardingRemoveSample: 'onboarding:removeSample',
   backupClearFolder: 'backup:clearFolder',
   backupFolderNow: 'backup:folderNow',
   packageCatalog: 'package:catalog',
@@ -580,6 +587,19 @@ export interface TramotakApi {
     clearFolder(): Promise<FolderBackupStatus>
     /** Grava um backup na pasta escolhida agora. */
     folderNow(): Promise<FolderBackupStatus>
+  }
+  onboarding: {
+    /** Boas-vindas, lista de primeiros passos do Início e o curso de exemplo (se instalado). */
+    get(): Promise<OnboardingView>
+    /** Boas-vindas concluídas ou puladas. */
+    finish(): Promise<void>
+    /** Mostra as boas-vindas de novo (Configurações → Sobre). */
+    reopen(): Promise<void>
+    /** Esconde a lista de primeiros passos. */
+    dismiss(): Promise<void>
+    /** Importa o curso de exemplo com o baralho e o banco de questões dele. */
+    installSample(): Promise<SampleInfo>
+    removeSample(): Promise<void>
   }
   packages: {
     catalog(): Promise<ExportCatalog>
