@@ -2,7 +2,16 @@
 
 
 Central de estudos desktop: importe cursos que já estão no seu computador e estude com eles.
-Windows e Linux.
+Windows e Linux. **Gratuito e de código aberto** ([GPL-3.0](LICENSE)): sem assinatura, sem limite de cursos, sem
+anúncios e sem telemetria.
+
+| | |
+|---|---|
+| ![Início com a meta do dia, flashcards e continuar assistindo](docs/screenshots/inicio.png) | ![Player com anotação no minuto do vídeo](docs/screenshots/player.png) |
+| ![Leitor de PDF do app](docs/screenshots/pdf.png) | ![Revisão de flashcards com FSRS](docs/screenshots/flashcards.png) |
+
+Na primeira abertura, o app oferece um curso de exemplo, **Como usar o Tramotak**, para experimentar tudo antes de
+importar os seus.
 
 - **Biblioteca:** importe a pasta de um curso; módulos, aulas, legendas e anexos são detectados sozinhos.
 - **Nomes das aulas:** regras por curso para limpar títulos vindos de nomes de arquivo (código como `#F0009` vira `9`, datas, numeração interna, autor depois do `@`, emojis, `_`, sufixos de cópia, textos e trocas personalizados), com prévia de todas as aulas e sugestão opcional da IA. Os arquivos não são renomeados.
@@ -60,14 +69,19 @@ As chaves ficam cifradas pelo cofre do sistema e nunca voltam para a interface.
 
 **Backup e outro computador:** em Configurações → Dados e backup. O backup é um arquivo `.db` com tudo, menos os vídeos e as chaves de API. Para migrar, restaure o backup no computador novo e use **Trocar pasta…** no menu dos cursos que estiverem em outro caminho; o progresso e as anotações são mantidos. Para compartilhar só parte do material, use **Exportar pacote…**.
 
-**Licenças:** o Tramotak inclui o FFmpeg (GPL) e o whisper.cpp (MIT) como programas separados e usa o pdf.js (Apache 2.0) no leitor de PDF; a licença do FFmpeg está em Configurações → Sobre e a do whisper.cpp junto do programa (`resources/whisper`).
+**Licenças:** o Tramotak inclui o FFmpeg (GPL) e o whisper.cpp (MIT) como programas separados e usa o pdf.js (Apache 2.0) no leitor de PDF; as licenças do Tramotak e do FFmpeg estão em Configurações → Sobre e a do whisper.cpp junto do programa (`resources/whisper`).
+
+## Contribuir
+
+Relatos de problemas, ideias e pull requests são bem-vindos. Veja o [guia de contribuição](CONTRIBUTING.md), o
+[código de conduta](CODE_OF_CONDUCT.md) e, para falhas de segurança, o [SECURITY.md](SECURITY.md).
 
 ## Desenvolvimento
 
-Requer Node.js 22.12 ou superior.
+Requer Node.js 22.12 ou superior. Detalhes e regras do projeto no [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ```bash
-npm install
+npm ci
 npm run dev        # abre o app com hot reload
 npm run lint
 npm run typecheck
@@ -76,7 +90,7 @@ npm run test:e2e   # compila e roda o fluxo completo no app real (Playwright)
 npm run dist:linux # gera instaladores em dist/ (também dist:win)
 ```
 
-Para publicar uma versão: atualize `version` no `package.json`, escreva as notas em `docs/releases/vX.Y.Z.md`, faça commit e crie a tag (`git tag vX.Y.Z && git push --tags`). O CI roda lint, testes e E2E nos 3 sistemas, gera os instaladores e cria a Release no GitHub com eles e os checksums.
+Para publicar uma versão: atualize `version` no `package.json`, escreva as notas em `docs/releases/vX.Y.Z.md`, faça commit e crie a tag (`git tag vX.Y.Z && git push --tags`). O CI roda lint, testes e E2E no Windows e no Linux, gera os instaladores e cria a Release no GitHub com eles e os checksums.
 
 ## Estrutura
 
@@ -87,5 +101,14 @@ src/shared/     tipos e lógica compartilhados
 src/renderer/   interface React
 tests/unit/     testes Vitest
 tests/e2e/      testes Playwright + curso de exemplo
-resources/      ícone: arte original em icon-source.png; icon.png e icons/ gerados por scripts/prepare-icon.py
+resources/      ícone (arte em icon-source.png; icon.png e icons/ por scripts/prepare-icon.py) e o curso de exemplo
+                (sample-course/, vídeo e PDF gerados por scripts/build-sample-course.ts)
 ```
+
+## Licença
+
+Copyright © 2026 Gabriel Waltrich.
+
+O Tramotak é software livre: você pode redistribuí-lo e modificá-lo nos termos da GNU General Public License,
+publicada pela Free Software Foundation, versão 3 ou (a seu critério) qualquer versão posterior. Ele é distribuído na
+esperança de ser útil, mas **sem nenhuma garantia**. Veja o texto completo em [LICENSE](LICENSE).

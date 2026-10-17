@@ -19,6 +19,9 @@ extraResources:
   - from: build/whisper
     to: whisper
     filter: ['whisper-cli', 'whisper-cli.exe', 'whisper.cpp-LICENSE.txt']
+  # Licença do Tramotak (GPL-3.0), aberta por Configurações → Sobre.
+  - from: LICENSE
+    to: LICENSE.txt
   # Curso de exemplo da primeira execução (gerado por scripts/build-sample-course.ts).
   - from: resources/sample-course
     to: sample-course

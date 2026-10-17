@@ -87,22 +87,42 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ~~Tutor dos pontos fracos e "explique meu erro"~~ e ~~custo estimado antes de gerar~~: tirados do roteiro em
   16/10/2026 por decisão do dono (não seriam úteis). Não implementar sem ele pedir de novo.
 
-## 0.9 — Polimento e beta 🚧 (backup na pasta e primeira execução publicados na v0.7.2)
+## 0.9 — Projeto aberto, polimento e beta 🚧 (backup na pasta e primeira execução publicados na v0.7.2)
+Prioridades revistas em 17/10/2026, depois do levantamento de apps parecidos e de como projetos abertos se mantêm.
 - ✅ Primeira execução guiada e curso de exemplo: boas-vindas em 3 passos (meta, curso de exemplo ou um seu, IA),
   "Primeiros passos" no Início e o curso "Como usar o Tramotak" com baralho e banco de questões de exemplo.
-- "Relatar problema": arquivo de diagnóstico sem dados pessoais.
-- Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
 - ✅ Backup automático para uma pasta escolhida (Drive/Dropbox/pendrive) como sincronização simples: um por dia e
   outro ao fechar (se algo mudou), 7 mais recentes, restaurar pela pasta, aviso no Início após 3 dias sem conseguir.
   Junto: **instância única** (abrir de novo só traz a janela existente).
-- Beta com usuários em Windows e Linux reais.
+- ✅ **Licença GPL-3.0 ou posterior** (antes o projeto não tinha licença) e arquivos da comunidade: CONTRIBUTING,
+  código de conduta, SECURITY, formulários de issue e de PR, README com capturas de tela.
+- **"Relatar problema"**: arquivo de diagnóstico sem dados pessoais (versão, sistema, erros recentes, configurações
+  sem chaves nem caminhos), para anexar no formulário de issue.
+- **Exportar flashcards para o Anki** (`.apkg` e CSV): sem prender a pessoa ao app e com revisão no celular de graça
+  (AnkiDroid/AnkiMobile).
+- **Assinatura grátis do instalador do Windows** pela SignPath Foundation (exige licença OSI, que agora existe, e
+  build automatizado, que o CI já faz). Substitui o certificado pago que estava na 1.0.
+- **Distribuição**: Flathub (sem a atualização automática própria dentro do Flatpak) e winget; Microsoft Store é grátis
+  para pessoa física.
+- Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
+- Beta com usuários em Windows e Linux reais (com o "Relatar problema" pronto).
 
 ## 1.0.0 ⬜
-- Instalador do Windows assinado (certificado de código).
-- Correções do beta; documentação de uso.
+- Correções do beta.
+- Documentação de uso (o curso de exemplo cobre o começo; falta um guia com todas as telas).
+- GitHub Sponsors e a página de apoio (`FUNDING.yml`), quando o dono ativar a conta de Sponsors.
 
 ---
 
-## Fora da 1.0 (ideias para depois)
-Sincronização com servidor, app de celular, marcadores e capítulos no vídeo, mini-player, novos tipos de questão
-(lacunas, ordenação, correspondência), imagens em cartas e cadernos.
+## Depois da 1.0 (priorizado)
+1. **Capturar o quadro do vídeo** para anotações e cartas, e **imagens em cartas e cadernos** (depois, oclusão de
+   imagem como no Anki).
+2. **Legenda dupla e tradução da legenda/transcrição** pela IA (cursos em inglês).
+3. **Capítulos e marcadores no vídeo**, com capítulos sugeridos pela IA a partir da transcrição.
+4. **Novos tipos**: cartas de lacunas (cloze); questões de associação e ordenação.
+5. **Estatísticas dos flashcards**: cartas-problema, retenção real, previsão de carga, "dias leves"; junto, otimizar
+   os parâmetros do FSRS pelo histórico.
+6. **Revisão intensiva antes de prova** (baralho ou tópico fora do limite diário) e **carta a partir de um grifo do
+   PDF** com um clique.
+7. **Tradução da interface** (preparar o app para vários idiomas; inglês e espanhol pelo Weblate, plano Libre).
+8. Mais adiante: sistema de plugins, perfis no mesmo computador, sincronização própria e app de celular.

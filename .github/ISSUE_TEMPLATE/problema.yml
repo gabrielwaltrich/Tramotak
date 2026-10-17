@@ -1,0 +1,62 @@
+name: Problema
+description: Algo não funciona como deveria
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Obrigado por relatar! Não cole chaves de API, senhas, caminhos com o seu nome nem conteúdo de cursos pagos.
+        Falhas de segurança vão pelo aviso privado (veja o SECURITY.md), não por aqui.
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do Tramotak
+      description: Em Configurações → Sobre.
+      placeholder: "0.7.2"
+    validations:
+      required: true
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema
+      options:
+        - Windows 11
+        - Windows 10
+        - Linux (Ubuntu, Mint, Pop!_OS e afins)
+        - Linux (outra distribuição)
+    validations:
+      required: true
+  - type: dropdown
+    id: instalacao
+    attributes:
+      label: Como você instalou
+      options:
+        - Instalador do Windows (setup.exe)
+        - Windows portátil (portable.exe)
+        - .deb
+        - AppImage
+        - A partir do código (npm run dev)
+    validations:
+      required: true
+  - type: textarea
+    id: aconteceu
+    attributes:
+      label: O que aconteceu
+      description: E o que você esperava que acontecesse.
+    validations:
+      required: true
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para repetir
+      placeholder: |
+        1. Abra um curso com vídeos em .mkv
+        2. Clique em …
+        3. Veja o erro …
+    validations:
+      required: true
+  - type: textarea
+    id: extras
+    attributes:
+      label: Capturas de tela ou mensagens de erro
+      description: Se aparecer uma mensagem, copie o texto dela.

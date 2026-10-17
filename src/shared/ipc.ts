@@ -214,6 +214,7 @@ export const IPC = {
   secretsSetGroqKey: 'secrets:setGroqKey',
   secretsHasGroqKey: 'secrets:hasGroqKey',
   openFfmpegLicense: 'app:openFfmpegLicense',
+  openLicense: 'app:openLicense',
   secretsSetAiKey: 'secrets:setAiKey',
   secretsAiKeys: 'secrets:aiKeys',
   aiModels: 'ai:models',
@@ -344,6 +345,8 @@ export interface TramotakApi {
     /** O processo principal pede para abrir uma rota (ex.: clique numa notificação). Devolve o "desinscrever". */
     onNavigate(callback: (path: string) => void): () => void
     openFfmpegLicense(): Promise<void>
+    /** Abre o texto da licença do Tramotak (GPL-3.0). */
+    openLicense(): Promise<void>
   }
   dashboard: {
     get(): Promise<DashboardData>

@@ -20,6 +20,8 @@ Roteiro até a 1.0: [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md). Plano original e
   `VACUUM INTO`) para um perfil temporário no scratchpad e apagar depois.
 - **Não enviar o e-mail do usuário** a nenhum serviço.
 - **macOS foi descontinuado** na 0.6.0: só Windows e Linux. Não reintroduzir no CI nem no empacotamento.
+- **Licença GPL-3.0 ou posterior.** Dependência nova precisa ser compatível (MIT, BSD, Apache-2.0, ISC, GPL…).
+  Nada de telemetria. Regras para quem contribui no `CONTRIBUTING.md`.
 
 ## Comandos
 

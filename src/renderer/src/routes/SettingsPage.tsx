@@ -233,6 +233,16 @@ export function SettingsPage() {
             <dd className="text-text">{info.data.electron}</dd>
           </dl>
           <p className="mt-3 text-xs text-muted">
+            O Tramotak é software livre e gratuito: você pode usá-lo, estudar o código, modificá-lo e redistribuí-lo nos termos da GNU GPL, versão 3 ou posterior.{' '}
+            <button type="button" onClick={() => window.api.app.openLicense().catch((e) => toast(errorMessage(e), 'error'))} className="text-accent hover:underline">
+              Ver licença
+            </button>{' '}
+            ·{' '}
+            <a href="https://github.com/gabrielwaltrich/Tramotak" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+              Código-fonte
+            </a>
+          </p>
+          <p className="mt-1 text-xs text-muted">
             Inclui o FFmpeg (licença GPL), distribuído como programa separado para converter vídeos e extrair áudio.{' '}
             <button type="button" onClick={() => window.api.app.openFfmpegLicense().catch((e) => toast(errorMessage(e), 'error'))} className="text-accent hover:underline">
               Ver licença

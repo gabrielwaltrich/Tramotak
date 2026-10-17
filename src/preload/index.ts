@@ -12,7 +12,8 @@ const api: TramotakApi = {
       ipcRenderer.on(IPC.navigate, listener)
       return () => ipcRenderer.removeListener(IPC.navigate, listener)
     },
-    openFfmpegLicense: () => ipcRenderer.invoke(IPC.openFfmpegLicense)
+    openFfmpegLicense: () => ipcRenderer.invoke(IPC.openFfmpegLicense),
+    openLicense: () => ipcRenderer.invoke(IPC.openLicense)
   },
   media: {
     jobs: () => ipcRenderer.invoke(IPC.mediaJobs),

@@ -5,7 +5,7 @@
   "description": "Central de estudos desktop: importe seus cursos e estude com eles.",
   "main": "./out/main/index.js",
   "author": "Gabriel Waltrich",
-  "license": "UNLICENSED",
+  "license": "GPL-3.0-or-later",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",

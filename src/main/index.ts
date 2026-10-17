@@ -106,6 +106,11 @@ function registerIpc(db: Database): void {
     const error = await shell.openPath(app.getPath('userData'))
     if (error) throw new Error(error)
   })
+  ipcMain.handle(IPC.openLicense, async () => {
+    // Instalado, vem nos recursos (extraResources); em desenvolvimento, é o LICENSE do repositório.
+    const error = await shell.openPath(app.isPackaged ? join(process.resourcesPath, 'LICENSE.txt') : join(app.getAppPath(), 'LICENSE'))
+    if (error) throw new Error(error)
+  })
   ipcMain.handle(IPC.dashboardGet, () => getDashboard(db))
   ipcMain.handle(IPC.searchQuery, (_e, text: unknown) => search(db, String(text ?? '').slice(0, 200)))
   ipcMain.handle(IPC.settingsGet, () => getSettings(db))

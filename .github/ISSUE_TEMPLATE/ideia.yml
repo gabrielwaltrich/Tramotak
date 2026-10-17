@@ -1,0 +1,22 @@
+name: Ideia
+description: Sugira um recurso ou uma melhoria
+labels: [ideia]
+body:
+  - type: textarea
+    id: problema
+    attributes:
+      label: Que problema do seu estudo isso resolve?
+      description: Conte a situação; ajuda mais do que descrever só a solução.
+    validations:
+      required: true
+  - type: textarea
+    id: ideia
+    attributes:
+      label: Como você imagina
+    validations:
+      required: true
+  - type: textarea
+    id: outros
+    attributes:
+      label: Você já viu isso em outro app?
+      description: Anki, Obsidian, Coursera… Um link ou uma captura ajuda.

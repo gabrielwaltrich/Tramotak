@@ -87,8 +87,9 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 
 - PDFs reais grandes e com imagens no leitor (os testes usaram PDFs gerados) e o fim de um bloco do Pomodoro com o
   relógio de verdade (aviso do sistema).
-- A primeira atualização automática real pelo `.deb` (0.6.0 → 0.6.1): deve aparecer "Atualizar para 0.6.1" na barra
+- A primeira atualização automática real pelo `.deb` (para a 0.7.2): deve aparecer "Atualizar para 0.7.2" na barra
   superior, pedir a senha do sistema e reabrir na versão nova.
+- Backup numa pasta do Google Drive ou do Dropbox de verdade (os testes usaram pasta local e pasta removida).
 - Instalação e atualização no Windows de verdade (só o CI testou).
 - IA e pesquisa na internet com chaves e contas reais.
 
@@ -164,8 +165,16 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
 - Conferido no app real: perfil vazio (todas as telas, vídeo, PDF, Início), cópia do banco do dono (nada aparece) e
   app empacotado (`electron-builder --linux dir`) instalando o exemplo.
 
-## Próximo: resto da 0.9 e 1.0 (resumo do roteiro)
+### 3. Licença e comunidade ✅ (17/10/2026)
+- **GPL-3.0 ou posterior** (`LICENSE` com o texto oficial da GNU; `package.json`; o app mostra a licença em
+  Configurações → Sobre, vinda de `extraResources` → `LICENSE.txt`). Antes era `UNLICENSED`, sem arquivo de licença.
+  Todas as dependências de produção são compatíveis (MIT, ISC, Apache-2.0, BSD, Python-2.0, BlueOak; FFmpeg GPL).
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `.github/ISSUE_TEMPLATE/` (Problema, Ideia),
+  `.github/pull_request_template.md` e capturas em `docs/screenshots/` (só o curso de exemplo, nenhum dado pessoal).
+- Configurações do repositório no GitHub ficam com o dono (o app não mexe): descrição, tópicos, Discussions e o aviso
+  privado de segurança (que o SECURITY.md usa).
 
-- **0.9** — Polimento e beta: primeira execução guiada, "Relatar problema", acessibilidade, backup para pasta
-  escolhida, beta com usuários reais.
-- **1.0** — Instalador do Windows assinado, correções do beta e documentação de uso.
+## Próximo: resto da 0.9 e 1.0
+Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): **Relatar problema** → **exportar para o Anki** → pedir o
+**SignPath** e publicar no **Flathub/winget** → **acessibilidade** → publicar a 0.9 e começar o **beta** → 1.0
+(correções, documentação de uso, Sponsors).
