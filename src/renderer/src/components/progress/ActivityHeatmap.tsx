@@ -43,7 +43,7 @@ export function ActivityHeatmap({ daily, goalMinutes }: { daily: DailyActivity[]
 
   return (
     <div className="relative" onMouseLeave={() => setHover(null)}>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" role="region" aria-label="Mapa de atividade (role para o lado)" tabIndex={0}>
         <svg width={width} height={height} role="img" aria-label={`Mapa de atividade: ${plural(activeDays, 'dia')} com estudo no último ano`} className="block">
           {months.map((m) => (
             <text key={`${m.x}-${m.label}`} x={m.x} y={10} className="fill-[var(--text-muted)] text-[10px]">
