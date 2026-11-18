@@ -34,7 +34,7 @@ importar os seus.
 
 Tudo fica no seu computador (exceto o que você mandar transcrever ou gerar com um provedor na nuvem): o Tramotak lê as pastas dos cursos sem alterá-las e guarda progresso e anotações num banco local.
 
-Plano original: [docs/PLANO-MVP.md](docs/PLANO-MVP.md). Caminho até a 1.0: [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md).
+Guia de todas as telas: [docs/GUIA-DE-USO.md](docs/GUIA-DE-USO.md). Plano original: [docs/PLANO-MVP.md](docs/PLANO-MVP.md). Caminho até a 1.0: [docs/ROADMAP-1.0.md](docs/ROADMAP-1.0.md).
 
 ## Instalação
 

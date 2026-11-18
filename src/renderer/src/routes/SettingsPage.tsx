@@ -129,7 +129,7 @@ function NotificationSettings({ enabled, lead }: { enabled: boolean; lead: (type
         />
         Ativar notificações do planner
       </label>
-      <div className={`flex items-center gap-2 text-sm ${enabled ? '' : 'opacity-50'}`}>
+      <div className="flex items-center gap-2 text-sm">
         <span className="text-muted">Avisar</span>
         <div role="radiogroup" aria-label="Antecedência do aviso" className="inline-flex rounded-lg border border-border p-1">
           {LEADS.map((m) => (
@@ -140,7 +140,7 @@ function NotificationSettings({ enabled, lead }: { enabled: boolean; lead: (type
               aria-checked={lead === m}
               disabled={!enabled}
               onClick={() => save.mutate({ notifyLeadMinutes: m })}
-              className={`rounded-md px-3 py-1 text-sm ${lead === m ? 'bg-accent-soft text-accent' : 'text-muted hover:text-text'}`}
+              className={`rounded-md px-3 py-1 text-sm disabled:opacity-50 ${lead === m ? 'bg-accent-soft text-accent' : 'text-muted hover:text-text'}`}
             >
               {m === 0 ? 'na hora' : `${m} min antes`}
             </button>
@@ -238,7 +238,7 @@ export function SettingsPage() {
               Ver licença
             </button>{' '}
             ·{' '}
-            <a href="https://github.com/gabrielwaltrich/Tramotak" target="_blank" rel="noreferrer" className="text-accent hover:underline">
+            <a href="https://github.com/gabrielwaltrich/Tramotak" target="_blank" rel="noreferrer" className="text-accent underline">
               Código-fonte
             </a>
           </p>

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Tramotak
+Comment=Central de estudos para os seus cursos
+Exec=tramotak %U
+Icon=io.github.gabrielwaltrich.Tramotak
+Terminal=false
+Type=Application
+Categories=Education;

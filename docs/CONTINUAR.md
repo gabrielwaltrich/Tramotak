@@ -2,11 +2,10 @@
 
 ## Estado atual
 
-- **Última versão publicada: v0.7.3** (exportar para o Anki e Relatar problema; antes, v0.7.2: (backup numa pasta escolhida, instância única e primeira execução guiada com
-  curso de exemplo: as primeiras partes da 0.9), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.2
-- Testes no momento da publicação: 506 unitários (Vitest) e 22 E2E (Playwright), lint e typecheck limpos, CI verde
+- **Última versão estável publicada: v0.7.3** (exportar para o Anki e Relatar problema). **v0.9.0 publicada como pré-lançamento (beta)**: acessibilidade (axe no E2E, contraste em todos os temas), arquivos de distribuição em `packaging/` e `docs/GUIA-DE-USO.md`. Só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.9.0
+- Testes no momento da publicação: 523 unitários (Vitest) e 25 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.7.3; não há trabalho pela metade. Próximo passo: o resto da **0.9** (ver abaixo).
+- `main` está igual à v0.9.0. Próximo passo: o beta e a **1.0** (ver o fim deste arquivo). Cadastros pendentes do dono: SignPath, Flathub, winget e GitHub Sponsors (ver `packaging/README.md`).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -205,7 +204,10 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   Tramotak passou a usar só as duas primeiras colunas de um texto com tabulação.
 - Junto: "Relatar problema" agora copia e salva exatamente o texto da prévia (antes gerava de novo e o horário mudava).
 
-## Próximo: resto da 0.9 e 1.0
+## Próximo: beta e 1.0
+Feito na 0.9.0: acessibilidade e documentação de uso; distribuição só preparada em `packaging/`.
+
+### Ordem original
 Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): ~~Relatar problema~~ ✅ → ~~exportar para o Anki~~ ✅ → pedir o
 **SignPath** e publicar no **Flathub/winget** → **acessibilidade** → publicar a 0.9 e começar o **beta** → 1.0
 (correções, documentação de uso, Sponsors).

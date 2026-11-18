@@ -102,16 +102,16 @@ Prioridades revistas em 17/10/2026, depois do levantamento de apps parecidos e d
 - ✅ **Exportar flashcards para o Anki** (`.apkg` e texto): um ou vários baralhos, com o agendamento e o histórico
   (opcional) e um campo Fonte (curso, aula e minuto). Sem prender a pessoa ao app e com revisão no celular de graça
   (AnkiDroid/AnkiMobile). Conferido importando na biblioteca oficial do Anki (26.09).
-- **Assinatura grátis do instalador do Windows** pela SignPath Foundation (exige licença OSI, que agora existe, e
+- ✅ (arquivos prontos em `packaging/`; falta o cadastro do dono) **Assinatura grátis do instalador do Windows** pela SignPath Foundation (exige licença OSI, que agora existe, e
   build automatizado, que o CI já faz). Substitui o certificado pago que estava na 1.0.
-- **Distribuição**: Flathub (sem a atualização automática própria dentro do Flatpak) e winget; Microsoft Store é grátis
+- ✅ (rascunhos em `packaging/`; falta o envio do dono) **Distribuição**: Flathub (sem a atualização automática própria dentro do Flatpak) e winget; Microsoft Store é grátis
   para pessoa física.
-- Acessibilidade (teclado, leitor de tela, contraste) revisada tela a tela.
-- Beta com usuários em Windows e Linux reais (com o "Relatar problema" pronto).
+- ✅ **Acessibilidade** revisada tela a tela com o axe-core no E2E (WCAG 2.1 AA, 15 telas), contraste corrigido nos 5 temas e 8 cores (teste unitário), rótulos e barra de progresso. Teste manual com leitor de tela (Orca/NVDA) fica para o beta.
+- 🚧 Beta: **v0.9.0 publicada como pré-lançamento**; falta o uso real em Windows e Linux e os relatos.
 
 ## 1.0.0 ⬜
 - Correções do beta.
-- Documentação de uso (o curso de exemplo cobre o começo; falta um guia com todas as telas).
+- ✅ Documentação de uso: `docs/GUIA-DE-USO.md`.
 - GitHub Sponsors e a página de apoio (`FUNDING.yml`), quando o dono ativar a conta de Sponsors.
 
 ---

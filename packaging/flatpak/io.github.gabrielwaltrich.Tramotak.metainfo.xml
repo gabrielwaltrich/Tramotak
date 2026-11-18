@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gabrielwaltrich.Tramotak</id>
+  <name>Tramotak</name>
+  <summary>Central de estudos para os seus cursos</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.gabrielwaltrich"><name>Gabriel Waltrich</name></developer>
+  <description>
+    <p>Importe os cursos que já estão no seu computador e estude com eles: player com anotações, PDFs, flashcards com repetição espaçada (FSRS), questões e simulados, cadernos, mapas mentais, plano de estudos e IA opcional.</p>
+    <p>Tudo fica no seu computador. Os arquivos dos cursos nunca são alterados.</p>
+  </description>
+  <launchable type="desktop-id">io.github.gabrielwaltrich.Tramotak.desktop</launchable>
+  <url type="homepage">https://github.com/gabrielwaltrich/Tramotak</url>
+  <url type="bugtracker">https://github.com/gabrielwaltrich/Tramotak/issues</url>
+  <categories><category>Education</category></categories>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.7.3" date="2026-11-17"/>
+  </releases>
+</component>

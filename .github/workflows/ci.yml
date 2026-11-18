@@ -129,7 +129,12 @@ jobs:
         run: |
           NOTES="docs/releases/${GITHUB_REF_NAME}.md"
           [ -f "$NOTES" ] || NOTES=/dev/null
+          # Notas cujo título diz "pré-lançamento" (beta) saem como pre-release: não viram a "última versão", então a
+          # atualização automática de quem usa a versão estável não as pega.
+          PRE=""
+          head -1 "$NOTES" | grep -qi 'pré-lançamento' && PRE="--prerelease"
           gh release create "$GITHUB_REF_NAME" artifacts/* \
             --title "Tramotak ${GITHUB_REF_NAME#v}" \
             --notes-file "$NOTES" \
+            $PRE \
             --verify-tag

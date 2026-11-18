@@ -4,6 +4,7 @@ import { cp, mkdir, mkdtemp, readdir, readFile, rm, stat } from 'node:fs/promise
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { _electron as electron, expect, test, type ElectronApplication, type Page } from '@playwright/test'
+import axe from 'axe-core'
 import { makePdf } from '../helpers/pdf'
 
 const FIXTURE = join(__dirname, 'fixtures', 'Curso E2E')
@@ -137,7 +138,7 @@ test('importar → assistir → anotar → concluir, e os dados sobrevivem a um 
   await second.page.getByRole('link', { name: 'Meus Cursos' }).click()
   // 1 de 3 aulas concluída; a duração já foi lida dos vídeos ("12 s").
   await expect(second.page.getByText(/12 s · 33%/)).toBeVisible()
-  await second.page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await second.page.getByRole('button', { name: /^Curso E2E/ }).click()
   await second.page.getByRole('link', { name: /Boas-vindas/ }).click()
   await expect(second.page.getByRole('tabpanel').getByText('Minha primeira anotação')).toBeVisible()
   await second.app.close()
@@ -146,7 +147,7 @@ test('importar → assistir → anotar → concluir, e os dados sobrevivem a um 
 test('aula em Markdown abre isolada, sem scripts', async () => {
   const { app, page } = await launch()
   await page.getByRole('link', { name: 'Meus Cursos' }).click()
-  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: /^Curso E2E/ }).click()
   await page.getByRole('link', { name: /Leia-me/ }).click()
   const frame = page.locator('iframe[title="Conteúdo da aula"]')
   await expect(frame).toHaveAttribute('sandbox', '')
@@ -191,7 +192,7 @@ test('busca global: barra superior e Ctrl+K encontram a anotação e abrem o ví
 test('flashcards: anotação vira carta, estudo com teclado e link de volta para a aula', async () => {
   const { app, page } = await launch()
   await page.getByRole('link', { name: 'Meus Cursos' }).click()
-  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: /^Curso E2E/ }).click()
   await page.getByRole('link', { name: /Boas-vindas/ }).click()
 
   // Criar a carta a partir da anotação do primeiro teste
@@ -270,7 +271,7 @@ test('planner e progresso: tarefa de hoje aparece no Início e conclui de lá; p
 test('plano de estudos: prévia, aulas distribuídas no Planner e no Início, e apagar', async () => {
   const { app, page } = await launch()
   await page.getByRole('link', { name: 'Meus Cursos' }).click()
-  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: /^Curso E2E/ }).click()
   await page.getByRole('button', { name: /Criar plano de estudos/ }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('radio', { name: 'Minutos por dia' }).click()
@@ -296,7 +297,7 @@ test('plano de estudos: prévia, aulas distribuídas no Planner e no Início, e 
 
   // Apagar o plano tira as tarefas pendentes dele
   await page.getByRole('link', { name: 'Meus Cursos' }).click()
-  await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+  await page.getByRole('button', { name: /^Curso E2E/ }).click()
   await page.getByRole('button', { name: 'Editar' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Apagar plano' }).click()
   await expect(page.getByText(/Plano apagado/)).toBeVisible()
@@ -513,7 +514,7 @@ test('IA: provedor local gera flashcards de uma aula, revisão escolhe e salva n
 
     // Do player para a IA, já com a aula escolhida (legenda + anotação como material)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('link', { name: /Boas-vindas/ }).click()
     await page.getByRole('link', { name: 'Gerar com IA' }).click()
     // Por padrão só a fala da aula (legenda) vai para a IA; as anotações ficam desmarcadas
@@ -568,7 +569,7 @@ test('conversa com a IA: resposta em tempo real só com a fala da aula e horári
   try {
     await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('link', { name: /Boas-vindas/ }).click()
     await page.getByRole('tab', { name: 'Perguntar à IA' }).click()
     await expect(page.getByText(/Base: legenda do curso/)).toBeVisible()
@@ -630,7 +631,7 @@ test('conversa sobre o curso: termos pela IA, busca local, só trechos sem títu
   try {
     await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('button', { name: 'Perguntar ao curso' }).click()
     const panel = page.getByRole('complementary', { name: 'Perguntar ao curso' })
     // Legenda da aula de vídeo e o texto do Leia-me entram; a segunda aula (sem legenda) não
@@ -659,7 +660,7 @@ test('conversa sobre o curso: termos pela IA, busca local, só trechos sem títu
 
     // Fecha o painel (a escolha fica guardada para os próximos testes)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('button', { name: 'Fechar a conversa' }).click()
   } finally {
     await app.close()
@@ -696,7 +697,7 @@ test('gerar do curso inteiro: flashcards aula por aula, salvos direto no baralho
   try {
     await page.evaluate((url) => window.api.settings.update({ aiProvider: 'ollama', ollamaUrl: url, aiModels: { gemini: 'g', openrouter: 'o', ollama: 'modelo-teste', anthropic: 'a', openai: 'x' } }), `http://127.0.0.1:${port}`)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('link', { name: 'Gerar flashcards ou questões do curso com a IA' }).click()
 
     await expect(page.getByRole('radio', { name: 'Curso inteiro' })).toHaveAttribute('aria-checked', 'true')
@@ -771,7 +772,7 @@ test('revisão pós-aula: ao terminar o vídeo, perguntas só da fala da aula, c
       `http://127.0.0.1:${port}`
     )
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso E2E' }).click()
+    await page.getByRole('button', { name: /^Curso E2E/ }).click()
     await page.getByRole('link', { name: /Boas-vindas/ }).click()
     await expect(page.getByRole('button', { name: /Revisão rápida/ })).toBeVisible()
 
@@ -872,7 +873,7 @@ test('PDF no leitor do app: busca, grifo, anotação na página, conclusão no f
   try {
     courseId = await page.evaluate((path) => window.api.courses.import({ path, title: 'Curso PDF', structure: 'flat', numbering: 'none' }), root)
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso PDF' }).click()
+    await page.getByRole('button', { name: /^Curso PDF/ }).click()
     await page.getByRole('link', { name: /01 Apostila/ }).click()
 
     const reader = page.getByRole('toolbar', { name: 'Leitor de PDF' })
@@ -920,7 +921,7 @@ test('PDF no leitor do app: busca, grifo, anotação na página, conclusão no f
 
     // Sair e voltar: reabre na última página lida
     await page.getByRole('link', { name: 'Meus Cursos' }).click()
-    await page.getByRole('button', { name: 'Abrir Curso PDF' }).click()
+    await page.getByRole('button', { name: /^Curso PDF/ }).click()
     await page.getByRole('link', { name: /01 Apostila/ }).click()
     await expect(pageBox).toHaveValue('3')
 
@@ -1079,13 +1080,13 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
     expect(await root.evaluate((el) => el.style.fontSize)).toBe('18px')
 
     await page.getByRole('radiogroup', { name: 'Cor de destaque' }).getByRole('radio', { name: 'Verde' }).click()
-    expect(await root.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
+    expect(await root.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#03684c')
     await app.close()
 
     const second = await launch()
     const root2 = second.page.locator('html')
     await expect(root2).toHaveAttribute('data-theme', 'paper')
-    expect(await root2.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#047857')
+    expect(await root2.evaluate((el) => el.style.getPropertyValue('--accent'))).toBe('#03684c')
     // Encerrado à força (como quando o fechamento trava): a aparência vem do banco, não só do localStorage.
     await second.page.evaluate(() => localStorage.clear())
     await killApp(second.app.process())
@@ -1105,7 +1106,7 @@ test('aparência: estilo pronto e cor de destaque mudam a interface na hora e fi
 test('pomodoro: começa pela barra superior, pausa, pula para a pausa, recomeça e as opções valem na hora', async () => {
   const { app, page } = await launch()
   try {
-    await page.getByRole('button', { name: 'Pomodoro', exact: true }).click()
+    await page.getByRole('button', { name: /Pomodoro/ }).click()
     const panel = page.getByRole('dialog', { name: 'Pomodoro' })
     await expect(panel.getByText('25:00')).toBeVisible()
     await panel.getByRole('button', { name: 'Começar foco' }).click()
@@ -1129,7 +1130,7 @@ test('pomodoro: começa pela barra superior, pausa, pula para a pausa, recomeça
     await expect(page.locator('#pomodoro')).toBeInViewport()
     await page.getByRole('radiogroup', { name: 'Foco' }).getByRole('radio', { name: '50 min' }).click()
     await expect.poll(() => page.evaluate(() => window.api.settings.get().then((s) => s.pomodoro.focusMinutes))).toBe(50)
-    await page.getByRole('button', { name: 'Pomodoro', exact: true }).click()
+    await page.getByRole('button', { name: /Pomodoro/ }).click()
     await expect(panel.getByText('50:00')).toBeVisible()
 
     await page.evaluate(async () => {
@@ -1343,6 +1344,39 @@ test('exportar para o Anki: .apkg pela tela, texto com cabeçalhos, e o pacote v
     const imported = await page.evaluate(() => window.api.decks.importFile())
     expect(imported?.imported).toBe(deck.total)
     await page.evaluate((id) => window.api.decks.delete(id), imported!.deckId)
+  } finally {
+    await app.close()
+  }
+})
+
+test('acessibilidade: nenhuma violação séria (axe) nas telas principais', async () => {
+  const { page, app } = await launch()
+  try {
+    const ids = await page.evaluate(async () => {
+      const courses = await window.api.courses.list()
+      const detail = await window.api.courses.get(courses[0].id)
+      const decks = await window.api.decks.list()
+      const banks = await window.api.banks.list()
+      const lesson = detail.modules.flatMap((m: { lessons: { id: number }[] }) => m.lessons)[0]
+      return { course: courses[0].id, lesson: lesson?.id, deck: decks[0]?.id, bank: banks[0]?.id }
+    })
+    const routes = ['/', '/courses', `/courses/${ids.course}`, `/lesson/${ids.lesson}`, '/flashcards', `/flashcards/${ids.deck}`,
+      '/questions', `/questions/${ids.bank}`, '/notes', '/notebooks', '/mindmaps', '/planner', '/progress', '/ai', '/settings']
+    const found: string[] = []
+    for (const route of routes) {
+      await page.evaluate((r) => { location.hash = '#' + r }, route)
+      await page.waitForTimeout(500)
+      // O Electron não cria abas novas, então o @axe-core/playwright não serve: o axe-core entra direto na página.
+      await page.evaluate(axe.source)
+      const result = await page.evaluate(
+        () => (window as unknown as { axe: typeof axe }).axe.run(document, { runOnly: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] })
+      )
+      for (const v of result.violations) {
+        found.push(`${route} [${v.impact}] ${v.id}: ${v.nodes.length}x ${v.nodes.slice(0, 2).map((n) => n.target.join(' ')).join(' | ')}`)
+      }
+    }
+    console.log('AXE\n' + found.join('\n'))
+    expect(found).toEqual([])
   } finally {
     await app.close()
   }

@@ -31,13 +31,13 @@ export const THEMES: { id: Exclude<ThemeId, 'system'>; label: string; mode: 'dar
 
 /** Cada cor tem um tom para fundo escuro (mais claro) e outro para fundo claro (mais escuro). */
 export const ACCENTS: { id: AccentId; label: string; dark: string; light: string }[] = [
-  { id: 'blue', label: 'Azul', dark: '#4f8cff', light: '#1d5fe0' },
-  { id: 'purple', label: 'Roxo', dark: '#8b5cf6', light: '#7c3aed' },
-  { id: 'cyan', label: 'Ciano', dark: '#22c3ee', light: '#0e7490' },
-  { id: 'green', label: 'Verde', dark: '#34d399', light: '#047857' },
-  { id: 'amber', label: 'Âmbar', dark: '#fbbf24', light: '#b45309' },
-  { id: 'orange', label: 'Laranja', dark: '#fb923c', light: '#c2410c' },
-  { id: 'pink', label: 'Rosa', dark: '#f472b6', light: '#be185d' },
+  { id: 'blue', label: 'Azul', dark: '#6b9eff', light: '#1a54c5' },
+  { id: 'purple', label: 'Roxo', dark: '#ae8df9', light: '#6e34d3' },
+  { id: 'cyan', label: 'Ciano', dark: '#22c3ee', light: '#0c647c' },
+  { id: 'green', label: 'Verde', dark: '#34d399', light: '#03684c' },
+  { id: 'amber', label: 'Âmbar', dark: '#fbbf24', light: '#954507' },
+  { id: 'orange', label: 'Laranja', dark: '#fb923c', light: '#a3370a' },
+  { id: 'pink', label: 'Rosa', dark: '#f472b6', light: '#af1656' },
   { id: 'graphite', label: 'Grafite', dark: '#d4d4d8', light: '#3f3f46' }
 ]
 

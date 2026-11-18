@@ -18,6 +18,8 @@ function linuxPackageType(): string | null {
 
 /** Esta instalação consegue se atualizar sozinha? */
 export function updateMode(): UpdateMode {
+  // Dentro do Flatpak quem atualiza é o Flathub: sem busca nem aviso próprio (o Flatpak define FLATPAK_ID).
+  if (process.env.FLATPAK_ID) return 'dev'
   if (!app.isPackaged && !process.env.TRAMOTAK_UPDATE_URL) return 'dev'
   if (process.platform === 'win32' && !process.env.PORTABLE_EXECUTABLE_FILE) return 'auto'
   if (process.platform === 'linux' && process.env.APPIMAGE) return 'auto'

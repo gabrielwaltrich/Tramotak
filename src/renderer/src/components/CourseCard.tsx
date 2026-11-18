@@ -43,7 +43,8 @@ export function CourseCard({ course, onEdit, onRevalidate, onRelocate, onDelete,
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-xl border border-border bg-surface transition hover:border-accent/50">
-      <button type="button" onClick={open} className="text-left" aria-label={`Abrir ${course.title}`}>
+      {/* A capa só repete o botão do título logo abaixo: fora do teclado e dos leitores de tela para não ter dois "Abrir". */}
+      <button type="button" onClick={open} className="text-left" tabIndex={-1} aria-hidden="true">
         <div
           className="grid aspect-video place-items-center text-3xl font-semibold text-white/90"
           style={{ background: `linear-gradient(135deg, hsl(${h} 55% 38%), hsl(${(h + 40) % 360} 60% 22%))` }}
@@ -78,7 +79,15 @@ export function CourseCard({ course, onEdit, onRevalidate, onRelocate, onDelete,
           )}
         </div>
 
-        <div className="h-1.5 overflow-hidden rounded-full bg-surface-2" aria-label={`${progress}% concluído`}>
+        <div
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={progress}
+          aria-label="Progresso do curso"
+          aria-valuetext={`${progress}% concluído`}
+          className="h-1.5 overflow-hidden rounded-full bg-surface-2"
+        >
           <div className="h-full rounded-full bg-accent" style={{ width: `${progress}%` }} />
         </div>
 

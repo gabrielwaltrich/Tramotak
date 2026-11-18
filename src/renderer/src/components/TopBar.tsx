@@ -22,7 +22,6 @@ export function TopBar() {
             search.open(e.key)
           }
         }}
-        aria-label="Buscar cursos, aulas, anotações, flashcards e questões"
         className="mx-auto flex h-9 w-full max-w-xl items-center gap-2.5 rounded-lg border border-border bg-surface px-3 text-sm text-muted transition-colors hover:border-accent/50 hover:text-text focus-visible:border-accent"
       >
         <Search size={16} className="shrink-0" />

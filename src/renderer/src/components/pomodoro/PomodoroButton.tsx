@@ -53,7 +53,7 @@ export function PomodoroButton() {
         onClick={() => setOpen((o) => !o)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label={started ? `Pomodoro: ${PHASE_LABEL[state.phase]}, ${formatTimer(remainingMs)}${state.running ? '' : ' (pausado)'}` : 'Pomodoro'}
+        aria-label={started ? `Pomodoro: ${PHASE_LABEL[state.phase]}, ${formatTimer(remainingMs)}${state.running ? '' : ' (pausado)'}` : 'Foco (Pomodoro)'}
         title="Pomodoro"
         className={`inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-xs font-medium tabular-nums ${
           started ? `border-current/40 ${tone} bg-surface` : 'border-border text-muted hover:text-text'

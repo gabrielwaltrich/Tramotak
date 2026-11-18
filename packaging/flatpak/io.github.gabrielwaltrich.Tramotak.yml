@@ -1,0 +1,46 @@
+# Manifesto Flatpak para o Flathub (rascunho, para o dono enviar em github.com/flathub/flathub).
+# O app é empacotado com o electron-builder, e o Flatpak usa o .deb publicado na Release (sem recompilar).
+# Dentro do Flatpak a atualização automática própria fica desligada (quem atualiza é o Flathub).
+app-id: io.github.gabrielwaltrich.Tramotak
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+base: org.electronjs.Electron2.BaseApp
+base-version: '24.08'
+command: tramotak
+separate-locales: false
+finish-args:
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --share=network
+  # Os cursos ficam na pasta pessoal da pessoa (somente leitura): o app nunca altera arquivos de curso.
+  - --filesystem=home:ro
+modules:
+  - name: tramotak
+    buildsystem: simple
+    build-commands:
+      - ar x tramotak.deb data.tar.xz
+      - tar -xf data.tar.xz
+      - mkdir -p /app/tramotak
+      - cp -a opt/Tramotak/. /app/tramotak/
+      - install -Dm755 tramotak.sh /app/bin/tramotak
+      - install -Dm644 io.github.gabrielwaltrich.Tramotak.metainfo.xml /app/share/metainfo/io.github.gabrielwaltrich.Tramotak.metainfo.xml
+      - install -Dm644 io.github.gabrielwaltrich.Tramotak.desktop /app/share/applications/io.github.gabrielwaltrich.Tramotak.desktop
+      - install -Dm644 usr/share/icons/hicolor/512x512/apps/tramotak.png /app/share/icons/hicolor/512x512/apps/io.github.gabrielwaltrich.Tramotak.png
+    sources:
+      - type: file
+        # Trocar pela URL e o sha256 da versão a publicar (ver packaging/README.md).
+        url: https://github.com/gabrielwaltrich/Tramotak/releases/download/v0.7.3/Tramotak-0.7.3-linux-amd64.deb
+        sha256: TROCAR_PELO_SHA256_DO_DEB
+        dest-filename: tramotak.deb
+      - type: script
+        dest-filename: tramotak.sh
+        commands:
+          - exec zypak-wrapper /app/tramotak/tramotak "$@"
+      - type: file
+        path: io.github.gabrielwaltrich.Tramotak.metainfo.xml
+      - type: file
+        path: io.github.gabrielwaltrich.Tramotak.desktop

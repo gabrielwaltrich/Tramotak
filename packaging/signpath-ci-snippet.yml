@@ -1,0 +1,20 @@
+# Rascunho: incluir no job "package" do ci.yml, no Windows, entre "Instaladores" e o upload dos artefatos.
+# Pré-requisito: projeto aprovado no SignPath (ver packaging/README.md).
+      - name: Enviar o instalador ao SignPath
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        id: unsigned
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-windows
+          path: dist/*.exe
+      - name: Assinar com o SignPath
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/v')
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: dist-signed

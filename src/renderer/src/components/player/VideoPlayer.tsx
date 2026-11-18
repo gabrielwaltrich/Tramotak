@@ -563,7 +563,7 @@ export function VideoPlayer({ lesson, videoRef, startAt = null, onEnded, onNext,
 
             <div className="ml-auto flex items-center gap-1">
               <PopMenu
-                label="Velocidade"
+                label={`Velocidade ${rate}×`}
                 icon={<span className="tabular-nums">{rate}×</span>}
                 value={rate}
                 options={SPEEDS.map((s) => ({ value: s, label: s === 1 ? 'Normal' : `${s}×` }))}
