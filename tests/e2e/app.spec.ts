@@ -1300,3 +1300,50 @@ test('relatar problema: erros registrados, diagnóstico sem dados pessoais, copi
     await app.close()
   }
 })
+
+test('exportar para o Anki: .apkg pela tela, texto com cabeçalhos, e o pacote volta pelo importador', async () => {
+  const { page, app } = await launch()
+  const apkg = join(workdir, 'export.apkg')
+  const txt = join(workdir, 'export.txt')
+  try {
+    const decks = await page.evaluate(() => window.api.decks.list())
+    const deck = decks.find((d) => d.total > 0 && decks.filter((o) => o.title === d.title).length === 1)!
+    const stubSave = (path: string) =>
+      app.evaluate(({ dialog }, p) => {
+        dialog.showSaveDialog = (async () => ({ canceled: false, filePath: p })) as typeof dialog.showSaveDialog
+      }, path)
+
+    await page.getByRole('link', { name: 'Flashcards' }).click()
+    await page.getByRole('button', { name: 'Exportar', exact: true }).click()
+    const dialog = page.getByRole('dialog', { name: 'Exportar para o Anki' })
+    await dialog.getByRole('button', { name: 'Desmarcar' }).click()
+    await expect(dialog.getByRole('button', { name: /^Exportar \(0 cartas\)/ })).toBeDisabled()
+    await dialog.getByRole('checkbox', { name: new RegExp(`^${deck.title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\d`) }).check()
+    await expect(dialog.getByRole('checkbox', { name: 'Levar o agendamento e o histórico' })).toBeChecked()
+    await stubSave(apkg)
+    await dialog.getByRole('button', { name: /^Exportar \(/ }).click()
+    await expect(page.getByText(/exportadas? de 1 baralho/)).toBeVisible()
+    const bytes = await readFile(apkg)
+    expect(bytes.subarray(0, 2).toString()).toBe('PK')
+
+    // Texto: o agendamento não se aplica.
+    await page.getByRole('button', { name: 'Exportar', exact: true }).click()
+    await dialog.getByRole('radio', { name: 'Texto (.txt)' }).check()
+    await expect(dialog.getByRole('checkbox', { name: 'Levar o agendamento e o histórico' })).toBeDisabled()
+    await stubSave(txt)
+    await dialog.getByRole('button', { name: /^Exportar \(/ }).click()
+    await expect(dialog).toBeHidden()
+    const text = await readFile(txt, 'utf8')
+    expect(text.split('\n').slice(0, 2)).toEqual(['#separator:tab', '#html:true'])
+
+    // O .apkg exportado volta pelo importador do app, com as mesmas cartas.
+    await app.evaluate(({ dialog }, p) => {
+      dialog.showOpenDialog = (async () => ({ canceled: false, filePaths: [p] })) as typeof dialog.showOpenDialog
+    }, apkg)
+    const imported = await page.evaluate(() => window.api.decks.importFile())
+    expect(imported?.imported).toBe(deck.total)
+    await page.evaluate((id) => window.api.decks.delete(id), imported!.deckId)
+  } finally {
+    await app.close()
+  }
+})

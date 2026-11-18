@@ -87,7 +87,7 @@ Inclui o que seria a 0.4.3 (não publicada separadamente):
 - ~~Tutor dos pontos fracos e "explique meu erro"~~ e ~~custo estimado antes de gerar~~: tirados do roteiro em
   16/10/2026 por decisão do dono (não seriam úteis). Não implementar sem ele pedir de novo.
 
-## 0.9 — Projeto aberto, polimento e beta 🚧 (backup na pasta e primeira execução publicados na v0.7.2)
+## 0.9 — Projeto aberto, polimento e beta 🚧 (publicados: backup na pasta e primeira execução na v0.7.2; Anki e Relatar problema na v0.7.3)
 Prioridades revistas em 17/10/2026, depois do levantamento de apps parecidos e de como projetos abertos se mantêm.
 - ✅ Primeira execução guiada e curso de exemplo: boas-vindas em 3 passos (meta, curso de exemplo ou um seu, IA),
   "Primeiros passos" no Início e o curso "Como usar o Tramotak" com baralho e banco de questões de exemplo.
@@ -99,8 +99,9 @@ Prioridades revistas em 17/10/2026, depois do levantamento de apps parecidos e d
 - ✅ **"Relatar problema"** (Configurações → Sobre): diagnóstico sem dados pessoais (versão, sistema, instalação,
   contagens, opções, erros recentes) com prévia, copiar, salvar e abrir o formulário de problema; registro de erros em
   `logs/erros.jsonl` (500 entradas, 14 dias).
-- **Exportar flashcards para o Anki** (`.apkg` e CSV): sem prender a pessoa ao app e com revisão no celular de graça
-  (AnkiDroid/AnkiMobile).
+- ✅ **Exportar flashcards para o Anki** (`.apkg` e texto): um ou vários baralhos, com o agendamento e o histórico
+  (opcional) e um campo Fonte (curso, aula e minuto). Sem prender a pessoa ao app e com revisão no celular de graça
+  (AnkiDroid/AnkiMobile). Conferido importando na biblioteca oficial do Anki (26.09).
 - **Assinatura grátis do instalador do Windows** pela SignPath Foundation (exige licença OSI, que agora existe, e
   build automatizado, que o CI já faz). Substitui o certificado pago que estava na 1.0.
 - **Distribuição**: Flathub (sem a atualização automática própria dentro do Flatpak) e winget; Microsoft Store é grátis

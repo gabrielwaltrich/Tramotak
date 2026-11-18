@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Loader2, MoreVertical, Pencil, PlayCircle, RotateCcw, Search, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowLeft, FileDown, Loader2, MoreVertical, Pencil, PlayCircle, RotateCcw, Search, Sparkles, Trash2 } from 'lucide-react'
 import type { CardView, DeckDetail } from '@shared/flashcards'
 import { plural } from '@shared/format'
 import { matches } from '@shared/search'
@@ -12,6 +12,7 @@ import { TextArea, TextInput } from '../components/Field'
 import { Menu } from '../components/Menu'
 import { DeckCounts } from '../components/flashcards/DeckCounts'
 import { useToast } from '../components/Toast'
+import { ExportDecksDialog } from '../components/flashcards/ExportDecksDialog'
 
 const STATE_LABEL: Record<CardView['state'], string> = {
   new: 'Nova',
@@ -179,6 +180,7 @@ export function DeckPage() {
   const queryClient = useQueryClient()
   const toast = useToast()
   const [filter, setFilter] = useState('')
+  const [exporting, setExporting] = useState(false)
 
   const deck = useQuery({ queryKey: queryKeys.deck(deckId), queryFn: () => window.api.decks.get(deckId), staleTime: 0 })
 
@@ -220,6 +222,9 @@ export function DeckPage() {
             <DeckCounts newCount={d.newCount} learningCount={d.learningCount} reviewCount={d.reviewCount} />
           </div>
         </div>
+        <Button variant="ghost" onClick={() => setExporting(true)} disabled={d.total === 0}>
+          <FileDown size={16} /> Exportar
+        </Button>
         <Button variant="ghost" onClick={() => navigate(`/ai?deck=${deckId}&task=cards`)}>
           <Sparkles size={16} /> Gerar com IA
         </Button>
@@ -228,6 +233,7 @@ export function DeckPage() {
         </Button>
       </header>
 
+      {exporting && <ExportDecksDialog initial={[deckId]} onClose={() => setExporting(false)} />}
       <section className="mb-6 rounded-xl border border-border bg-surface p-4">
         <h2 className="mb-3 text-sm font-medium">Nova carta</h2>
         <CardEditor submitLabel="Adicionar" busy={create.isPending} onSubmit={(v) => create.mutateAsync(v)} />

@@ -19,7 +19,7 @@ importar os seus.
 - **PDFs:** aulas e anexos em PDF abrem no leitor do app (páginas, zoom, busca no texto), com grifos coloridos e anotações por página; a aula continua de onde parou e conta como concluída ao chegar na última página. O arquivo do curso não é alterado.
 - **Anotações:** aperte `N` durante a aula para anotar no ponto exato do vídeo; clique no horário para voltar a ele. A página **Anotações** reúne as de todos os cursos (busca, filtro, exportar em Markdown) e envia as escolhidas para um caderno, com os horários clicáveis.
 - **Busca global:** barra de pesquisa no topo (ou `Ctrl+K` em qualquer tela) encontra cursos, aulas, anotações e flashcards, sem se importar com acentos.
-- **Flashcards:** repetição espaçada com o FSRS (o algoritmo do Anki atual), retenção desejada e limites por baralho; transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki.
+- **Flashcards:** repetição espaçada com o FSRS (o algoritmo do Anki atual), retenção desejada e limites por baralho; transforme anotações em cartas ligadas ao ponto da aula; importe baralhos `.apkg` do Anki e exporte para o Anki (`.apkg` com o agendamento, ou texto), para revisar também no celular pelo AnkiDroid ou AnkiMobile.
 - **Questões e simulados:** bancos com 5 tipos de questão e fórmulas LaTeX, simulados cronometrados com anti-cola, correção e desempenho por tópico; importa e exporta JSON, CSV e GIFT (Moodle).
 - **Cadernos:** páginas com Markdown, fórmulas, desenho à mão (caneta com pressão) e links para o seu material; exporta PDF.
 - **Mapas mentais:** editor por teclado com layouts automáticos (árvore, organograma, radial), cores e anexos; exporta PNG e JSON.

@@ -133,7 +133,8 @@ const api: TramotakApi = {
     update: (id, patch) => ipcRenderer.invoke(IPC.decksUpdate, id, patch),
     delete: (id) => ipcRenderer.invoke(IPC.decksDelete, id),
     forCourse: (courseId) => ipcRenderer.invoke(IPC.decksForCourse, courseId),
-    importFile: () => ipcRenderer.invoke(IPC.decksImport)
+    importFile: () => ipcRenderer.invoke(IPC.decksImport),
+    exportFile: (request) => ipcRenderer.invoke(IPC.decksExport, request)
   },
   cards: {
     create: (input) => ipcRenderer.invoke(IPC.cardsCreate, input),
@@ -254,8 +255,8 @@ const api: TramotakApi = {
   },
   diagnostics: {
     get: () => ipcRenderer.invoke(IPC.diagnosticsGet),
-    copy: () => ipcRenderer.invoke(IPC.diagnosticsCopy),
-    save: () => ipcRenderer.invoke(IPC.diagnosticsSave),
+    copy: (text) => ipcRenderer.invoke(IPC.diagnosticsCopy, text),
+    save: (text) => ipcRenderer.invoke(IPC.diagnosticsSave, text),
     openIssue: () => ipcRenderer.invoke(IPC.diagnosticsOpenIssue),
     logError: (error) => ipcRenderer.invoke(IPC.diagnosticsLogError, error)
   },

@@ -81,8 +81,8 @@ export async function parseApkg(path: string): Promise<ParsedDeck> {
 }
 
 /**
- * Texto com uma carta por linha: "frente<TAB>verso" (exportação do Anki) ou "frente;verso".
- * Linhas começando com "#" são cabeçalhos do Anki e são ignoradas.
+ * Texto com uma carta por linha: "frente<TAB>verso" (exportação do Anki) ou "frente;verso". Com mais colunas (fonte,
+ * baralho, etiquetas), só as duas primeiras viram a carta. Linhas começando com "#" são cabeçalhos do Anki e são ignoradas.
  */
 export function parseText(content: string, title: string): ParsedDeck {
   const lines = content.replace(/^\uFEFF/, '').split(/\r?\n/)
@@ -91,8 +91,11 @@ export function parseText(content: string, title: string): ParsedDeck {
   const cards: ParsedDeck['cards'] = []
   for (const line of lines) {
     if (!line.trim() || line.startsWith('#')) continue
-    const [front = '', ...rest] = line.split(separator)
-    const card = cardFromFields(/<[a-z]/i.test(line) ? [front, rest.join(separator)] : [escapeHtml(front), escapeHtml(rest.join(separator))])
+    const columns = line.split(separator)
+    const front = columns[0] ?? ''
+    // Com tabulação, cada coluna é um campo; com ";", o resto da linha é o verso (pode ter ";" no texto).
+    const back = useTab ? (columns[1] ?? '') : columns.slice(1).join(separator)
+    const card = cardFromFields(/<[a-z]/i.test(line) ? [front, back] : [escapeHtml(front), escapeHtml(back)])
     if (card) cards.push(card)
   }
   return { title, cards }

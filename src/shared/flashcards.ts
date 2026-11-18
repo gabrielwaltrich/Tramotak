@@ -67,3 +67,22 @@ export interface ImportResult {
 }
 
 export const MAX_CARD_FIELD = 10_000
+
+// ── Exportar para o Anki ────────────────────────────────────────────────────
+
+/** `apkg`: pacote do Anki (abre no Anki, AnkiDroid e AnkiMobile). `text`: frente, verso, fonte e baralho por tabulação. */
+export type DeckExportFormat = 'apkg' | 'text'
+
+export interface DeckExportRequest {
+  deckIds: number[]
+  format: DeckExportFormat
+  /** Leva a próxima revisão, o intervalo e o histórico (só no .apkg); sem isso, as cartas entram como novas. */
+  includeSchedule: boolean
+}
+
+export interface DeckExportResult {
+  path: string
+  decks: number
+  cards: number
+}
+

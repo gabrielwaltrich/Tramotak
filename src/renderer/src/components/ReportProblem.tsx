@@ -26,12 +26,12 @@ function ReportDialog({ onClose }: { onClose: () => void }) {
   const toast = useToast()
   const text = useQuery({ queryKey: ['diagnostics'], queryFn: () => window.api.diagnostics.get(), staleTime: 0, gcTime: 0 })
   const copy = useMutation({
-    mutationFn: () => window.api.diagnostics.copy(),
+    mutationFn: () => window.api.diagnostics.copy(text.data!),
     onSuccess: () => toast('Diagnóstico copiado'),
     onError: (e) => toast(errorMessage(e), 'error')
   })
   const save = useMutation({
-    mutationFn: () => window.api.diagnostics.save(),
+    mutationFn: () => window.api.diagnostics.save(text.data!),
     onSuccess: (path) => path && toast('Diagnóstico salvo'),
     onError: (e) => toast(errorMessage(e), 'error')
   })

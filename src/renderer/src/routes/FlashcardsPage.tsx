@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { FileUp, Layers, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
+import { FileDown, FileUp, Layers, Loader2, MoreVertical, Pencil, Plus, Trash2 } from 'lucide-react'
 import type { DeckSummary } from '@shared/flashcards'
 import { plural } from '@shared/format'
 import { errorMessage, queryKeys } from '../lib/api'
@@ -13,6 +13,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { DeckDialog } from '../components/flashcards/DeckDialog'
 import { DeckCounts } from '../components/flashcards/DeckCounts'
 import { useToast } from '../components/Toast'
+import { ExportDecksDialog } from '../components/flashcards/ExportDecksDialog'
 
 export function FlashcardsPage() {
   const navigate = useNavigate()
@@ -21,6 +22,7 @@ export function FlashcardsPage() {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<DeckSummary | null>(null)
   const [deleting, setDeleting] = useState<DeckSummary | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const decks = useQuery({ queryKey: queryKeys.decks, queryFn: () => window.api.decks.list(), staleTime: 0 })
 
@@ -61,6 +63,11 @@ export function FlashcardsPage() {
             <Button variant="ghost" onClick={() => importDeck.mutate()} disabled={importDeck.isPending}>
               {importDeck.isPending ? <Loader2 size={16} className="animate-spin" /> : <FileUp size={16} />} Importar
             </Button>
+            {list.length > 0 && (
+              <Button variant="ghost" onClick={() => setExporting(true)}>
+                <FileDown size={16} /> Exportar
+              </Button>
+            )}
             <Button onClick={() => setCreating(true)}>
               <Plus size={16} /> Novo baralho
             </Button>
@@ -125,6 +132,7 @@ export function FlashcardsPage() {
           histórico de revisões também será apagado.
         </p>
       </ConfirmDialog>
+      {exporting && <ExportDecksDialog initial={list.map((d) => d.id)} onClose={() => setExporting(false)} />}
     </div>
   )
 }

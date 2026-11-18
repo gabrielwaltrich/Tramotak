@@ -1,5 +1,5 @@
 /** Contratos de IPC compartilhados entre main, preload e renderer. */
-import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNext } from './flashcards'
+import type { DeckDetail, DeckSummary, CardView, ImportResult, NewCard, StudyNext, DeckExportRequest, DeckExportResult } from './flashcards'
 import type { DeckOptions, Rating } from './srs'
 import type { CalendarDay, Task, TaskInput, TaskStatus } from './planner'
 import type { PlanPreview, PlanSettings, StudyPlanView } from './studyPlan'
@@ -132,6 +132,7 @@ export const IPC = {
   decksDelete: 'decks:delete',
   decksForCourse: 'decks:forCourse',
   decksImport: 'decks:import',
+  decksExport: 'decks:export',
   cardsCreate: 'cards:create',
   cardsUpdate: 'cards:update',
   cardsDelete: 'cards:delete',
@@ -371,6 +372,8 @@ export interface TramotakApi {
     forCourse(courseId: number): Promise<number>
     /** Abre o seletor de arquivo e importa .apkg/.txt; `null` se cancelar. */
     importFile(): Promise<ImportResult | null>
+    /** Exporta baralhos para o Anki (.apkg) ou texto, pelo "Salvar como". `null` se cancelar. */
+    exportFile(request: DeckExportRequest): Promise<DeckExportResult | null>
   }
   cards: {
     create(input: NewCard): Promise<CardView>
@@ -599,9 +602,10 @@ export interface TramotakApi {
   diagnostics: {
     /** Texto do diagnóstico já sem dados pessoais (o mesmo que vai ser copiado ou salvo). */
     get(): Promise<string>
-    copy(): Promise<void>
-    /** "Salvar como" para o .txt. Devolve o caminho, ou `null` se cancelar. */
-    save(): Promise<string | null>
+    /** Copia o texto mostrado na prévia. */
+    copy(text: string): Promise<void>
+    /** "Salvar como" para o .txt com o texto mostrado. Devolve o caminho, ou `null` se cancelar. */
+    save(text: string): Promise<string | null>
     /** Abre o formulário de problema no GitHub com a versão preenchida. */
     openIssue(): Promise<void>
     /** Registra um erro da interface. */

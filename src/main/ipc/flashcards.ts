@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto'
+import { writeFile } from 'node:fs/promises'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import type { NewCard } from '@shared/flashcards'
+import type { DeckExportRequest, DeckExportResult, NewCard } from '@shared/flashcards'
 import { IPC } from '@shared/ipc'
 import type { DeckOptions, Rating } from '@shared/srs'
 import type { Database } from '../db/database'
@@ -18,6 +20,9 @@ import {
   updateDeck
 } from '../db/flashcards'
 import { importDeckFile } from '../importers/flashcards'
+import { buildApkg, buildText, exportFileName, loadExport } from '../exporters/anki'
+import { stamp } from '../backup/backup'
+import { getInternal, setInternal } from '../db/settings'
 
 function assertId(id: unknown): number {
   if (!Number.isInteger(id)) throw new Error('Identificador inválido')
@@ -51,6 +56,30 @@ export function registerFlashcardIpc(db: Database): void {
     const result = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
     const path = result.canceled ? null : result.filePaths[0]
     return path ? importDeckFile(db, path) : null
+  })
+
+  // Exportar para o Anki: o caminho vem do "Salvar como" aqui no principal, nunca da interface.
+  ipcMain.handle(IPC.decksExport, async (event, request: DeckExportRequest): Promise<DeckExportResult | null> => {
+    const format = request?.format === 'text' ? 'text' : 'apkg'
+    const data = loadExport(db, Array.isArray(request?.deckIds) ? request.deckIds : [])
+    if (!data.cards.length) throw new Error('Os baralhos escolhidos não têm cartas')
+    const win = BrowserWindow.fromWebContents(event.sender)
+    const options = {
+      title: 'Exportar para o Anki',
+      defaultPath: exportFileName(data, format, stamp()),
+      filters: [format === 'apkg' ? { name: 'Pacote do Anki', extensions: ['apkg'] } : { name: 'Texto (Anki, planilhas)', extensions: ['txt'] }]
+    }
+    const result = win ? await dialog.showSaveDialog(win, options) : await dialog.showSaveDialog(options)
+    if (result.canceled || !result.filePath) return null
+    let installId = getInternal(db, 'installId')
+    if (typeof installId !== 'string') {
+      installId = randomUUID()
+      setInternal(db, 'installId', installId)
+    }
+    const content =
+      format === 'apkg' ? await buildApkg(data, { includeSchedule: request.includeSchedule !== false, installId: installId as string }) : buildText(data)
+    await writeFile(result.filePath, content)
+    return { path: result.filePath, decks: data.decks.length, cards: data.cards.length }
   })
 
   ipcMain.handle(IPC.cardsCreate, (_e, input: NewCard) =>

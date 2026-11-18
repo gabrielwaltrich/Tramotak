@@ -1,12 +1,12 @@
-# Onde paramos (atualizado em 16/10/2026)
+# Onde paramos (atualizado em 17/11/2026)
 
 ## Estado atual
 
-- **Última versão publicada: v0.7.2** (backup numa pasta escolhida, instância única e primeira execução guiada com
+- **Última versão publicada: v0.7.3** (exportar para o Anki e Relatar problema; antes, v0.7.2: (backup numa pasta escolhida, instância única e primeira execução guiada com
   curso de exemplo: as primeiras partes da 0.9), só para **Windows e Linux**. Release: https://github.com/gabrielwaltrich/Tramotak/releases/tag/v0.7.2
 - Testes no momento da publicação: 506 unitários (Vitest) e 22 E2E (Playwright), lint e typecheck limpos, CI verde
   no Windows e no Linux.
-- `main` está igual à v0.7.2; não há trabalho pela metade. Próximo passo: o resto da **0.9** (ver abaixo).
+- `main` está igual à v0.7.3; não há trabalho pela metade. Próximo passo: o resto da **0.9** (ver abaixo).
 - Ambiente local: o sistema traz Node 18; o projeto precisa do **Node 22** (o mesmo do CI), instalado em
   `~/.local/lib/node22/bin` (pôr no `PATH` antes de `npm`/testes/build).
 - O dono do projeto usa o Tramotak instalado pelo **`.deb`** (em `/opt/Tramotak`) e estuda o curso "DevOps PRO 2"
@@ -191,7 +191,21 @@ Perguntar ao terminar cada parte. O que ficou registrado de cada parte (para que
   cabeçalho (versões têm pontos que pareceriam IP). Conferido com uma cópia do banco do dono: nenhum caminho, usuário
   ou título no texto.
 
+### 5. Exportar para o Anki ✅ (17/10/2026, sem commit)
+- **Exportar** em Flashcards (vários baralhos) e na página do baralho (`components/flashcards/ExportDecksDialog.tsx`).
+  Decisões do dono: `.apkg` e texto; agendamento como opção ligada; um ou vários baralhos; campo **Fonte**.
+- `src/main/exporters/anki.ts`: `.apkg` clássico (`collection.anki2`, esquema 11, ZIP por `writeZip` em
+  `importers/zip.ts`), tipo de nota fixo "Tramotak (Frente, Verso, Fonte)" (`MODEL_ID`), baralhos com o mesmo nome
+  (`::` vira ` › `), GUID estável por carta (`internal.installId`: exportar de novo não duplica). Agendamento: nova =
+  posição; aprendendo = horário (fila 1) ou dia (fila 3); revisão = dia relativo a `crt` (começo de hoje);
+  `data` com `s`/`d`/`lrt` do FSRS; histórico no `revlog`. Texto: sem nomes de coluna (os campos do "Básico" mudam com
+  o idioma do Anki), `#deck column:4`, `#tags column:5`.
+- Conferido com o pacote `anki` 26.09.3 do PyPI num venv descartável: importa sem erro nem correção na checagem do
+  banco, agendamento e memória certos, reimportar não duplica; o texto cai em Frente/Verso do "Básico". O importador do
+  Tramotak passou a usar só as duas primeiras colunas de um texto com tabulação.
+- Junto: "Relatar problema" agora copia e salva exatamente o texto da prévia (antes gerava de novo e o horário mudava).
+
 ## Próximo: resto da 0.9 e 1.0
-Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): ~~Relatar problema~~ ✅ → **exportar para o Anki** → pedir o
+Ordem combinada (detalhes no `docs/ROADMAP-1.0.md`): ~~Relatar problema~~ ✅ → ~~exportar para o Anki~~ ✅ → pedir o
 **SignPath** e publicar no **Flathub/winget** → **acessibilidade** → publicar a 0.9 e começar o **beta** → 1.0
 (correções, documentação de uso, Sponsors).
